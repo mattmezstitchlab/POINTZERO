@@ -185,6 +185,32 @@ describe("OXS", () => {
     expect(xml).not.toContain(`symbol="${RED}"`);
   });
 
+  it("relit le symbole choisi dans l'atelier au retour", () => {
+    const restored = fromOxs(toOxs(sample()));
+    expect(restored.palette).toContain(RED);
+    // `assignedSymbol` attend l'indice du fil, pas sa position dans la palette.
+    expect(assignedSymbol(restored, RED)).toBe(CUSTOM);
+  });
+
+  it("emporte les références de perle, et seulement celles de la palette", () => {
+    const p = sample();
+    p.beadMap = { "321": "DB0361", B5200: "DB0001" }; // B5200 n'est pas dans ce motif
+    const xml = toOxs(p);
+    expect(xml).toContain("DB0361");
+    expect(xml).not.toContain("DB0001");
+    expect(fromOxs(xml).beadMap).toEqual({ "321": "DB0361" });
+  });
+
+  it("une extension illisible ne détruit pas le coeur portable", () => {
+    const xml = toOxs(sample()).replace(/<pointzero_extra>.*<\/pointzero_extra>/, "<pointzero_extra>pas du JSON</pointzero_extra>");
+    expect(xml).toContain("pas du JSON");
+    const restored = fromOxs(xml);
+    expect(FLOSS[restored.cross[0]].code).toBe("321");
+    expect(restored.back).toHaveLength(1);
+    expect(restored.beadMap).toBeUndefined();
+    expect(restored.knots).toHaveLength(0);
+  });
+
   it("échappe le texte saisi", () => {
     const p = sample();
     p.name = 'Motif <piquant> & "guillemets"';
