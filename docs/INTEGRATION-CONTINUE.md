@@ -89,7 +89,7 @@ jobs:
 | Étape | Commande | Ce qu'elle attrape |
 | --- | --- | --- |
 | Types | `tsc --noEmit` | Toute régression de typage. Le projet est en `strict` avec `noUnusedLocals` et `noUnusedParameters` : une variable morte fait échouer la fusion. |
-| Tests | `vitest run` | 122 tests sur 7 fichiers, dont les 12 auto-tests du moteur (`src/lib/checks.ts`) exécutés à chaque passage : export PDF, sérialisation par codes, symétrie, formats, tables couleur, journal. |
+| Tests | `vitest run` | 150 tests sur 8 fichiers, dont les 12 auto-tests du moteur (`src/lib/checks.ts`) exécutés à chaque passage : export PDF, sérialisation par codes, symétrie, formats, tables couleur, journal, guide. |
 | Build | `vite build` | L'application se construit réellement, en monofichier, avec les tables de données embarquées. |
 
 `npm ci` plutôt que `npm install` : le dépôt doit pouvoir être reconstruit
@@ -114,7 +114,7 @@ environ 6 s, largement sous le plafond de 15 minutes).
   lint qui n'existe pas.
 - **Pas de test navigateur.** Les tests tournent sous jsdom. Ce qui dépend d'un
   vrai moteur de rendu — l'aperçu PDF dans un `<iframe>`, qui ne s'affiche pas
-  sur iOS Safari, le stylet Apple Pencil, le Wake Lock, l'enregistrement vidéo —
+  sur iOS Safari, le stylet Apple Pencil, le Wake Lock, l'animation du guide —
   n'est pas couvert, et ne le sera pas par un headless Chrome.
 - **Pas de déploiement.** L'application est hors ligne et monofichier : le build
   est le produit. Publier `dist/index.html` est un choix d'hébergement, pas une

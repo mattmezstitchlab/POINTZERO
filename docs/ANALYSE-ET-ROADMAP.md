@@ -116,6 +116,16 @@ tableaux plats. C'est le niveau de détail d'un Pattern Keeper, pas d'un jouet.
     (`pointzero:canvas`, `pointzero:floss`, `pointzero:export-preview`) sur une **copie**
     de démonstration. Le produit se documente lui-même, sans fichier vidéo fictif.
 
+    > **Supprimé depuis, et remplacé.** L'idée juste de ce point — le produit se
+    > documente lui-même, sur l'interface réelle — a été conservée ; le moyen
+    > (filmer, enregistrer, narrer) a été retiré à la demande : un studio de
+    > capture, trois modes de voix et des sous-titres à caler, pour produire une
+    > vidéo que personne ne regarde au moment où il faut cliquer. Le guide pas à
+    > pas (§4, P5) montre un pictogramme à la fois, attend le geste réel, et
+    > répond aux questions. Le mécanisme de cible (`data-guide`) est celui que la
+    > visite filmée avait introduit ; la copie de démonstration et le pilote de
+    > chapitres ont disparu avec elle.
+
 Accessibilité réelle, pas décorative : annonce de case en `aria-live`, piège à focus des
 panneaux avec restauration de l'élément précédent, stylet seul (`pencilOnly`),
 mouvement réduit, grand texte, haut contraste, cibles ≥ 44 px.
@@ -391,8 +401,8 @@ un avertissement explicite quand `flossIndex` renvoie `-1` — aujourd'hui c'est
 - **Relais TURN optionnel** pour le partage WebRTC : le mode auteur unique est un choix
   assumé, mais un relais ferait passer le taux de connexion (l'AUDIT note que certains
   réseaux bloquent).
-- **Reconnaissance vocale** pour les sous-titres de l'atelier vidéo (aujourd'hui : script
-  fourni, pas d'ASR).
+- ~~**Reconnaissance vocale** pour les sous-titres de l'atelier vidéo~~ — sans objet depuis
+  la suppression du studio vidéo (P5).
 - **Co-édition multi-auteurs (CRDT)** — seulement si le positionnement change.
   L'AUDIT a raison de ne pas le promettre aujourd'hui.
 - **Étalonnage écran → carte physique.** L'app répète à juste titre que les couleurs écran
@@ -444,7 +454,7 @@ statuts sont ceux du code livré, pas des intentions.
 
 **P1 — crédibilité technique** ✅
 
-- Harnais vitest + jsdom, 7 fichiers, **122 tests** ; `npm run verify` enchaîne
+- Harnais vitest + jsdom, 8 fichiers, **150 tests** au total ; `npm run verify` enchaîne
   `tsc --noEmit`, `vitest run` et `build`. Les 12 auto-tests de `checks.ts` sont
   exécutés à chaque passage de la suite : une régression du moteur fait échouer
   `engine.test.ts`.
@@ -512,6 +522,36 @@ statuts sont ceux du code livré, pas des intentions.
   (contourné par le téléchargement direct) ; `vite-plugin-singlefile` inline les
   tables chargées à la demande, donc le différé n'est réel qu'en développement.
 
+**P5 — demandé après coup : guider au lieu de filmer** ✅
+
+- Studio vidéo et voix supprimés : composant, capture `getDisplayMedia`,
+  synthèse vocale, fichiers audio importés, script et sous-titres VTT, ainsi que
+  la copie de démonstration et le pilote de chapitres qui allaient avec. Un
+  bouton en moins, et environ 130 lignes de code qui n'avaient de sens que pour
+  produire une vidéo.
+- Guide pas à pas à la place : une étape à la fois, un seul pictogramme animé, un
+  mémo court, et **validation par le geste réel** — l'outil est pris, une case est
+  posée, un fil est choisi, un panneau est ouvert. « Suivant » et « Précédent »
+  restent toujours disponibles : un guide qui bloque est pire que pas de guide.
+  Deux pistes (Créer, Broder) qui suivent le mode en cours, reprise là où l'on
+  s'est arrêté, démarrage seul à la première ouverture, boussole pour rejouer.
+- Champ de questions : recherche dans une base écrite depuis le source
+  (`src/lib/coach.ts`, 40 entrées couvrant les 26 outils, les panneaux, les
+  formats, la toile, les mélanges, les correspondances, le journal, le partage,
+  l'accessibilité et les limites assumées). **Aucun modèle distant** : hors ligne,
+  sans compte ni clé, un agent appelé sur le réseau se tairait sans connexion et
+  devinerait sur une interface qu'il ne voit pas. Un mot seul ne suffit pas à
+  répondre, et une question hors sujet reçoit « je ne sais pas » suivi de pistes.
+- Le groupe « plus » du dock s'ouvre seul quand le guide y pointe un outil : un
+  pictogramme qui pulse dans un groupe replié ne guide personne.
+- L'animation respecte « réduire les animations » (règle globale déjà en place),
+  et la cible reste identifiable sans mouvement : le contour est dessiné dans les
+  deux cas.
+- 28 tests : pertinence et refus de la recherche, intégrité de la base et du
+  parcours, reprise de progression et nettoyage d'un état illisible, rendu du
+  guide, et invariant d'intégration — **chaque outil visé par une étape existe
+  réellement dans le dock du mode concerné**.
+
 ---
 
 ## 5. Bilan chiffré après livraison
@@ -519,7 +559,7 @@ statuts sont ceux du code livré, pas des intentions.
 | Contrôle | Avant (`7d2982b`) | Après |
 | --- | --- | --- |
 | `npx tsc --noEmit` | 0 erreur | 0 erreur |
-| Tests automatisés | aucun | 122, sur 7 fichiers |
+| Tests automatisés | aucun | 150, sur 8 fichiers |
 | `npm run verify` | inexistant | tsc + tests + build |
 | CI | aucune | workflow écrit dans `docs/INTEGRATION-CONTINUE.md`, non installé (permission `workflows` absente du jeton), jamais exécuté |
 | README / LICENSE | absents | écrits, avec attribution par table |
@@ -527,7 +567,8 @@ statuts sont ceux du code livré, pas des intentions.
 | Tables couleur employées | 1 sur 15 (`dmc-floss` seul) | 8 sur 15 (+ Delica, + 6 correspondances) |
 | Outils exposés dans le Dock | 16 sur 26 | 26 |
 | Symétrie | aucune | 3 axes, formes et remplissage inclus |
-| Documentation | 1 audit interne | audit, feuille de route statuée, contrat OXS |
+| Documentation | 1 audit interne | audit, feuille de route statuée, contrat OXS, CI |
+| Aide dans l'atelier | studio vidéo à filmer soi-même | guide pas à pas validé par le geste + 40 réponses hors ligne |
 
 Le poids ajouté est celui des données, pas du code : 71 ko de tables de
 correspondance en plus des 149 ko de la Delica, soit environ 48 ko gzippés. Le

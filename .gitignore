@@ -6,8 +6,8 @@ build/
 !.env.example
 .DS_Store
 
-# Configuration de développement propre à un environnement mandaté
-# (server.allowedHosts) : elle désactive la vérification d'hôte de Vite, ce qui
-# n'a pas sa place dans le dépôt.
-vite.dev.config.ts
+# `vite.dev.config.ts` (développement derrière un mandataire, `allowedHosts`)
+# n'est volontairement PAS suivi par git, mais n'est pas ignoré non plus : un
+# fichier ignoré disparaît au moindre rafraîchissement de l'espace de travail,
+# et le serveur de développement ne redémarre plus.
 

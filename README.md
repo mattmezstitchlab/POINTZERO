@@ -14,12 +14,12 @@ Elle couvre le cycle complet, ce qui évite d'ouvrir quatre outils différents p
 | **Composer** | Grille vierge jusqu'à 1 000 × 1 000 cases, 26 outils (croix, demi, quart, trois-quarts, petite croix, perle, arrière, lancé, noeud français, remplissage, formes, lasso, déplacement, lettrage compté 5 × 7), symétrie, calques visibles et verrouillables |
 | **Convertir** | Photo ou pixel art → quantification DMC avec tramage Floyd–Steinberg, calcul en worker ; génération d'image par description (service tiers), reprise ensuite comme une photo |
 | **Importer** | PDF du commerce : lecture vectorielle des symboles (pdf.js), légende par lignes, axes, ordre des pages ; secours image par blocs calés et tableau magnétique de recollement quand la numérotation est ambiguë. Fichiers projet et OXS |
-| **Suivre le fil** | Substitution d'un fil par ses trois plus proches en CIEDE2000, correspondance du motif entier vers une autre marque (diamant DMC, perles à repasser) sans changer la langue du motif |
+| **Suivre le fil** | Substitution d'un fil par ses trois plus proches en CIEDE2000, correspondance du motif entier vers une autre marque (diamant DMC, perles à repasser Perler, Hama, Artkal, MARD, Nabbi) sans changer la langue du motif |
 | **Préparer** | 489 références DMC sourcées, correspondance perceptuelle CIEDE2000, mélanges de deux fils, tissu (Aida/binca, lin, evenweave, 7 à 40 ct, sur 1 ou sur 2), marge, métrage et nombre d'écheveaux par fil, stock et liste d'achats CSV multi-projets |
 | **Broder** | Fil actif, symétrie sur trois axes, suivi case / ligne / bloc 10 × 10, parking par coin, erreurs à défaire, contours et ornements suivis séparément, sessions horodatées et calendrier d'activité, séries, estimation de fin |
 | **Exporter** | PDF paginé A4 ou Letter avec recouvrement, règle d'échelle à mesurer, page d'ornements, légende, correspondances multi-marques et provenance ; SVG vectoriel ; JSON ; OXS (coeur standard + extension documentée) ; PNG ; CSV |
-| **Convertir** | Correspondance du motif vers une autre marque — broderie diamant DMC, perles à repasser Perler, Hama, Artkal, MARD, Nabbi — avec l'écart perceptuel, sans changer la langue du motif |
-| **Partager** | Lecture à distance chiffrée (WebRTC, invitation manuelle), l'hôte reste auteur ; guide vidéo en sept chapitres qui pilote vraiment l'interface |
+| **Se repérer** | Guide pas à pas : une étape à la fois, le pictogramme concerné pulse, un mémo court, et l'étape se valide quand le geste est réellement fait. Un champ de questions répond sur tout l'atelier, hors ligne |
+| **Partager** | Lecture à distance chiffrée (WebRTC, invitation manuelle), l'hôte reste auteur |
 
 ## Essayer
 
@@ -95,6 +95,31 @@ référence reste la carte physique du fabricant.
 
 Liste assumée, dans l'ordre où elle gêne :
 
+## Le guide n'est pas un agent distant
+
+Le champ de questions ressemble à un assistant, et c'est voulu — mais il ne faut
+pas s'y tromper : **aucun modèle n'est appelé**. L'atelier fonctionne hors ligne,
+sans compte ni clé d'API ; un agent distant se tairait sans connexion et
+devinerait sur une interface qu'il ne voit pas.
+
+À la place, la connaissance est écrite dans `src/lib/coach.ts`, depuis le source,
+entrée par entrée : les 26 outils, les panneaux, les formats d'export, les
+réglages de toile, les mélanges, les correspondances de marques, le journal, le
+partage, l'accessibilité — et les limites assumées. La recherche est une
+correspondance de mots normalisés (accents et casse ignorés), pondérée : une
+locution entière pèse plus qu'un mot, et un mot seul ne suffit pas à répondre.
+
+Deux conséquences à connaître. La réponse est **exacte** sur ce logiciel, parce
+qu'elle est écrite à partir de lui et vérifiable dans `src/`. Et elle **s'arrête
+là** : une question hors sujet reçoit « je ne sais pas répondre à ça », suivi de
+quelques pistes, jamais une invention. Un guide qui répond à côté apprend à ne
+plus lui faire confiance.
+
+Le pas à pas, lui, ne défile pas tout seul : chaque étape attend un geste réel —
+l'outil est pris, une case est posée, un fil est choisi, un panneau est ouvert —
+et « Suivant » reste disponible dans tous les cas. Un guide qui avance au
+chronomètre redevient la vidéo qu'il remplace.
+
 - **Aperçu PDF sur iPadOS.** L'aperçu passe par un `<iframe>` : Safari iOS n'y affiche pas un PDF
   en ligne. Un lien d'ouverture dans un nouvel onglet et un avertissement contournent le problème
   sans le résoudre.
@@ -108,6 +133,9 @@ Liste assumée, dans l'ordre où elle gêne :
   pas ce qui suit l'avancement — marquage, suivi case / ligne / bloc, stationnement, erreurs,
   notes, sélection, déplacement, pipette — ni le lettrage : refléter ces marques ferait mentir le
   suivi.
+- **Le guide ne connaît que cet atelier.** Sa base est écrite à la main : une
+  fonctionnalité ajoutée sans entrée correspondante n'existe pas pour lui. C'est
+  un choix — hors ligne, exact, et borné — plutôt qu'un agent qui improvise.
 - **Pas d'internationalisation.** L'interface est en français, les textes sont dans les composants.
 - **Un seul fichier HTML en sortie.** `vite-plugin-singlefile` inline aussi les imports
   dynamiques : les tables de perles et de correspondances, bien que chargées à la demande, se
