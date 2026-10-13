@@ -448,9 +448,14 @@ statuts sont ceux du code livré, pas des intentions.
   `tsc --noEmit`, `vitest run` et `build`. Les 12 auto-tests de `checks.ts` sont
   exécutés à chaque passage de la suite : une régression du moteur fait échouer
   `engine.test.ts`.
-- `.github/workflows/ci.yml` écrit (Node 22, `npm ci && npm run verify`).
-  ⚠️ **Jamais exécuté** : aucun run n'a eu lieu depuis cet environnement. À
-  vérifier au premier push.
+- Workflow de CI écrit (Node 22, `npm ci && npm run verify`), consigné dans
+  [`docs/INTEGRATION-CONTINUE.md`](INTEGRATION-CONTINUE.md).
+  ⚠️ **Ni installé ni exécuté** : le jeton employé pour pousser cette branche n'a
+  pas la permission `workflows`, et GitHub refuse la poussée d'un commit ajoutant
+  un fichier sous `.github/workflows/`. Contourner ce contrôle en renommant le
+  fichier aurait été la pire des réponses — il existe pour qu'un jeton compromis
+  ne puisse pas exécuter du code sur les runners du dépôt. La commande jouée par
+  le workflow, elle, est exécutée localement à chaque modification.
 - Pas d'ESLint dans le projet ; `npm run verify` est la porte d'entrée, et c'est
   écrit dans le README pour qu'on n'attende pas un lint qui n'existe pas.
 
@@ -516,7 +521,7 @@ statuts sont ceux du code livré, pas des intentions.
 | `npx tsc --noEmit` | 0 erreur | 0 erreur |
 | Tests automatisés | aucun | 122, sur 7 fichiers |
 | `npm run verify` | inexistant | tsc + tests + build |
-| CI | aucune | `.github/workflows/ci.yml`, jamais exécutée |
+| CI | aucune | workflow écrit dans `docs/INTEGRATION-CONTINUE.md`, non installé (permission `workflows` absente du jeton), jamais exécuté |
 | README / LICENSE | absents | écrits, avec attribution par table |
 | Bundle | 3 416 ko (1 090 ko gzip) | 3 674 ko (1 152 ko gzip) |
 | Tables couleur employées | 1 sur 15 (`dmc-floss` seul) | 8 sur 15 (+ Delica, + 6 correspondances) |

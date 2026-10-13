@@ -31,7 +31,7 @@ npm run dev        # atelier sur http://localhost:5173
 ```bash
 npm run build      # dist/ — JS et CSS inlinés dans un seul HTML (public/ reste à côté)
 npm run preview    # servir le build
-npm run verify     # types + tests + build, la commande de contrôle
+npm run verify     # types + tests + build, la commande de contrôle (CI : docs/INTEGRATION-CONTINUE.md)
 ```
 
 `npm run test` lance les 64 tests (Vitest, jsdom). Ils ne testent pas des utilitaires isolés : ils
@@ -126,6 +126,8 @@ Trois documents accompagnent le code :
   fonction.
 - [`docs/OXS-EXTENSION.md`](docs/OXS-EXTENSION.md) — le contrat OXS : coeur portable, extension
   `<pointzero_extra>`, règles de relecture, et la liste de ce que ce format ne transporte pas.
+- [`docs/INTEGRATION-CONTINUE.md`](docs/INTEGRATION-CONTINUE.md) — le workflow de CI, ce qu'il
+  vérifie, et pourquoi il n'est pas encore installé dans le dépôt.
 
 ## Droits
 
