@@ -24,6 +24,60 @@ export interface StrokeCtx {
   halfDirection?: "auto" | "forward" | "backward";
 }
 
+export type Symmetry = "none" | "x" | "y" | "both";
+/** Axe de reflet : horizontal, vertical, ou les deux (le reflet central). */
+export type Axis = "x" | "y" | "xy";
+
+/**
+ * Outils dont le tracé est reflété par la symétrie.
+ *
+ * La règle : la symétrie reflète ce qui pose du fil, pas ce qui suit
+ * l'avancement. Surligner, cocher un bloc ou une ligne, garer un fil, poser une
+ * annotation ou repérer une erreur restent du côté où l'on brode — refléter ces
+ * marques ferait mentir le suivi. Les formes (ligne, rectangle, ellipse) et les
+ * lancés sont reflétés au moment du relâchement, pas échantillon par
+ * échantillon.
+ */
+export const MIRROR_TOOLS: Tool[] = [
+  "cross", "half", "quarter", "threeQuarter", "petite", "bead",
+  "erase", "fill", "knot", "back",
+];
+
+/** Axes de reflet, dans l'ordre où ils sont appliqués. */
+export function symmetryAxes(sym: Symmetry | undefined): Axis[] {
+  return sym === "x" ? ["x"] : sym === "y" ? ["y"] : sym === "both" ? ["x", "y", "xy"] : [];
+}
+
+/** Reflet d'un point sur un axe, dans une grille de w × h cases. */
+export function reflectPoint(p: { w: number; h: number }, q: Pt, axis: Axis): Pt {
+  return { x: axis === "y" ? q.x : p.w - q.x, y: axis === "x" ? q.y : p.h - q.y };
+}
+
+/** Tous les reflets d'un point, le point lui-même exclu. */
+export function mirrorPoints(p: { w: number; h: number }, q: Pt, sym: Symmetry | undefined): Pt[] {
+  return symmetryAxes(sym).map((axis) => reflectPoint(p, q, axis));
+}
+
+/**
+ * Un contexte de tracé par reflet.
+ *
+ * Les outils à état gardent cet état dans `StrokeCtx` : l'arrière relie le
+ * noeud précédent au noeud courant, le noeud français évite les doublons, le
+ * remplissage ne passe qu'une fois par trait. Un reflet doit donc avoir le
+ * sien, aligné sur le même axe — sinon le second reflet d'une symétrie double
+ * repartirait du premier au lieu de son propre point d'origine.
+ */
+export function mirrorContexts(
+  p: { w: number; h: number },
+  ctx: StrokeCtx,
+  sym: Symmetry | undefined,
+): StrokeCtx[] {
+  return symmetryAxes(sym).map((axis) => ({
+    ...ctx,
+    lastNode: ctx.lastNode ? reflectPoint(p, ctx.lastNode, axis) : null,
+  }));
+}
+
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
 /** Case sous le point (coin haut-gauche = trou 0). */
@@ -333,6 +387,35 @@ export function applySample(d: Pattern, s: StrokeCtx, q: Pt): boolean {
     default:
       return false;
   }
+}
+
+/**
+ * Applique un segment de tracé au brouillon, reflets compris.
+ *
+ * `mirrors` doit contenir un contexte par axe, dans l'ordre de `symmetryAxes`
+ * (voir `mirrorContexts`) : c'est ce qui permet à l'arrière-point et au noeud
+ * français d'être reflétés sans que les reflets se marchent dessus.
+ *
+ * Retourne true si le motif a changé. Le brouillon est muté sur place.
+ */
+export function applyStrokeSegment(
+  d: Pattern,
+  ctx: StrokeCtx,
+  mirrors: StrokeCtx[],
+  from: Pt,
+  to: Pt,
+  sym: Symmetry | undefined,
+  step = 0.2,
+): boolean {
+  const axes = symmetryAxes(sym);
+  let changed = false;
+  samplePath(from, to, step, (q) => {
+    if (applySample(d, ctx, q)) changed = true;
+    for (let k = 0; k < axes.length && k < mirrors.length; k++) {
+      if (applySample(d, mirrors[k], reflectPoint(d, q, axes[k]))) changed = true;
+    }
+  });
+  return changed;
 }
 
 /** Couleur sous le curseur (croix, puis demi, puis quarts). -1 si vide. */

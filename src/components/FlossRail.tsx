@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Check, Minus, Plus, Search, X } from "lucide-react";
 import { contrastOn, FLOSS } from "../lib/dmc";
 import { assignedSymbol, computeStats, type ColorStat, type Pattern, type Supply } from "../lib/pattern";
@@ -23,10 +23,17 @@ const fmt = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 1,
  * Les 489 DMC ne sont affichés que dans le sélecteur de recherche, sur demande.
  */
 export default function FlossRail({ pattern, active, onActive, onPattern, onBrowse, stitching, hidden, onSupply }: Props) {
+  // Compter les points parcourt toutes les cases du motif. Pendant un trait de
+  // stylet le rail est redescendu à chaque échantillon : sur un grand motif, ce
+  // recomptage prenait le pas sur le dessin. La valeur différée laisse React
+  // sauter les étapes intermédiaires et rattraper son retard dès que le trait se
+  // pose. Les compteurs peuvent donc avoir un temps de retard pendant le tracé,
+  // ce qui est préférable à un atelier qui ne répond plus.
+  const counted = useDeferredValue(pattern);
   const stats = useMemo(() => {
-    const used = computeStats(pattern).rows;
-    return pattern.palette.map((idx): ColorStat => used.find((r) => r.idx === idx) ?? { idx, code: FLOSS[idx].code, name: FLOSS[idx].name, hex: FLOSS[idx].hex, pos: assignedSymbol(pattern, idx), cross: 0, half: 0, quarter: 0, back: 0, long: 0, knots: 0, cells: 0, done: 0, meters: 0, skeins: 0, owned: pattern.supplies?.[FLOSS[idx].code]?.whole ?? 0, petite: 0, beads: 0 });
-  }, [pattern]);
+    const used = computeStats(counted).rows;
+    return counted.palette.map((idx): ColorStat => used.find((r) => r.idx === idx) ?? { idx, code: FLOSS[idx].code, name: FLOSS[idx].name, hex: FLOSS[idx].hex, pos: assignedSymbol(counted, idx), cross: 0, half: 0, quarter: 0, back: 0, long: 0, knots: 0, cells: 0, done: 0, meters: 0, skeins: 0, owned: counted.supplies?.[FLOSS[idx].code]?.whole ?? 0, petite: 0, beads: 0 });
+  }, [counted]);
   const [detail, setDetail] = useState<number | null>(null);
   const [choosingSymbol, setChoosingSymbol] = useState(false);
   const row = detail === null ? null : stats.find((r) => r.idx === detail) ?? null;

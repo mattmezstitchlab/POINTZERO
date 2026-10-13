@@ -5,14 +5,18 @@ import { assignedSymbol, clonePattern, compositePattern, ornamentKey, type Patte
 import { boundedSelection, clearSelection, drawShape, extractSelection, pasteSelection, type Selection } from "../lib/editing";
 import {
   addLongTo,
-  applySample,
+  applyStrokeSegment,
   cellOf,
+  MIRROR_TOOLS,
+  mirrorContexts,
   nodeOf,
   pickAt,
-  samplePath,
+  reflectPoint,
+  symmetryAxes,
   type Node,
   type Pt,
   type StrokeCtx,
+  type Symmetry,
   type Tool,
 } from "../lib/stitch";
 
@@ -35,7 +39,7 @@ interface Props {
   onlyActive?: boolean;
   highContrast?: boolean;
   pencilOnly?: boolean;
-  symmetry?: "none" | "x" | "y" | "both";
+  symmetry?: Symmetry;
   annotation?: string;
   onSelection?: (s: Selection | null) => void;
   readOnly?: boolean;
@@ -52,10 +56,13 @@ interface Props {
 interface Stroke {
   tool: Tool;
   ctx: StrokeCtx;
+  /** Un contexte par axe de symétrie, dans l'ordre de `symmetryAxes`. */
+  mirror: StrokeCtx[];
   last: Pt;
   start: Node;
   end: Node;
   base: Pattern;
+  /** Brouillon unique du trait, muté sur place jusqu'au relâchement. */
   draft: Pattern | null;
   changed: boolean;
 }
@@ -94,6 +101,23 @@ export default function Canvas(props: Props) {
   const tipRef = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
   latest.current = props;
+
+  /**
+   * Composition des calques, mémorisée par identité de motif.
+   *
+   * Le rendu redessine à chaque image, y compris pour la seule infobulle qui
+   * suit le pointeur : recomposer les calques à ce rythme relit tous les
+   * instantanés pour rien. Tant que l'objet motif est le même, la composition
+   * est la même.
+   */
+  const compositeCache = useRef<{ src: Pattern; out: Pattern } | null>(null);
+  const compositeOf = (src: Pattern): Pattern => {
+    const hit = compositeCache.current;
+    if (hit && hit.src === src) return hit.out;
+    const out = compositePattern(src);
+    compositeCache.current = { src, out };
+    return out;
+  };
 
   const view = useRef({ s: 16, ox: 0, oy: 0, fit: 16, w: 1, h: 1, dpr: 1, ready: false });
   const frame = useRef<number | null>(null);
@@ -188,7 +212,11 @@ export default function Canvas(props: Props) {
     if (!canvas || !ctx) return;
     const v = view.current;
     const { view: mode, symbols, highlightActive, highContrast, color: activeColor, tool: activeTool, insets: ins } = latest.current;
-    const P = compositePattern(latest.current.pattern);
+    // Pendant un trait, le brouillon est mutable : la composition doit être
+    // refaite à chaque image. En dehors, le motif ne change que par identité,
+    // et la mémoire ci-dessus évite de recomposer au moindre survol.
+    const live = stroke.current?.draft;
+    const P = live ? compositePattern(live) : compositeOf(latest.current.pattern);
     const c = content();
     const { s, ox, oy } = v;
     const { w, h } = P;
@@ -671,25 +699,24 @@ export default function Canvas(props: Props) {
 
   /* ---------------------------- Tracé ---------------------------- */
 
+  /**
+   * Applique les échantillons d'un segment de tracé.
+   *
+   * Le brouillon est cloné une seule fois par trait puis muté sur place : le
+   * clonage à chaque déplacement de stylet allouait ~1,3 Mo par échantillon sur
+   * un 300 × 300 et ~15 Mo sur un 1 000 × 1 000, ce qui gelait l'atelier en
+   * plein tracé. `onLive` reçoit une copie superficielle : nouvelle identité
+   * pour que React redescende l'état, mêmes tableaux typés en dessous.
+   */
   const processSamples = (from: Pt, to: Pt) => {
     const st = stroke.current;
     if (!st) return;
-    const base = st.draft ?? st.base;
-    const draft = clonePattern(base);
-    let changed = false;
-    samplePath(from, to, 0.2, (q) => {
-      if (applySample(draft, st.ctx, q)) changed = true;
-      if (["cross", "half", "quarter", "threeQuarter", "petite", "bead", "erase"].includes(st.tool)) {
-        const sym = latest.current.symmetry;
-        if (sym === "x" || sym === "both") if (applySample(draft, st.ctx, { x: draft.w - q.x, y: q.y })) changed = true;
-        if (sym === "y" || sym === "both") if (applySample(draft, st.ctx, { x: q.x, y: draft.h - q.y })) changed = true;
-        if (sym === "both") if (applySample(draft, st.ctx, { x: draft.w - q.x, y: draft.h - q.y })) changed = true;
-      }
-    });
-    if (changed) {
-      st.draft = draft;
+    if (!st.draft) st.draft = clonePattern(st.base);
+    const draft = st.draft;
+    if (applyStrokeSegment(draft, st.ctx, st.mirror, from, to, latest.current.symmetry)) {
       st.changed = true;
-      latest.current.onLive(draft);
+      latest.current.onLive({ ...draft });
+      schedule();
     }
   };
 
@@ -708,9 +735,21 @@ export default function Canvas(props: Props) {
       return;
     }
     const node = nodeOf(P, pt);
+    const ctx: StrokeCtx = {
+      tool: t,
+      color,
+      lastNode: t === "knot" ? null : node,
+      fillDone: false,
+      markMode: -1,
+      onlyActive: latest.current.onlyActive,
+      annotation: latest.current.annotation,
+      halfDirection: latest.current.halfDirection,
+      lookup: ["mark", "details", "block", "row"].includes(t) ? compositeOf(P) : undefined,
+    };
     stroke.current = {
       tool: t,
-      ctx: { tool: t, color, lastNode: t === "knot" ? null : node, fillDone: false, markMode: -1, onlyActive: latest.current.onlyActive, annotation: latest.current.annotation, halfDirection: latest.current.halfDirection, lookup: ["mark", "details", "block", "row"].includes(t) ? compositePattern(P) : undefined },
+      ctx,
+      mirror: MIRROR_TOOLS.includes(t) ? mirrorContexts(P, ctx, latest.current.symmetry) : [],
       last: pt,
       start: node,
       end: node,
@@ -756,7 +795,14 @@ export default function Canvas(props: Props) {
       if (!selected.current) selected.current = boundedSelection(st.base, lasso.current[0], st.last);
       latest.current.onSelection?.(selected.current);
     } else if (["line", "rect", "ellipse"].includes(st.tool)) {
-      const d = drawShape(st.base, st.tool as "line" | "rect" | "ellipse", lasso.current[0], st.last, st.ctx.color);
+      const shape = st.tool as "line" | "rect" | "ellipse";
+      const a = lasso.current[0], b = st.last;
+      let d = drawShape(st.base, shape, a, b, st.ctx.color);
+      // La forme est reflétée une fois, au relâchement : deux points suffisent
+      // à la définir, et la refléter pendant le tracé la ferait clignoter.
+      for (const axis of symmetryAxes(latest.current.symmetry)) {
+        d = drawShape(d, shape, reflectPoint(st.base, a, axis), reflectPoint(st.base, b, axis), st.ctx.color);
+      }
       latest.current.onLive(d); st.changed = true;
     } else if (st.tool === "move" && selected.current) {
       const s = selected.current, dx = Math.round(st.last.x - lasso.current[0].x), dy = Math.round(st.last.y - lasso.current[0].y);
@@ -765,11 +811,16 @@ export default function Canvas(props: Props) {
       latest.current.onSelection?.(selected.current); latest.current.onLive(d); st.changed = true;
     }
     if (st.tool === "long" && (st.start.x !== st.end.x || st.start.y !== st.end.y)) {
-      const draft = clonePattern(st.draft ?? st.base);
-      if (addLongTo(draft, st.start, st.end, st.ctx.color)) {
+      const draft = st.draft ?? clonePattern(st.base);
+      let added = addLongTo(draft, st.start, st.end, st.ctx.color);
+      for (const axis of symmetryAxes(latest.current.symmetry)) {
+        const a = reflectPoint(st.base, st.start, axis), b = reflectPoint(st.base, st.end, axis);
+        if (addLongTo(draft, a, b, st.ctx.color)) added = true;
+      }
+      if (added) {
         st.draft = draft;
         st.changed = true;
-        latest.current.onLive(draft);
+        latest.current.onLive({ ...draft });
       }
     }
     latest.current.onEnd(st.changed);

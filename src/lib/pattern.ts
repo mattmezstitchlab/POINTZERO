@@ -191,6 +191,44 @@ export function ornamentKey(kind: string, v: Seg | Knot | Special): string {
   return "x1" in v ? `${kind}:DMC=${code}:${v.x1},${v.y1},${v.x2},${v.y2}` : `${kind}:DMC=${code}:${v.x},${v.y}`;
 }
 
+/**
+ * Instantanés de calques déjà relus.
+ *
+ * `compositePattern` est appelée à chaque image du rendu — y compris au simple
+ * survol de la grille, qui redessine pour l'infobulle. Sans mémoire, chaque
+ * calque non actif était redésérialisé (JSON.parse de tout le motif) à chaque
+ * image. La clé est la chaîne de l'instantané : si le calque change, la chaîne
+ * change, donc l'entrée devient inaccessible et finit évincée.
+ *
+ * La mémoire est bornée des deux côtés : on ne garde pas les instantanés d'un
+ * motif trop grand (un 1 000 × 1 000 pèse ~15 Mo de tableaux typés une fois
+ * relu) et on ne garde que huit entrées, éviction par la plus ancienne.
+ */
+const SNAPSHOT_CACHE = new Map<string, Pattern>();
+const SNAPSHOT_CACHE_CELLS = 250_000;
+const SNAPSHOT_CACHE_MAX = 8;
+
+/** Relit l'instantané d'un calque, une fois par version de son contenu. */
+function layerSnapshot(json: string, w: number, h: number): Pattern | null {
+  const cached = SNAPSHOT_CACHE.get(json);
+  if (cached) return cached;
+  try {
+    const part = fromObject(JSON.parse(json));
+    if (!part || part.w !== w || part.h !== h) return null;
+    if (w * h <= SNAPSHOT_CACHE_CELLS) {
+      if (SNAPSHOT_CACHE.size >= SNAPSHOT_CACHE_MAX) {
+        const oldest = SNAPSHOT_CACHE.keys().next();
+        if (!oldest.done) SNAPSHOT_CACHE.delete(oldest.value);
+      }
+      SNAPSHOT_CACHE.set(json, part);
+    }
+    return part;
+  } catch {
+    /* Un calque optionnel corrompu ne doit pas faire tomber le projet en cours. */
+    return null;
+  }
+}
+
 export function compositePattern(p: Pattern): Pattern {
   if (!p.layers?.length) return p;
   const out = createPattern(p.name, p.w, p.h, p.count, p.strands);
@@ -208,8 +246,8 @@ export function compositePattern(p: Pattern): Pattern {
     if (!layer.visible) continue;
     if (layer.id === p.activeLayer) merge(p);
     else if (layer.snapshot) {
-      try { const part = fromObject(JSON.parse(layer.snapshot)); if (part && part.w === p.w && part.h === p.h) merge(part); }
-      catch { /* A corrupted optional layer must not crash the current project. */ }
+      const part = layerSnapshot(layer.snapshot, p.w, p.h);
+      if (part) merge(part);
     }
   }
   return { ...p, cross: out.cross, fwd: out.fwd, bwd: out.bwd, q: out.q, back: out.back, long: out.long, knots: out.knots, special: out.special, layers: [] };

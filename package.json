@@ -35,6 +35,28 @@
     "vite-plugin-singlefile": "2.3.0",
     "vitest": "^3.2.7"
   },
-  "description": "Atelier de broderie point de croix : un seul projet pour cr\u00e9er le patron et le broder. PWA hors ligne, palette DMC, import PDF, export PDF/SVG/OXS.",
-  "license": "MIT"
+  "description": "Atelier de broderie point de croix : un seul projet pour créer le patron et le broder. PWA hors ligne, palette DMC, import PDF, export PDF/SVG/OXS.",
+  "license": "MIT",
+  "author": "Matt Mez Stitch Lab",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattmezstitchlab/POINTZERO.git"
+  },
+  "homepage": "https://github.com/mattmezstitchlab/POINTZERO#readme",
+  "bugs": {
+    "url": "https://github.com/mattmezstitchlab/POINTZERO/issues"
+  },
+  "keywords": [
+    "cross-stitch",
+    "point-de-croix",
+    "embroidery",
+    "broderie",
+    "pattern",
+    "patron",
+    "dmc",
+    "pwa",
+    "oxs",
+    "react",
+    "offline-first"
+  ]
 }
