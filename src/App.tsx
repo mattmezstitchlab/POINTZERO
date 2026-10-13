@@ -71,9 +71,9 @@ export default function App() {
   // qui valide une étape « posez un point », pas un simple déplacement de vue.
   const [strokes, setStrokes] = useState(0);
   const autoStarted = useRef(false);
-  const stepStart = useRef({ step: "", tool: "" as Tool | "", color: -1, strokes: -1, panel: null as Panel });
+  const stepStart = useRef({ step: "", color: -1, strokes: -1, panel: null as Panel });
   const ready = useRef(!!boot), templatePromise = useRef<Promise<Pattern> | null>(null), prevTool = useRef<Tool>("cross"), lastViews = useRef<{ create: ViewMode; stitch: ViewMode }>({ create: "real", stitch: "pattern" });
-  const snapshot = useRef({ P, remote, prefs, workspace, store, coach }); snapshot.current = { P, remote, prefs, workspace, store, coach };
+  const snapshot = useRef({ P, remote, prefs, workspace, store, coach, coachOpen, ask }); snapshot.current = { P, remote, prefs, workspace, store, coach, coachOpen, ask };
   const checked = useRef(false);
   const notify = useCallback((msg: string) => setToast(msg), []);
   const closePanel = useCallback(() => setPanel(null), []);
@@ -108,6 +108,15 @@ export default function App() {
     if (["mark", "details", "block", "row", "park", "unpick"].includes(next) && snapshot.current.workspace === "create") { setWorkspace("stitch"); setView("pattern"); }
     if (next !== "pick") prevTool.current = next;
     setTool(next);
+    /* Toucher le pictogramme montré valide l'étape. C'est ici et non dans un
+       effet sur l'outil : le point de croix est l'outil par défaut, donc
+       attendre un changement d'état ferait patienter l'étape 2 pour rien. Le
+       geste, c'est d'aller le chercher — pas que l'atelier change d'avis. */
+    const s = snapshot.current;
+    if (s.coachOpen && !s.ask) {
+      const shown = resolveStep(s.coach, s.workspace);
+      if (shown?.gesture === "tool" && shown.expect === next) coachNext();
+    }
   }, [notify]);
   const pickColor = (idx: number) => {
     setColor(idx);
@@ -205,7 +214,11 @@ export default function App() {
   };
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
-      if (screen !== "editor" || (e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (screen !== "editor") return;
+      // Rien ne doit passer pendant qu'on écrit : un raccourci déclenché dans un
+      // champ mange des lettres. La cible peut ne pas être un Element.
+      const cible = e.target;
+      if (cible instanceof Element && cible.closest('input, textarea, select, [contenteditable="true"]')) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); if (!remote) dispatch({ type: e.shiftKey ? "redo" : "undo" }); return; }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key.toLowerCase();
@@ -312,8 +325,8 @@ export default function App() {
      déjà actif à l'ouverture. */
   useEffect(() => {
     if (!coachStep || stepStart.current.step === coachStep.id) return;
-    stepStart.current = { step: coachStep.id, tool, color, strokes, panel };
-  }, [coachStep, tool, color, strokes, panel]);
+    stepStart.current = { step: coachStep.id, color, strokes, panel };
+  }, [coachStep, color, strokes, panel]);
 
   /* Validation par le geste réel. « Suivant » reste toujours disponible : un
      guide qui bloque est pire que pas de guide du tout. */
@@ -323,12 +336,12 @@ export default function App() {
     if (start.step !== coachStep.id) return;
     const gesture = coachStep.gesture;
     const done =
-      (gesture === "tool" && tool === coachStep.expect && tool !== start.tool) ||
       (gesture === "color" && color !== start.color) ||
       (gesture === "stitch" && strokes > start.strokes) ||
       (gesture === "panel" && panel === coachStep.expectPanel && panel !== start.panel);
     if (done) coachNext();
-  }, [coachOpen, coachStep, ask, tool, color, strokes, panel, coachNext]);
+    // Les étapes « outil » se valident dans chooseTool, au toucher.
+  }, [coachOpen, coachStep, ask, color, strokes, panel, coachNext]);
 
   const openEditor = () => { window.location.hash = "atelier"; setScreen("editor"); };
   const openLanding = () => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); closePanel(); history.pushState(null, "", window.location.pathname + window.location.search); setScreen("landing"); window.scrollTo(0, 0); };

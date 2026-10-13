@@ -454,7 +454,7 @@ statuts sont ceux du code livré, pas des intentions.
 
 **P1 — crédibilité technique** ✅
 
-- Harnais vitest + jsdom, 8 fichiers, **150 tests** au total ; `npm run verify` enchaîne
+- Harnais vitest + jsdom, 9 fichiers, **161 tests** au total ; `npm run verify` enchaîne
   `tsc --noEmit`, `vitest run` et `build`. Les 12 auto-tests de `checks.ts` sont
   exécutés à chaque passage de la suite : une régression du moteur fait échouer
   `engine.test.ts`.
@@ -547,10 +547,23 @@ statuts sont ceux du code livré, pas des intentions.
 - L'animation respecte « réduire les animations » (règle globale déjà en place),
   et la cible reste identifiable sans mouvement : le contour est dessiné dans les
   deux cas.
-- 28 tests : pertinence et refus de la recherche, intégrité de la base et du
+- 39 tests : pertinence et refus de la recherche, intégrité de la base et du
   parcours, reprise de progression et nettoyage d'un état illisible, rendu du
   guide, et invariant d'intégration — **chaque outil visé par une étape existe
   réellement dans le dock du mode concerné**.
+- L'atelier est aussi monté entier sous jsdom (`src/__tests__/atelier.test.tsx`,
+  11 tests) : démarrage seul, une seule cible animée, groupe « plus » ouvert par
+  le guide, étape validée par le geste, Échappe qui masque sans effacer,
+  parcours qui suit le mode, question posée dans le champ. Les suites isolées
+  prouvaient que chaque pièce fonctionne ; celle-ci prouve qu'elles sont
+  branchées. Elle a trouvé deux défauts que rien d'autre ne voyait :
+  - **l'étape « prendre le point de croix » était invalidable.** L'outil croix
+    est l'outil par défaut : attendre un changement d'état faisait patienter
+    l'étape pour rien. La validation d'un outil se fait désormais au toucher,
+    dans `chooseTool` — le geste, c'est d'aller le chercher, pas que l'atelier
+    change d'avis ;
+  - **les raccourcis plantaient si la cible de l'événement n'était pas un
+    Element** (`e.target.closest` sans garde). Garde ajoutée.
 
 ---
 
@@ -559,7 +572,7 @@ statuts sont ceux du code livré, pas des intentions.
 | Contrôle | Avant (`7d2982b`) | Après |
 | --- | --- | --- |
 | `npx tsc --noEmit` | 0 erreur | 0 erreur |
-| Tests automatisés | aucun | 150, sur 8 fichiers |
+| Tests automatisés | aucun | 161, sur 9 fichiers |
 | `npm run verify` | inexistant | tsc + tests + build |
 | CI | aucune | workflow écrit dans `docs/INTEGRATION-CONTINUE.md`, non installé (permission `workflows` absente du jeton), jamais exécuté |
 | README / LICENSE | absents | écrits, avec attribution par table |
