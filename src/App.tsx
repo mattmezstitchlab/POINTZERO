@@ -246,10 +246,11 @@ export default function App() {
   const coachZone = coachTarget?.kind === "zone" ? coachTarget.zone : "";
 
   const commitCoach = (next: CoachProgress) => { setCoach(next); saveCoach(next); };
-  const applyStep = (stepId: string | null) => {
+  const applyStep = () => {
     setAsk(null);
     setPanel(null); // la cible doit être visible, pas derrière un panneau
-    if (stepId) setFitKey((k) => k + 1);
+    // Pas de recadrage : recentrer la grille à chaque étape fait perdre le point
+    // où l'on dessinait, et le guide n'a pas besoin de déplacer la vue.
   };
   const coachNext = useCallback(() => {
     const steps = TRACKS[snapshot.current.workspace];
@@ -259,14 +260,14 @@ export default function App() {
     const following = steps[at + 1];
     const next = { ...snapshot.current.coach, track: snapshot.current.workspace, done, stepId: following ? following.id : null, seen: true };
     commitCoach(next);
-    applyStep(next.stepId);
+    applyStep();
   }, []);
   const coachPrev = () => {
     const steps = TRACKS[workspace];
     const at = coachStep ? steps.findIndex((v) => v.id === coachStep.id) : steps.length;
     const previous = steps[Math.max(0, at - 1)];
     commitCoach({ ...coach, track: workspace, stepId: previous.id, seen: true });
-    applyStep(previous.id);
+    applyStep();
   };
   const openCoach = () => {
     // Rouvrir reprend l'étape en cours ; un parcours terminé repart du début.
@@ -275,7 +276,7 @@ export default function App() {
     const stepId = current?.id ?? steps[0].id;
     commitCoach({ ...coach, track: workspace, stepId, done: current ? coach.done : [], seen: true, dismissed: false });
     setCoachOpen(true);
-    applyStep(stepId);
+    applyStep();
   };
   const hideCoach = () => { setCoachOpen(false); setAsk(null); };
   const closeCoach = () => { hideCoach(); commitCoach({ ...coach, track: workspace, dismissed: true }); };
