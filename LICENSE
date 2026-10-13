@@ -27,8 +27,23 @@ couleur, qui viennent d'un tiers et restent sous leur propre licence.
 
 Données couleur : craft-color-codes, MakeBead (makebead.com)
   https://github.com/makebead/craft-color-codes
-  Code : MIT — Données : Creative Commons Attribution 4.0 International (CC BY 4.0)
-  https://creativecommons.org/licenses/by/4.0/
+  Code : MIT
+
+Les tables publiées par ce dépôt n'ont pas toutes la même licence, et chaque
+table porte la sienne :
+
+  CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+    dmc-floss, dmc-diamond, miyuki-delica, mard-185/221/291, lego,
+    minecraft-blocks, minecraft-map, pixel-art-256, red-heart-super-saver
+
+  MIT (maxcleme/beadcolors, Copyright (c) 2020 maxcleme)
+    https://github.com/maxcleme/beadcolors
+    perler-midi, hama-midi, artkal-s, nabbi
+
+Point Zéro emploie dmc-floss et miyuki-delica (CC BY 4.0) ainsi que, pour les
+correspondances multi-marques, dmc-diamond (CC BY 4.0) et perler-midi,
+hama-midi, artkal-s, mard-291, nabbi. L'application et les fichiers exportés
+affichent la licence de la table réellement utilisée.
 
 Conformément à la clause d'attribution de la CC BY 4.0, les fichiers produits
 par Point Zéro (page de couverture du PDF, pied de page de la page d'ornements,

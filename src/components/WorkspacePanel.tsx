@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { Check, Circle, FileDown, FileJson, FileUp, Film, FolderOpen, ImagePlus, Layers, Lock, Plus, Radio, ShieldCheck, Sparkles, Unlock, X } from "lucide-react";
 import { COUNTS, ensurePalette, fabricInfo, type Pattern } from "../lib/pattern";
 import { addLayer, replaceColor, resizePattern, stampText, switchLayer } from "../lib/editing";
-import { BASE_FLOSS, FLOSS, flossIndex, registerBlend } from "../lib/dmc";
+import { BASE_FLOSS, FLOSS, flossIndex, nearestFlossList, registerBlend } from "../lib/dmc";
+import { deltaELabel } from "../lib/colorScience";
 import { removeConfetti } from "../lib/convert";
 import { clonePattern } from "../lib/pattern";
 import { runChecks, type CheckResult } from "../lib/checks";
@@ -34,6 +35,12 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
   // toutes les cases pour l'estimation de fin, autant ne le faire que quand le
   // journal est réellement affiché, et pas à chaque échantillon de stylet.
   const session = open ? sessionSummary(p) : null;
+  // Trois substitutions du fil actif, par écart perceptuel croissant. Le pool
+  // par défaut exclut les mélanges : on ne propose pas une recette comme
+  // remplacement d'une recette.
+  const substituts = open && FLOSS[color]
+    ? nearestFlossList(FLOSS[color].lab, 4).filter((s) => s.idx !== color).slice(0, 3)
+    : [];
   const change = <K extends keyof Preferences>(key: K, value: Preferences[K]) => onPrefs({ ...prefs, [key]: value });
   const toolButton = (id: Tool, title: string) => <button key={id} className={`flex min-h-11 items-center gap-2 rounded-[10px] px-3 text-left text-[13px] ${tool === id ? "bg-accent/15 text-accent-2" : "hover:bg-white/[.04] text-label-2"}`} aria-pressed={tool === id} onClick={() => onTool(id)}><Circle size={12} />{title}</button>;
 
@@ -62,7 +69,36 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
         <Label title="Sens du demi-point"><select className="field" value={prefs.halfDirection} onChange={(e) => change("halfDirection", e.target.value as Preferences["halfDirection"])}><option value="forward">Diagonale /</option><option value="backward">Diagonale inverse</option><option value="auto">Selon le côté touché</option></select></Label>
         <Block title="Outils de conception"><div className="grid grid-cols-2 gap-1">{([['select','Sélection rectangle'],['lasso','Lasso'],['move','Déplacer la sélection'],['line','Ligne de croix'],['rect','Rectangle'],['ellipse','Ellipse'],['threeQuarter','Trois-quarts'],['petite','Petite croix'],['bead','Perle']] as [Tool,string][]).map(([id,label]) => toolButton(id,label))}</div><Label title="Symétrie du dessin"><select className="field" value={prefs.symmetry} onChange={(e) => change("symmetry", e.target.value as Preferences["symmetry"])}><option value="none">Aucune</option><option value="x">Miroir horizontal</option><option value="y">Miroir vertical</option><option value="both">Les deux axes</option></select></Label></Block>
         <Block title="Lettrage compté"><Label title="Alphabet 5 × 7, A–Z et chiffres"><input className="field" value={text} maxLength={60} onChange={(e) => setText(e.target.value)} /></Label><NumberField title="Échelle de l’alphabet" value={scale} min={1} max={5} onChange={setScale} /><button className="btn-tinted mt-3 w-full" onClick={() => { onSet(stampText(p, text, Math.max(0, Math.floor(p.w / 2 - text.length * 3 * scale)), Math.floor(p.h / 2), color, scale)); actions.notify("Lettrage posé en croix réelles. Annulable."); }}>Poser le texte au centre</button></Block>
-        <Block title="Remplacer le fil actif"><p className="text-[12px] text-label-3">Fil actif : {FLOSS[color]?.code}. Remplace tous ses points sur le calque actif.</p><input className="field mt-2" list="all-floss" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Code DMC de remplacement" /><button className="btn-tinted mt-3 w-full" onClick={() => { const idx = flossIndex(to); if (idx >= 0) { onSet(replaceColor(p, color, idx)); onColor(idx); } else actions.notify("Code DMC introuvable"); }}>Remplacer globalement</button></Block>
+        <Block title="Remplacer le fil actif">
+          <p className="text-[12px] text-label-3">Fil actif : DMC {FLOSS[color]?.code ?? "—"}. Remplace tous ses points sur le calque actif.</p>
+          <input className="field mt-2" list="all-floss" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Code DMC de remplacement" />
+          {substituts.length > 0 && <>
+            <p className="mt-3 text-[11px] text-label-3">Substitutions les plus proches, par écart perceptuel :</p>
+            <div className="mt-1 grid gap-1">
+              {substituts.map((s) => (
+                <button
+                  key={s.idx}
+                  type="button"
+                  onClick={() => setTo(FLOSS[s.idx].code)}
+                  className="flex items-center gap-2 rounded-[9px] bg-white/[0.04] p-1.5 text-left transition-colors hover:bg-white/[0.09]"
+                  aria-label={`Remplacer par DMC ${FLOSS[s.idx].code}, ${FLOSS[s.idx].name}, écart ${s.deltaE.toFixed(1)}, ${deltaELabel(s.deltaE)}`}
+                >
+                  <span className="h-6 w-6 shrink-0 rounded-[7px] ring-1 ring-black/30" style={{ background: FLOSS[s.idx].hex }} aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-mono text-[11px]">DMC {FLOSS[s.idx].code}</span>
+                    <span className="block truncate text-[10px] text-label-3">{FLOSS[s.idx].name}</span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="block font-mono text-[10px] tabular-nums">ΔE {s.deltaE.toFixed(1)}</span>
+                    <span className="block text-[9px] text-label-3">{deltaELabel(s.deltaE)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-label-3">Une proposition remplit le champ, le remplacement reste à confirmer et il est annulable. Sous 1 ΔE00 l'écart est invisible, au-dessus de 3 il se voit de près : la substitution ne remplace pas une carte physique.</p>
+          </>}
+          <button className="btn-tinted mt-3 w-full" onClick={() => { const idx = flossIndex(to); if (idx >= 0) { onSet(replaceColor(p, color, idx)); onColor(idx); } else actions.notify("Code DMC introuvable"); }}>Remplacer globalement</button>
+        </Block>
         <Block title="Fils mélangés"><div className="grid grid-cols-2 gap-3"><Label title="DMC A"><input className="field" list="all-floss" value={mixA} onChange={(e) => setMixA(e.target.value)} /></Label><Label title="DMC B"><input className="field" list="all-floss" value={mixB} onChange={(e) => setMixB(e.target.value)} /></Label><NumberField title="Brins A" value={aStrands} min={1} max={5} onChange={setAStrands} /><NumberField title="Brins B" value={bStrands} min={1} max={5} onChange={setBStrands} /></div><button className="btn-tinted mt-3 w-full" onClick={() => { const c = registerBlend(mixA, mixB, aStrands, bStrands); if (c < 0) actions.notify("Deux codes valides, de 2 à 6 brins au total, sont nécessaires."); else { const next = clonePattern(p); ensurePalette(next, c); onSet(next); onColor(c); actions.notify("Recette de mélange sélectionnée"); } }}>Créer ce mélange</button><p className="mt-2 text-[11px] text-label-3">La couleur affichée est indicative, pas une mesure du fil mélangé. La liste d’achat répartit les besoins entre les deux références.</p></Block>
         <Block title="Calques"><button className="mb-3 flex items-center gap-2 text-[13px] text-accent-2" onClick={() => onSet(addLayer(p))}><Plus size={15} />Ajouter un calque</button>{(p.layers ?? []).map((l) => <div key={l.id} className="mb-2 flex items-center gap-2"><button className="btn-icon" aria-label={l.visible ? "Masquer le calque" : "Afficher le calque"} onClick={() => onSet({ ...p, layers: p.layers?.map((v) => v.id === l.id ? { ...v, visible: !v.visible } : v) })}><Layers size={15} className={l.visible ? "text-accent-2" : "text-label-3"} /></button><button className={`flex-1 text-left text-[13px] ${p.activeLayer === l.id ? "text-accent-2" : ""}`} onClick={() => onSet(switchLayer(p, l.id))}>{l.name}</button><button className="btn-icon" aria-label={l.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onSet({ ...p, layers: p.layers?.map((v) => v.id === l.id ? { ...v, locked: !v.locked } : v) })}>{l.locked ? <Lock size={15} /> : <Unlock size={15} />}</button></div>)}<p className="text-[11px] text-label-3">Les exports compositent les calques visibles. Les modifications sont effectuées sur le calque actif.</p></Block>
         <Block title="Nettoyage contrôlé"><button className="btn-quiet w-full" onClick={() => { const next = clonePattern(p), n = removeConfetti(next.cross, next.w, next.h); if (n) onSet(next); actions.notify(`${n} petites modifications, annulables`); }}>Fusionner les croix isolées</button><p className="mt-2 text-[11px] text-label-3">Une croix isolée peut être un détail intentionnel. Inspectez le résultat avant d’exporter.</p></Block>

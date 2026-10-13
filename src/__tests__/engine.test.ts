@@ -10,7 +10,8 @@ import {
   ensurePalette,
   skeinsAtCount,
 } from "../lib/pattern";
-import { FLOSS, flossIndex } from "../lib/dmc";
+import { BASE_FLOSS, FLOSS, flossIndex, nearestFloss, nearestFlossList } from "../lib/dmc";
+import { deltaELabel } from "../lib/colorScience";
 import { SYMBOL_COUNT } from "../lib/symbols";
 import { applySample, type StrokeCtx } from "../lib/stitch";
 
@@ -184,5 +185,62 @@ describe("Suivi de broderie", () => {
     expect(p.done[0]).toBe(1);
     expect(p.cross[0]).toBe(red);
     expect(p.back).toHaveLength(1);
+  });
+});
+
+describe("Substitution de fil : trois propositions, pas une seule", () => {
+  it("classe par écart perceptuel croissant", () => {
+    const red = flossIndex("321");
+    const list = nearestFlossList(FLOSS[red].lab, 3);
+    expect(list).toHaveLength(3);
+    expect(list[0].deltaE).toBeLessThanOrEqual(list[1].deltaE);
+    expect(list[1].deltaE).toBeLessThanOrEqual(list[2].deltaE);
+    // La couleur interrogée est son propre plus proche voisin, à zéro.
+    expect(list[0].idx).toBe(red);
+    expect(list[0].deltaE).toBeCloseTo(0, 6);
+    // Les trois propositions sont trois références distinctes.
+    expect(new Set(list.map((s) => s.idx)).size).toBe(3);
+  });
+
+  it("respecte la limite demandée et un pool restreint", () => {
+    const red = flossIndex("321");
+    expect(nearestFlossList(FLOSS[red].lab, 1)).toHaveLength(1);
+    expect(nearestFlossList(FLOSS[red].lab, 0)).toHaveLength(0);
+    expect(nearestFlossList(FLOSS[red].lab, -2)).toHaveLength(0);
+    const pool = [flossIndex("Blanc"), flossIndex("310"), flossIndex("321")];
+    const inPool = nearestFlossList(FLOSS[red].lab, 10, pool);
+    expect(inPool).toHaveLength(3);
+    expect(inPool.every((s) => pool.includes(s.idx))).toBe(true);
+  });
+
+  it("ne propose jamais un mélange enregistré comme substitution", () => {
+    const red = flossIndex("321");
+    const list = nearestFlossList(FLOSS[red].lab, BASE_FLOSS.length + 5);
+    expect(list.some((s) => FLOSS[s.idx].blend)).toBe(false);
+  });
+
+  it("le meilleur choix reste le même qu'avec l'ancienne fonction", () => {
+    for (const code of ["321", "Blanc", "310", "B5200", "3801"]) {
+      const idx = flossIndex(code);
+      expect(nearestFloss(FLOSS[idx].lab)).toBe(nearestFlossList(FLOSS[idx].lab, 1)[0].idx);
+    }
+  });
+
+  it("qualifie l'écart sans le survendre", () => {
+    expect(deltaELabel(0)).toBe("identique à l'œil");
+    expect(deltaELabel(0.9)).toBe("identique à l'œil");
+    expect(deltaELabel(1)).toBe("très proche");
+    expect(deltaELabel(2.9)).toBe("très proche");
+    expect(deltaELabel(3)).toBe("proche");
+    expect(deltaELabel(5.9)).toBe("proche");
+    expect(deltaELabel(6)).toBe("teinte approchée");
+    expect(deltaELabel(11.9)).toBe("teinte approchée");
+    expect(deltaELabel(12)).toBe("teinte différente");
+    // Le plus proche voisin d'un rouge DMC dans les 489 références est une
+    // autre teinte, pas un blanc ni un noir.
+    const red = flossIndex("321");
+    const second = nearestFlossList(FLOSS[red].lab, 2)[1];
+    expect(second.deltaE).toBeLessThan(6);
+    expect(deltaELabel(second.deltaE)).toMatch(/proche|identique/);
   });
 });

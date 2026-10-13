@@ -16,7 +16,8 @@ Elle couvre le cycle complet, ce qui évite d'ouvrir quatre outils différents p
 | **Importer** | PDF du commerce : lecture vectorielle des symboles (pdf.js), légende par lignes, axes, ordre des pages ; secours image par blocs calés et tableau magnétique de recollement quand la numérotation est ambiguë. Fichiers projet et OXS |
 | **Préparer** | 489 références DMC sourcées, correspondance perceptuelle CIEDE2000, mélanges de deux fils, tissu (Aida/binca, lin, evenweave, 7 à 40 ct, sur 1 ou sur 2), marge, métrage et nombre d'écheveaux par fil, stock et liste d'achats CSV multi-projets |
 | **Broder** | Fil actif, suivi case / ligne / bloc 10 × 10, parking par coin, erreurs à défaire, contours et ornements suivis séparément, sessions horodatées, séries, estimation de fin |
-| **Exporter** | PDF paginé A4 ou Letter avec recouvrement, page d'ornements, légende et provenance ; SVG vectoriel ; JSON ; OXS (coeur standard + extensions) ; PNG ; CSV |
+| **Exporter** | PDF paginé A4 ou Letter avec recouvrement, page d'ornements, légende, correspondances multi-marques et provenance ; SVG vectoriel ; JSON ; OXS (coeur standard + extensions) ; PNG ; CSV |
+| **Convertir** | Correspondance du motif vers une autre marque — broderie diamant DMC, perles à repasser Perler, Hama, Artkal, MARD, Nabbi — avec l'écart perceptuel, sans changer la langue du motif |
 | **Partager** | Lecture à distance chiffrée (WebRTC, invitation manuelle), l'hôte reste auteur ; guide vidéo en sept chapitres qui pilote vraiment l'interface |
 
 ## Essayer
@@ -72,6 +73,19 @@ Les valeurs couleur viennent de [`craft-color-codes`](https://github.com/makebea
   pas être une seule couleur plate. Cet écart est affiché tel quel, jamais présenté comme une
   correspondance exacte.
 
+Six autres tables servent aux **correspondances multi-marques** : DMC Diamond Painting (154
+références, *cross-checked*, mêmes codes que le DMC mouliné), Perler Midi (103), Hama Midi (92),
+Artkal S (199), MARD 291 et Nabbi BioBeads (30), toutes quatre *community*. Le motif n'est jamais
+converti — il reste en DMC — ; l'atelier produit une table de correspondance, ligne par ligne, avec
+l'écart CIEDE2000 et le statut de la table. Quand la marque numérote comme DMC, l'appariement est
+signalé comme « même code » au lieu d'être présenté comme une approximation.
+
+**Les licences de ces données ne sont pas les mêmes d'une table à l'autre.** Les tables mesurées ou
+recoupées par MakeBead (DMC, Miyuki, diamant, MARD, Minecraft, pixel art) sont en CC BY 4.0 ; les
+tables de perles à repasser Perler, Hama, Artkal et Nabbi viennent de `maxcleme/beadcolors` sous
+MIT. L'atelier et les exports affichent la licence de la table réellement employée, jamais une
+licence générique.
+
 Une teinte à l'écran n'est pas un bain de fil. Pour un ouvrage destiné à être vu de près, la
 référence reste la carte physique du fabricant.
 
@@ -91,9 +105,11 @@ Liste assumée, dans l'ordre où elle gêne :
   déplacement, ligne, rectangle et ellipse ne sont accessibles que depuis le panneau Projet.
 - **Pas d'internationalisation.** L'interface est en français, les textes sont dans les composants.
 - **Un seul fichier HTML en sortie.** `vite-plugin-singlefile` inline aussi les imports
-  dynamiques : la table de perles, bien que chargée à la demande, se retrouve dans le fichier
-  final (149 ko, ~22 ko gzippé). Le chargement différé n'est donc pas réel en production
-  monofichier ; il l'est en développement.
+  dynamiques : les tables de perles et de correspondances, bien que chargées à la demande, se
+  retrouvent dans le fichier final (215 ko de données, ~48 ko gzippé sur 1,15 Mo). Le chargement
+  différé n'est donc pas réel en production monofichier ; il l'est en développement. Seules les
+  sept tables réellement employées sont déclarées dans `src/lib/palettes.ts` et `src/lib/beads.ts`
+  — un import à chemin variable ferait embarquer les quinze.
 - **Effacer les données du navigateur supprime les projets.** Les exportations JSON sont la vraie
   sauvegarde.
 

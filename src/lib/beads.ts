@@ -1,5 +1,7 @@
-import { deltaE2000 } from "./colorScience";
+import { nearestColors } from "./colorScience";
 import { labOf } from "./dmc";
+
+export { deltaELabel } from "./colorScience";
 
 /**
  * Références de perles fabricant.
@@ -78,8 +80,10 @@ export function loadBeads(): Promise<BeadPalette> {
           code: c.code,
           name: c.name,
           hex: c.hex,
-          rgb: c.rgb,
-          lab: labOf(c.rgb),
+          // Le JSON est inféré en `number[]` : la table publie bien des
+          // triplets sRGB, le type est repris ici.
+          rgb: c.rgb as [number, number, number],
+          lab: labOf(c.rgb as [number, number, number]),
           glass: c.glass,
           discontinued: c.discontinued === true,
         }));
@@ -118,13 +122,7 @@ export function nearestBeads(
   limit = 3,
   includeDiscontinued = false,
 ): BeadMatch[] {
-  const out: BeadMatch[] = [];
-  for (const b of beads) {
-    if (b.discontinued && !includeDiscontinued) continue;
-    out.push({ ...b, deltaE: deltaE2000(lab, b.lab) });
-  }
-  out.sort((a, b) => a.deltaE - b.deltaE);
-  return out.slice(0, limit);
+  return nearestColors(lab, beads, limit, includeDiscontinued);
 }
 
 /** Cherche une référence exacte par son code (« DB10 », « DB-0010 » et « 10 » fonctionnent). */
@@ -134,11 +132,3 @@ export function beadByCode(beads: Bead[], code: string): Bead | undefined {
   return beads.find((b) => b.code.toUpperCase().replace(/^DB[-_]?/, "").replace(/^0+(?=\d)/, "") === key);
 }
 
-/** Libellé court d'un écart CIEDE2000, aligné sur l'échelle documentée. */
-export function deltaELabel(d: number): string {
-  if (d < 1) return "identique à l'œil";
-  if (d < 3) return "très proche";
-  if (d < 6) return "proche";
-  if (d < 12) return "teinte approchée";
-  return "teinte différente";
-}

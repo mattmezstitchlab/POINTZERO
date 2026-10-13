@@ -1,6 +1,7 @@
 import type { jsPDF } from "jspdf";
 import { FLOSS } from "./dmc";
 import { beadByCode, GLASS_LABEL, loadBeads, type Bead } from "./beads";
+import { equivalenceWarning, FAR_DELTA_E, STATUS_LABEL, type EquivalenceTable } from "./palettes";
 import { drawSymbolPdf } from "./symbols";
 import {
   assignedSymbol,
@@ -53,6 +54,12 @@ export interface PdfOptions {
    * réel, pas seulement une marge teintée.
    */
   overlap?: boolean;
+  /**
+   * Table de correspondance vers une autre marque (broderie diamant, perles à
+   * repasser), calculée par l'appelant. Une page de couverture la résume et une
+   * page dédiée la détaille, après la légende des fils.
+   */
+  equivalences?: EquivalenceTable;
   /** Progression (pages de grille produites / total), pour un export long. */
   onProgress?: (done: number, total: number, label: string) => void;
   /** Annulation coopérative, vérifiée entre chaque page. */
@@ -269,7 +276,7 @@ export async function buildPdf(input: Pattern, opts: PdfOptions = { bw: false })
 
   section("Spécifications");
   line("Grille", `${p.w} × ${p.h} cases (point zéro au centre)`);
-  line("Toile", `${p.fabric?.type ?? "aida"} ${p.count} ct, sur ${p.fabric?.over ?? 1} fil(s) → ${fmt(effectiveCount(p), 1)} pts/pouce`);
+  line("Toile", `${p.fabric?.type ?? "aida"} ${p.count} ct, sur ${p.fabric?.over ?? 1} fil(s), soit ${fmt(effectiveCount(p), 1)} pts/pouce`);
   line("Brins", `${p.strands} brin${p.strands > 1 ? "s" : ""} · point arrière ${p.backStrands ?? 1} brin${(p.backStrands ?? 1) > 1 ? "s" : ""}`);
   line("Taille finie", `${fmt(fab.fw)} × ${fmt(fab.fh)} cm`);
   line("Toile minimum", `${fmt(fab.mw, 0)} × ${fmt(fab.mh, 0)} cm (marge ${fmt(p.fabric?.margin ?? 7.5, 1)} cm / côté)`);
@@ -298,6 +305,22 @@ export async function buildPdf(input: Pattern, opts: PdfOptions = { bw: false })
   for (const c of pageCounts) {
     const f = fabricInfo({ ...p, count: c as Pattern["count"] });
     line(`Aida ${c} ct`, `${fmt(f.fw)} × ${fmt(f.fh)} cm · ${num(skeinsAtCount(p, rows, c))} écheveau(x)`);
+  }
+
+  const eq = opts.equivalences?.rows.length ? opts.equivalences : null;
+  if (eq) {
+    y += 2;
+    section("Correspondances multi-marques");
+    line("Marque", `${eq.palette.brand} ${eq.palette.product}`);
+    line("Table", `${eq.palette.count} références, statut « ${eq.palette.status} » (${STATUS_LABEL[eq.palette.status] ?? eq.palette.status}), licence ${eq.palette.license}`);
+    line("Écart de teinte", `médian ${fmt(eq.median, 1)} delta E00, le plus mauvais ${fmt(eq.worst, 1)}`);
+    line(
+      "Sans correspondance",
+      eq.far.length
+        ? `${eq.far.length} couleur(s) au-delà de ${FAR_DELTA_E} delta E00, à choisir à la main`
+        : `aucune couleur au-delà de ${FAR_DELTA_E} delta E00`,
+    );
+    line("Détail", `${eq.rows.length} ligne(s) dans la page dédiée, après la légende des fils`);
   }
 
   if (beads.size) {
@@ -340,7 +363,8 @@ export async function buildPdf(input: Pattern, opts: PdfOptions = { bw: false })
   const attribution =
     "Données couleur : craft-color-codes par MakeBead (makebead.com), licence CC BY 4.0 — DMC Mouliné Spécial art. 117" +
     (beads.size ? " et Miyuki Delica 11/0" : "") +
-    ". DMC et Miyuki ne publient pas de table RGB officielle exploitable : les teintes écran sont des approximations à confirmer sur carte physique.";
+    (eq ? ` et ${eq.palette.brand} ${eq.palette.product}, licence ${eq.palette.license}` : "") +
+    ". Ces marques ne publient pas de table RGB officielle exploitable : les teintes écran sont des approximations à confirmer sur carte physique.";
   doc.text(wrap(attribution, printW), LEFT, y);
   doc.setTextColor(0);
 
@@ -418,6 +442,37 @@ export async function buildPdf(input: Pattern, opts: PdfOptions = { bw: false })
     const beadNote =
       "Perles Miyuki Delica 11/0, table « measured » de craft-color-codes (CC BY 4.0). Appariement par CIEDE2000 entre le fil DMC et la perle : la référence est juste, la teinte est approchée (écart médian de 6 à 12 ΔE00). Une perle « arrêtée » n'est plus fabriquée.";
     doc.text(wrap(beadNote, printW), LEFT, y);
+    doc.setTextColor(0);
+  }
+
+  /* ------------------ 2bis. Correspondances multi-marques ------------------ */
+  if (eq) {
+    doc.addPage();
+    y = 22;
+    heading(`Correspondances ${eq.palette.brand}`);
+    y += 10;
+    section(`Vos fils DMC et ${eq.palette.brand} ${eq.palette.product}`);
+    for (const r of eq.rows) {
+      const best = r.matches[0];
+      const rest = r.matches.slice(1).map((m) => `${m.code} (delta E ${fmt(m.deltaE, 1)})`).join(", ");
+      line(
+        FLOSS[r.idx].blend ? `Mix ${r.code}` : r.code,
+        best
+          ? `${best.code}${best.sameCode ? " (même code)" : ""} · delta E ${fmt(best.deltaE, 1)} · ${num(r.cells)} élément(s)` +
+              (rest ? ` · ensuite ${rest}` : "")
+          : "aucune correspondance dans cette table",
+      );
+    }
+    y += 3;
+    if (y > pageH - BOTTOM - 24) {
+      doc.addPage();
+      y = 24;
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(125);
+    const eqLines = wrap(`${equivalenceWarning(eq)} Note de la source, en anglais : ${eq.palette.notes}`, printW);
+    doc.text(eqLines, LEFT, y);
     doc.setTextColor(0);
   }
 

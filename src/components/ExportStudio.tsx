@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Ban, Download, Eye, FileCode2, FileJson, Image, ShoppingBag, VectorSquare } from "lucide-react";
+import { Ban, Download, Eye, FileCode2, FileJson, Image, Rows3, ShoppingBag, VectorSquare } from "lucide-react";
 import { buildPdf, PdfAborted, pdfFileName, type PdfOptions } from "../lib/pdf";
 import { assignedSymbol, compositePattern, computeStats, fabricInfo, type Pattern } from "../lib/pattern";
 import { contrastOn, FLOSS } from "../lib/dmc";
@@ -8,6 +8,17 @@ import { patternToSvg } from "../lib/svg";
 import { downloadBlob, saveProjectFile, slugify } from "../lib/io";
 import { downloadOxs } from "../lib/oxs";
 import { shoppingList } from "../lib/library";
+import { deltaELabel } from "../lib/colorScience";
+import {
+  equivalencesCsv,
+  equivalents,
+  equivalenceWarning,
+  FAR_DELTA_E,
+  PALETTE_CHOICES,
+  STATUS_LABEL,
+  type EquivalenceTable,
+  type PaletteId,
+} from "../lib/palettes";
 import Sheet from "./Sheet";
 
 const Q_CORNER: [number, number][] = [
@@ -156,6 +167,11 @@ export default function ExportStudio({ pattern, onClose }: { pattern: Pattern; o
   const [overlap, setOverlap] = useState(true);
   const [svgSymbols, setSvgSymbols] = useState(true);
   const [svgLegend, setSvgLegend] = useState(true);
+  const [brand, setBrand] = useState<PaletteId | "">("");
+  const [table, setTable] = useState<EquivalenceTable | null>(null);
+  const [tableBusy, setTableBusy] = useState(false);
+  const [tableError, setTableError] = useState("");
+  const [tableInPdf, setTableInPdf] = useState(true);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(null);
@@ -165,7 +181,34 @@ export default function ExportStudio({ pattern, onClose }: { pattern: Pattern; o
 
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); abort.current?.abort(); }, [url]);
 
-  const options = (): PdfOptions => ({ bw, paper, overlap });
+  // Changer de marque ou de motif invalide la table déjà calculée.
+  useEffect(() => {
+    setTable(null);
+    setTableError("");
+  }, [brand, pattern]);
+
+  const options = (): PdfOptions => ({ bw, paper, overlap, equivalences: table && tableInPdf ? table : undefined });
+
+  /**
+   * Correspondance vers une autre marque.
+   *
+   * Calculée sur le motif composite : c'est ce que le PDF imprime, donc ce que
+   * la table doit décrire. Un motif à calques masqués ne doit pas proposer des
+   * références pour des fils qui ne seront pas brodés.
+   */
+  const computeTable = async () => {
+    if (!brand) return;
+    setTableBusy(true);
+    setTableError("");
+    try {
+      setTable(await equivalents(compositePattern(pattern), brand));
+    } catch {
+      setTable(null);
+      setTableError("Table fabricante indisponible sur cet appareil.");
+    } finally {
+      setTableBusy(false);
+    }
+  };
 
   const exportChart = async (preview: boolean) => {
     setBusy(true);
@@ -240,6 +283,14 @@ export default function ExportStudio({ pattern, onClose }: { pattern: Pattern; o
     );
   };
 
+  const tableCsv = () => {
+    if (!table) return;
+    downloadBlob(
+      new Blob([equivalencesCsv(table)], { type: "text/csv;charset=utf-8" }),
+      `${slugify(pattern.name)}-correspondance-${table.palette.id}.csv`,
+    );
+  };
+
   const fab = fabricInfo(pattern);
   const { totals } = computeStats(pattern);
   const beads = Object.keys(pattern.beadMap ?? {}).length;
@@ -257,6 +308,7 @@ export default function ExportStudio({ pattern, onClose }: { pattern: Pattern; o
       </p>
       <p className="mb-4 text-[12px] text-label-3">
         {gridPages} page{gridPages > 1 ? "s" : ""} de grille{beads ? ` · ${beads} référence${beads > 1 ? "s" : ""} de perle` : ""}
+        {table && tableInPdf ? ` · correspondances ${table.palette.brand}` : ""}
         {pattern.layers?.length ? ` · ${pattern.layers.filter((l) => l.visible).length} calque(s) visible(s) fusionné(s)` : ""}
       </p>
 
@@ -333,6 +385,94 @@ export default function ExportStudio({ pattern, onClose }: { pattern: Pattern; o
         </p>
       </div>
 
+      <div className="mt-5 border-t border-white/10 pt-4">
+        <p className="mb-1 text-[12px] font-medium text-label-2">Correspondances multi-marques</p>
+        <p className="mb-2 text-[11px] leading-relaxed text-label-3">
+          Le motif reste en DMC : c'est sa langue. Voici, pour chacun de ses fils, les références les plus proches d'une autre marque —
+          broderie diamant ou perles à repasser — avec l'écart perceptuel.
+        </p>
+        <select
+          className="field"
+          value={brand}
+          aria-label="Marque cible"
+          onChange={(e) => setBrand(e.target.value as PaletteId | "")}
+        >
+          <option value="">Choisir une marque…</option>
+          {PALETTE_CHOICES.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label} — {c.use}
+            </option>
+          ))}
+        </select>
+        {brand && (
+          <button className="btn-tinted mt-2 w-full" disabled={tableBusy || busy} onClick={() => void computeTable()}>
+            <Rows3 size={15} />
+            {tableBusy ? "Calcul des écarts…" : table ? "Recalculer la correspondance" : "Calculer la correspondance"}
+          </button>
+        )}
+        {tableError && <p role="alert" className="mt-2 text-[12px] text-danger">{tableError}</p>}
+
+        {table && (
+          <>
+            <p className="mt-3 text-[11px] leading-relaxed text-label-2">{equivalenceWarning(table)}</p>
+            <p className="mt-2 text-[11px] leading-relaxed text-label-3">
+              Table {STATUS_LABEL[table.palette.status] ?? table.palette.status} — note de la source, en anglais : {table.palette.notes}
+            </p>
+
+            <label className="mt-3 flex items-start gap-2.5 text-[13px] leading-snug text-label-2">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#0a84ff]"
+                checked={tableInPdf}
+                onChange={() => setTableInPdf(!tableInPdf)}
+              />
+              <span>
+                Imprimer la correspondance dans le PDF
+                <span className="block text-[11px] text-label-3">
+                  Résumé en couverture, {table.rows.length} ligne(s) détaillées après la légende des fils.
+                </span>
+              </span>
+            </label>
+
+            <ul className="thin-scroll mt-3 max-h-[240px] divide-y divide-white/[0.06] overflow-y-auto rounded-[10px] bg-white/[0.03] px-2">
+              {table.rows.map((r) => (
+                <li key={r.idx} className="flex items-center gap-2 py-1.5">
+                  <span className="h-5 w-5 shrink-0 rounded-[5px] ring-1 ring-black/30" style={{ background: r.hex }} aria-hidden="true" />
+                  <span className="w-12 shrink-0 font-mono text-[11px]">{FLOSS[r.idx].blend ? "Mix" : r.code}</span>
+                  <span className="w-12 shrink-0 text-[10px] text-label-3 tabular-nums">{r.cells} él.</span>
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-2 gap-y-1">
+                    {r.matches.map((m, i) => (
+                      <span
+                        key={m.code}
+                        className="flex items-center gap-1"
+                        title={`${m.name}${m.finish ? ` · ${m.finish}` : ""} — écart ${m.deltaE.toFixed(1)} (${deltaELabel(m.deltaE)})${m.sameCode ? " · même code DMC" : ""}${i === 0 ? " · meilleure correspondance" : ""}`}
+                      >
+                        <span className="h-4 w-4 rounded-[4px] ring-1 ring-black/30" style={{ background: m.hex }} aria-hidden="true" />
+                        <span className="font-mono text-[10px]">{m.code}</span>
+                        <span className={`font-mono text-[9px] tabular-nums ${m.deltaE > FAR_DELTA_E ? "text-warn" : "text-label-3"}`}>
+                          {m.deltaE.toFixed(1)}
+                        </span>
+                        {m.sameCode && <span className="text-[9px] text-ok">=</span>}
+                        {m.discontinued && <span className="text-[9px] text-warn">arrêt</span>}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="sr-only">
+                    {`DMC ${r.code}, ${r.cells} éléments, correspondances ${r.matches
+                      .map((m) => `${m.code} écart ${m.deltaE.toFixed(1)} ${deltaELabel(m.deltaE)}`)
+                      .join(", ")}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <button className="mt-2 text-[12px] text-accent-2" type="button" onClick={tableCsv}>
+              Télécharger la correspondance en CSV
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="mt-4 divide-y divide-white/10">
         {[
           { label: "Grille SVG vectorielle", icon: VectorSquare, fn: svg },
@@ -340,6 +480,7 @@ export default function ExportStudio({ pattern, onClose }: { pattern: Pattern; o
           { label: "Format ouvert OXS", icon: FileCode2, fn: () => downloadOxs(pattern) },
           { label: "Aperçu couleur PNG", icon: Image, fn: () => void png() },
           { label: "Liste d'achat CSV", icon: ShoppingBag, fn: csv },
+          ...(table ? [{ label: `Correspondance ${table.palette.brand} CSV`, icon: Rows3, fn: tableCsv }] : []),
         ].map(({ label, icon: Icon, fn }) => (
           <button key={label} className="flex w-full items-center gap-3 py-4 text-left text-[14px] text-accent-2 disabled:opacity-40" disabled={busy} onClick={fn}>
             <Icon size={18} />

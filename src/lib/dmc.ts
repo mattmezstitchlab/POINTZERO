@@ -84,20 +84,26 @@ export function labOf(rgb: [number, number, number]): [number, number, number] {
   return srgbToLab(rgb);
 }
 
+/**
+ * Les `limit` fils DMC les plus proches par CIEDE2000, du plus petit écart au
+ * plus grand. Le pool par défaut exclut les mélanges enregistrés en session :
+ * on ne propose pas une recette comme substitution.
+ */
+export function nearestFlossList(
+  lab: [number, number, number],
+  limit = 3,
+  pool?: number[],
+): { idx: number; deltaE: number }[] {
+  const indices = pool ?? BASE_FLOSS.map((_, i) => i);
+  return indices
+    .map((idx) => ({ idx, deltaE: deltaE2000(lab, FLOSS[idx].lab) }))
+    .sort((a, b) => a.deltaE - b.deltaE)
+    .slice(0, Math.max(0, limit));
+}
+
 /** Fil DMC le plus proche par CIEDE2000, éventuellement dans un sous-ensemble. */
 export function nearestFloss(lab: [number, number, number], pool?: number[]): number {
-  let best = 0;
-  let bestD = Infinity;
-  const indices = pool ?? BASE_FLOSS.map((_, i) => i);
-  for (const i of indices) {
-    const f = FLOSS[i];
-    const d = deltaE2000(lab, f.lab);
-    if (d < bestD) {
-      bestD = d;
-      best = i;
-    }
-  }
-  return best;
+  return nearestFlossList(lab, 1, pool)[0]?.idx ?? 0;
 }
 
 /** Couleur de contraste lisible sur une teinte de fil. */
