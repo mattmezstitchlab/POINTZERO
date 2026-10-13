@@ -3,6 +3,7 @@ import { ArrowRight, Check, ChevronRight, FileUp, Lock, Wand2 } from "lucide-rea
 import { GROUPS } from "./landingTools";
 import LandingModules from "./LandingModules";
 import HeroPlayground from "./HeroPlayground";
+import HeroTexture from "./HeroTexture";
 import Loupe from "./Loupe";
 import type { Pattern } from "../lib/pattern";
 
@@ -137,24 +138,14 @@ export default function Landing({ onOpen, onGuide, onMotif }: Props) {
 
       {/* ---------------- Hero ---------------- */}
       <section className="relative min-h-[100svh] overflow-hidden">
-        <img
-          src="images/hero-ipad-broderie.jpg"
-          alt="Une brodeuse utilise Point Zéro sur iPad à côté de son tambour de broderie"
-          className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,.78)_0%,rgba(0,0,0,.46)_38%,rgba(0,0,0,.04)_72%),linear-gradient(0deg,rgba(0,0,0,.6)_0%,transparent_40%)]" />
-        <div className="relative mx-auto flex min-h-[100svh] max-w-[1280px] items-end px-5 pt-24 pb-16 sm:px-8 sm:pb-24 lg:items-center lg:pb-0">
-          <div className="max-w-[640px]" style={{ animation: "hero-in 1s cubic-bezier(0.22,1,0.36,1) both" }}>
-            <p className="text-[clamp(28px,4vw,54px)] leading-none font-semibold tracking-[-0.045em]">Point Zéro</p>
-            <h1 className="mt-4 text-[clamp(40px,6.6vw,86px)] leading-[0.93] font-semibold tracking-[-0.055em]">
+        <HeroTexture />
+        <div className="relative mx-auto flex min-h-[100svh] max-w-[1280px] items-center justify-center px-5 pt-24 pb-16 sm:px-8 sm:pb-24">
+          <div className="mx-auto w-full max-w-[760px] text-center" style={{ animation: "hero-in 1s cubic-bezier(0.22,1,0.36,1) both" }}>
+            <h1 className="text-[clamp(40px,6.6vw,86px)] leading-[0.93] font-semibold tracking-[-0.055em]">
               De l’image au dernier point.
             </h1>
-            <p className="mt-7 max-w-[540px] text-[clamp(17px,2vw,22px)] leading-[1.45] tracking-[-0.015em] text-white/80">
-              Créez le patron, préparez les vrais fils, puis brodez case après case — sans jamais perdre votre place. Un moteur unique, de la description au canevas.
-            </p>
+
             <HeroPlayground
-              onOpen={onOpen}
-              onGuide={onGuide}
               onMotif={onMotif}
               prompt={promptText}
               setPrompt={setPromptText}

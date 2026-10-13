@@ -49,14 +49,10 @@ function FLOSS_HEX(idx: number): string {
 }
 
 export default function HeroPlayground({
-  onOpen,
-  onGuide,
   onMotif,
   prompt,
   setPrompt,
 }: {
-  onOpen: () => void;
-  onGuide: () => void;
   onMotif: (p: Pattern) => void;
   prompt: string;
   setPrompt: (v: string) => void;
@@ -128,7 +124,7 @@ export default function HeroPlayground({
     return (
       <div id="hero-jeu" className="mt-9 scroll-m-24">
         <form
-          className="glass-strong flex flex-col gap-3 rounded-[22px] p-3 sm:flex-row sm:items-center"
+          className="glass-strong mx-auto flex w-full max-w-[680px] flex-col gap-3 rounded-[22px] p-3 sm:flex-row sm:items-center"
           onSubmit={(e) => {
             e.preventDefault();
             void generate(seed);
@@ -149,26 +145,10 @@ export default function HeroPlayground({
             <input type="file" accept="application/pdf" className="sr-only" onChange={onPdf} />
           </label>
         </form>
-        <p className="mt-3 text-[11.5px] leading-relaxed text-label-3">
+        <p className="mt-3 text-center text-[11.5px] leading-relaxed text-label-3">
           La génération appelle un service tiers d'images : elle demande un réseau. Le PDF, lui, se
           reconstitue entièrement chez vous — et tout l'atelier fonctionne hors ligne.
         </p>
-        <div className="mt-5 flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            onClick={onOpen}
-            className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#0071e3] px-6 text-[16px] font-semibold text-white transition-all hover:bg-[#0077ed] active:scale-[.97]"
-          >
-            Ouvrir l'atelier <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={onGuide}
-            className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 text-[16px] font-semibold text-white backdrop-blur-xl transition-all hover:bg-white/16 active:scale-[.97]"
-          >
-            Se laisser guider
-          </button>
-        </div>
       </div>
     );
   }

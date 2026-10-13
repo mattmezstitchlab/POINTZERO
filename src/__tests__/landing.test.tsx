@@ -172,7 +172,7 @@ describe("Landing : le hero est un terrain de jeu", () => {
     expect(container!.querySelector("#hero-jeu input"), "le champ de description est dans le hero").toBeTruthy();
     expect(byText(/Voir le motif/)).toBeTruthy();
     expect(container!.textContent).toContain("Un PDF");
-    expect(byText(/Ouvrir l'atelier/)).toBeTruthy();
+    expect(byText(/Ouvrir l.atelier/), "la nav reste une porte d'entrée").toBeTruthy();
     expect(container!.textContent).toContain("demande un réseau");
   });
 
@@ -190,6 +190,17 @@ describe("Landing : le hero est un terrain de jeu", () => {
     expect(container!.querySelector('[data-loupe="motif"] canvas'), "le motif arrive en petits pixels").toBeTruthy();
     expect(container!.textContent).toContain("44 × 44 cases");
     expect(byText(/Continuer dans l'atelier/), "puis hop : on continue").toBeTruthy();
+  });
+
+  it("sobre : le titre seul, le champ centré, sans les deux boutons", () => {
+    const hero = container!.querySelector("#hero-jeu")!;
+    expect(hero.textContent).not.toContain("Se laisser guider");
+    expect(hero.textContent).not.toContain("Ouvrir l'atelier");
+    expect(container!.querySelector(".hero-texture"), "le fond animé est là").toBeTruthy();
+    expect(container!.querySelector(".hero-texture-css"), "sans WebGL, la texture CSS prend le relais").toBeTruthy();
+    const h1 = container!.querySelector("h1")!;
+    expect(h1.textContent).toMatch(/De l.image au dernier point/);
+    expect(h1.previousElementSibling, "plus d'eyebrow « Point Zéro » au-dessus du titre").toBeFalsy();
   });
 
   it("la loupe suit la souris sur les pictos, et change de forme", async () => {

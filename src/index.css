@@ -965,3 +965,45 @@
     opacity: 1;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Fond du hero : dithering animé, ou point de croix CSS sans WebGL   */
+/* ------------------------------------------------------------------ */
+
+.hero-texture {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #0b0b0d;
+}
+.hero-texture canvas {
+  display: block;
+}
+.hero-texture-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(72% 58% at 50% 46%, rgba(11, 11, 13, 0) 0%, rgba(11, 11, 13, 0.55) 68%, rgba(11, 11, 13, 0.9) 100%);
+}
+.hero-texture-css {
+  position: absolute;
+  inset: -80px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 7px),
+    #0b0b0d;
+  animation: texture-drift 26s linear infinite;
+}
+@keyframes texture-drift {
+  from {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 56px 56px, -56px 56px, 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-texture-css {
+    animation: none;
+  }
+}
