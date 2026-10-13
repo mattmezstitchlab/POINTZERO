@@ -3,7 +3,8 @@
 Audit de code réalisé le 13 octobre 2026 sur `7d2982b` (branche `arena/b8d87879-pointzero`).
 Tout ce qui est affirmé ici a été vérifié dans le source ; les numéros de ligne sont indiqués.
 
-État mécanique du dépôt :
+État mécanique du dépôt **au moment de l'audit** (le bilan après livraison est
+en §6) :
 
 | Contrôle | Résultat |
 | --- | --- |
@@ -401,43 +402,137 @@ un avertissement explicite quand `flossIndex` renvoie `-1` — aujourd'hui c'est
 
 ---
 
-## 4. Ordre proposé
+## 4. Ordre proposé — et ce qui en a été fait
 
-**P0 — correctifs, moins d'un jour, touchent le produit imprimé**
-- B1 : symboles PDF alignés sur `assignedSymbol` (utiliser `r.pos`).
-- B2 : `compositePattern` dans `buildPdf`.
-- B3 : retirer `downloadBlob` de `buildPdf`.
-- B4 : dessiner `long`, `knots`, `special` (et `annotations`) sur les pages de grille.
+Cette feuille de route a été déroulée intégralement le 13 octobre 2026. Les
+statuts sont ceux du code livré, pas des intentions.
 
-**P0 bis — légal, avant toute publication**
-- README, LICENSE, et attribution CC BY 4.0 des données couleur (dépôt **et** PDF exporté).
-- Renommer le paquet (`react-vite-tailwind` → `point-zero`).
+**P0 — correctifs, touchent le produit imprimé** ✅
 
-**P1 — crédibilité technique**
-- B5 : perf grands patrons. C'est le seul vrai risque sur la cible iPad.
-- Porter `checks.ts` en suite vitest / `node --test` + CI GitHub Actions
-  (`tsc --noEmit && build && test`). Les 12 assertions existent déjà : il manque le harnais.
-  Ajouter des cas pour `buildPdf`, `quantizePixels` et `readVectorChart`.
+- B1 ✅ symboles PDF alignés sur `assignedSymbol` : la légende et la grille
+  partagent `r.pos`, verrouillé par deux tests qui réaffectent un symbole et
+  vérifient que l'impression suit.
+- B2 ✅ `compositePattern` en tête de `buildPdf` : un projet dont le calque actif
+  est vide imprime le dessin des calques visibles.
+- B3 ✅ `buildPdf` est redevenue une fonction pure, renvoie le `Blob`, et
+  l'appelant décide du téléchargement.
+- B4 ✅ `long`, `knots`, `special` (petites croix et perles) et `annotations`
+  sont dessinés sur les pages de grille, avec renvois numérotés ; la table des
+  ornements n'est pas imprimée quand elle est vide, et le suivi de broderie ne
+  l'est jamais.
+- B5 ✅ perf : cache LRU des instantanés de calques, `applyStrokeSegment` au lieu
+  d'un clone par échantillon, brouillon unique pendant un trait, statistiques
+  calculées sur une valeur différée.
+- Au passage, quatre autres défauts vérifiés ont été corrigés : export
+  entièrement synchrone (progression + `AbortController`), géométrie A4 qui
+  débordait (case adaptative), nœud écrasé par `addKnotTo` quand la couleur
+  différait, et flèche `→` imprimée « droite » sur la ligne Toile de la
+  couverture (repli Latin-1 réservé à la navigation entre pages).
 
-**P2 — valeur produit immédiate, zéro dépendance**
-- Delica pour les perles (le trou avoué de l'AUDIT).
-- `nearest(limit: 3)` dans « Remplacer le fil actif ».
+**P0 bis — légal** ✅
 
-**P3 — croissance**
-- Sélecteur de palette → perles à repasser, puis diamond painting.
-- Exposer les 9 outils manquants dans le Dock + raccourcis clavier.
-- Symétrie étendue aux formes, au remplissage et aux points arrière.
+- `README.md` et `LICENSE` écrits ; attribution des données couleur dans le
+  dépôt, dans l'interface et dans chaque export (PDF, SVG).
+- Le paquet s'appelle `point-zero`.
+- ⚠️ Découverte en route, et elle était un piège : **les tables de
+  `craft-color-codes` n'ont pas toutes la même licence.** Les mesures MakeBead
+  (DMC, Miyuki, diamant, MARD, Minecraft, pixel art) sont en CC BY 4.0, mais les
+  tables de perles à repasser Perler, Hama, Artkal et Nabbi viennent de
+  `maxcleme/beadcolors` sous MIT. Annoncer « CC BY 4.0 » partout aurait été une
+  attribution fausse. L'application, les exports, le README et `LICENSE`
+  affichent désormais la licence de la table réellement employée.
+
+**P1 — crédibilité technique** ✅
+
+- Harnais vitest + jsdom, 7 fichiers, **122 tests** ; `npm run verify` enchaîne
+  `tsc --noEmit`, `vitest run` et `build`. Les 12 auto-tests de `checks.ts` sont
+  exécutés à chaque passage de la suite : une régression du moteur fait échouer
+  `engine.test.ts`.
+- `.github/workflows/ci.yml` écrit (Node 22, `npm ci && npm run verify`).
+  ⚠️ **Jamais exécuté** : aucun run n'a eu lieu depuis cet environnement. À
+  vérifier au premier push.
+- Pas d'ESLint dans le projet ; `npm run verify` est la porte d'entrée, et c'est
+  écrit dans le README pour qu'on n'attende pas un lint qui n'existe pas.
+
+**P2 — valeur produit immédiate** ✅
+
+- Miyuki Delica 11/0 : 1 288 références mesurées, chargement différé, choix au
+  plus proche en CIEDE2000, références arrêtées exclues, colonne « perle » dans
+  la légende PDF et SVG, crédit et limites de la mesure affichés tels quels.
+- Substitution de fil : `nearestColors` factorisé dans `colorScience.ts` (une
+  seule implémentation pour les fils et les perles), trois propositions avec
+  écart ΔE00 et libellé, mélanges enregistrés exclus du vivier.
+
+**P3 — croissance** ✅
+
+- Sélecteur de marque : six tables chargées à la demande, table de
+  correspondance calculée sur le motif **fusionné**, affichée dans l'export,
+  téléchargeable en CSV et imprimée dans le PDF (résumé en couverture, une ligne
+  par fil après la légende). Appariement exact par code quand la marque numérote
+  comme DMC — le diamant DMC partage 154 codes — signalé « même code » au lieu
+  d'être présenté comme une approximation.
+- Les 10 outils absents du Dock sont exposés (groupe « plus », chiffres 1 à 9).
+- Symétrie étendue : axes x, y et les deux, reflet des formes au relâchement, du
+  remplissage (un jeu de contexte par axe) et des points arrière. La règle,
+  verrouillée par les tests : **la symétrie reflète ce qui pose du fil, pas ce
+  qui suit l'avancement** (marquage, stationnement, suivi, sélection exclus).
 
 **P4 — différenciation**
-- Export SVG du patron.
-- Découpe en tuiles à imprimer.
-- Visualisation des sessions (calendrier, courbe, ETA).
-- Statut des palettes affiché honnêtement ; équivalences multi-marques dans le PDF.
-- XSD ; étalonnage écran → carte physique.
+
+- Export SVG ✅ (noir et blanc, symboles, légende, seuil d'omission annoncé).
+- Visualisation des sessions ✅ : calendrier d'activité des treize dernières
+  semaines dans le journal du projet, intensités relatives à la meilleure
+  journée affichée — et c'est écrit, pour qu'un mois régulier à vingt cases ne
+  se lise pas comme un mois vide. L'ETA et la vitesse existaient déjà en texte.
+- Étalonnage ✅ dans le seul sens vérifiable : **une règle de 10 cm imprimée à
+  mesurer** en couverture, avec la taille de case réelle et l'injonction de
+  désactiver l'ajustement à la page. L'étalonnage écran → carte physique
+  (profils ICC, spectrophotomètre) est hors de portée d'une application hors
+  ligne : l'écran n'est pas l'autorité, la carte du fabricant l'est, et le
+  logiciel le dit au lieu de promettre une fidélité qu'il ne peut pas garantir.
+- Statut des palettes ✅ affiché honnêtement (`measured`, `cross-checked`,
+  `community`) avec l'écart médian et le pire écart du motif.
+- XSD ❌ **volontairement abandonné**, remplacé par `docs/OXS-EXTENSION.md`.
+  OXS n'a pas de schéma publié faisant autorité ; écrire un XSD « officiel »
+  aurait consisté à inventer une norme depuis un seul échantillon de fichiers et
+  à laisser un document qui a l'air de faire foi. La documentation décrit
+  exactement le même contrat — éléments, attributs, types, invariants, règles de
+  relecture, ce qui est perdu — sans en revendiquer le statut. Deux pertes réelles
+  d'aller-retour ont été corrigées au passage : les numéros de symboles et les
+  références de perle sont maintenant relus.
+- Découpe en tuiles à imprimer ⚠️ **c'était déjà fait** : la pagination du PDF
+  découpe le motif en blocs de 40 cases avec bandes grisées de chevauchement et
+  index des pages. Il n'y avait rien à construire, seulement à le dire.
+- ❌ Reste ouvert : l'aperçu PDF dans `<iframe>` ne s'affiche pas sur iOS Safari
+  (contourné par le téléchargement direct) ; `vite-plugin-singlefile` inline les
+  tables chargées à la demande, donc le différé n'est réel qu'en développement.
 
 ---
 
-## 5. Sources
+## 5. Bilan chiffré après livraison
+
+| Contrôle | Avant (`7d2982b`) | Après |
+| --- | --- | --- |
+| `npx tsc --noEmit` | 0 erreur | 0 erreur |
+| Tests automatisés | aucun | 122, sur 7 fichiers |
+| `npm run verify` | inexistant | tsc + tests + build |
+| CI | aucune | `.github/workflows/ci.yml`, jamais exécutée |
+| README / LICENSE | absents | écrits, avec attribution par table |
+| Bundle | 3 416 ko (1 090 ko gzip) | 3 674 ko (1 152 ko gzip) |
+| Tables couleur employées | 1 sur 15 (`dmc-floss` seul) | 8 sur 15 (+ Delica, + 6 correspondances) |
+| Outils exposés dans le Dock | 16 sur 26 | 26 |
+| Symétrie | aucune | 3 axes, formes et remplissage inclus |
+| Documentation | 1 audit interne | audit, feuille de route statuée, contrat OXS |
+
+Le poids ajouté est celui des données, pas du code : 71 ko de tables de
+correspondance en plus des 149 ko de la Delica, soit environ 48 ko gzippés. Le
+monde hors ligne se paie en octets embarqués. Les sept tables réellement
+employées sont déclarées une par une dans `src/lib/palettes.ts` et
+`src/lib/beads.ts` : un import à chemin variable ferait embarquer les quinze.
+
+---
+
+## 6. Sources
 
 - craft-color-codes (15 palettes, 3 689 couleurs, API) : https://github.com/makebead/craft-color-codes
 - DMC Mouliné Spécial art. 117 : https://www.dmc.com/US/en/products/mouline-special

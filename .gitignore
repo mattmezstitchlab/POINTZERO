@@ -5,3 +5,9 @@ build/
 .env.*
 !.env.example
 .DS_Store
+
+# Configuration de développement propre à un environnement mandaté
+# (server.allowedHosts) : elle désactive la vérification d'hôte de Vite, ce qui
+# n'a pas sa place dans le dépôt.
+vite.dev.config.ts
+

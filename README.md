@@ -14,9 +14,10 @@ Elle couvre le cycle complet, ce qui évite d'ouvrir quatre outils différents p
 | **Composer** | Grille vierge jusqu'à 1 000 × 1 000 cases, 26 outils (croix, demi, quart, trois-quarts, petite croix, perle, arrière, lancé, noeud français, remplissage, formes, lasso, déplacement, lettrage compté 5 × 7), symétrie, calques visibles et verrouillables |
 | **Convertir** | Photo ou pixel art → quantification DMC avec tramage Floyd–Steinberg, calcul en worker ; génération d'image par description (service tiers), reprise ensuite comme une photo |
 | **Importer** | PDF du commerce : lecture vectorielle des symboles (pdf.js), légende par lignes, axes, ordre des pages ; secours image par blocs calés et tableau magnétique de recollement quand la numérotation est ambiguë. Fichiers projet et OXS |
+| **Suivre le fil** | Substitution d'un fil par ses trois plus proches en CIEDE2000, correspondance du motif entier vers une autre marque (diamant DMC, perles à repasser) sans changer la langue du motif |
 | **Préparer** | 489 références DMC sourcées, correspondance perceptuelle CIEDE2000, mélanges de deux fils, tissu (Aida/binca, lin, evenweave, 7 à 40 ct, sur 1 ou sur 2), marge, métrage et nombre d'écheveaux par fil, stock et liste d'achats CSV multi-projets |
-| **Broder** | Fil actif, suivi case / ligne / bloc 10 × 10, parking par coin, erreurs à défaire, contours et ornements suivis séparément, sessions horodatées, séries, estimation de fin |
-| **Exporter** | PDF paginé A4 ou Letter avec recouvrement, page d'ornements, légende, correspondances multi-marques et provenance ; SVG vectoriel ; JSON ; OXS (coeur standard + extensions) ; PNG ; CSV |
+| **Broder** | Fil actif, symétrie sur trois axes, suivi case / ligne / bloc 10 × 10, parking par coin, erreurs à défaire, contours et ornements suivis séparément, sessions horodatées et calendrier d'activité, séries, estimation de fin |
+| **Exporter** | PDF paginé A4 ou Letter avec recouvrement, règle d'échelle à mesurer, page d'ornements, légende, correspondances multi-marques et provenance ; SVG vectoriel ; JSON ; OXS (coeur standard + extension documentée) ; PNG ; CSV |
 | **Convertir** | Correspondance du motif vers une autre marque — broderie diamant DMC, perles à repasser Perler, Hama, Artkal, MARD, Nabbi — avec l'écart perceptuel, sans changer la langue du motif |
 | **Partager** | Lecture à distance chiffrée (WebRTC, invitation manuelle), l'hôte reste auteur ; guide vidéo en sept chapitres qui pilote vraiment l'interface |
 
@@ -49,7 +50,8 @@ codes plutôt que par indices.
   indices internes peuvent changer entre deux versions, pas le motif.
 - **Une seule définition de symbole, trois rendus.** Les 504 symboles sont déclaratifs (cercles,
   rectangles, polygones, segments) et dessinés à l'identique sur canvas, en PDF (jsPDF) et en SVG.
-  Un symbole personnalisé dans l'atelier est le même partout, y compris dans l'OXS.
+  Un symbole personnalisé dans l'atelier est le même partout, y compris dans l'OXS, où le numéro
+  écrit dans le coeur est relu au retour.
 - **La science des couleurs est un module pur**, partagé par le worker de conversion et son repli
   hors worker : sRGB → Lab, CIEDE2000, contraste. Les mêmes fonctions servent au fil DMC le plus
   proche et à la perle la plus proche.
@@ -96,13 +98,16 @@ Liste assumée, dans l'ordre où elle gêne :
 - **Aperçu PDF sur iPadOS.** L'aperçu passe par un `<iframe>` : Safari iOS n'y affiche pas un PDF
   en ligne. Un lien d'ouverture dans un nouvel onglet et un avertissement contournent le problème
   sans le résoudre.
-- **Grands motifs et stylet.** Sur un 1 000 × 1 000, le dessin en direct peut ralentir : le rendu
-  recompose les calques à chaque image et l'annulation clone le motif pendant le trait.
-- **Symétrie partielle.** Elle s'applique aux croix, demi-points, quarts, trois-quarts, petites
-  croix, perles et à la gomme — pas au remplissage, aux arrières, noeuds, lancés, formes ni au
-  lettrage.
-- **Outils peu découvrables.** Trois-quarts, petite croix, perle, détails, note, lasso,
-  déplacement, ligne, rectangle et ellipse ne sont accessibles que depuis le panneau Projet.
+- **Grands motifs et stylet.** Sur un 1 000 × 1 000, le dessin en direct peut ralentir : pendant un
+  trait, le rendu recompose les calques à chaque image — le brouillon mute en place, une composition
+  mémorisée afficherait l'image d'avant. Au repos, la composition est mémorisée, les instantanés de
+  calques sont mis en cache et l'annulation ne clone plus le motif à chaque échantillon.
+- **Symétrie partielle.** Elle reflète ce qui pose du fil : croix, demi-points, quarts,
+  trois-quarts, petites croix, perles, noeuds, points arrière, remplissage, gomme, et les formes
+  (ligne, rectangle, ellipse) ainsi que les points lancés au moment du relâchement. Elle ne reflète
+  pas ce qui suit l'avancement — marquage, suivi case / ligne / bloc, stationnement, erreurs,
+  notes, sélection, déplacement, pipette — ni le lettrage : refléter ces marques ferait mentir le
+  suivi.
 - **Pas d'internationalisation.** L'interface est en français, les textes sont dans les composants.
 - **Un seul fichier HTML en sortie.** `vite-plugin-singlefile` inline aussi les imports
   dynamiques : les tables de perles et de correspondances, bien que chargées à la demande, se
@@ -113,8 +118,14 @@ Liste assumée, dans l'ordre où elle gêne :
 - **Effacer les données du navigateur supprime les projets.** Les exportations JSON sont la vraie
   sauvegarde.
 
-La suite est écrite, chiffrée et ordonnée dans [`docs/ANALYSE-ET-ROADMAP.md`](docs/ANALYSE-ET-ROADMAP.md).
-L'état d'origine de l'application, fonction par fonction, est dans [`docs/AUDIT-B.md`](docs/AUDIT-B.md).
+Trois documents accompagnent le code :
+
+- [`docs/ANALYSE-ET-ROADMAP.md`](docs/ANALYSE-ET-ROADMAP.md) — l'audit d'origine, la feuille de
+  route, et le statut de chaque point une fois livré, y compris ce qui a été abandonné et pourquoi.
+- [`docs/AUDIT-B.md`](docs/AUDIT-B.md) — l'état de l'application avant ces travaux, fonction par
+  fonction.
+- [`docs/OXS-EXTENSION.md`](docs/OXS-EXTENSION.md) — le contrat OXS : coeur portable, extension
+  `<pointzero_extra>`, règles de relecture, et la liste de ce que ce format ne transporte pas.
 
 ## Droits
 
