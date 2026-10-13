@@ -76,8 +76,8 @@ async function openAtelier() {
     root!.render(<App />);
   });
   // Les libellés de l'accueil contiennent des espaces insécables.
-  const entrer = byText(/Commencer\s+à\s+créer/);
-  expect(entrer, "l'écran d'accueil propose d'entrer dans l'atelier").toBeTruthy();
+  const entrer = byText(/Ouvrir l'atelier/);
+  expect(entrer, "le hero propose d'entrer dans l'atelier").toBeTruthy();
   await click(entrer!);
   expect(compass(), "la boussole est dans la barre du haut").toBeTruthy();
 }

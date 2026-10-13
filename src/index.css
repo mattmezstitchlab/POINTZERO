@@ -855,3 +855,113 @@
   line-height: 1.5;
   color: var(--color-label-3);
 }
+
+/* ------------------------------------------------------------------ */
+/*  Cohérence des tailles de pictos                                    */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --picto: 84px;
+}
+.tool-demo {
+  height: var(--picto);
+}
+.tool-demo svg {
+  width: var(--picto);
+  height: var(--picto);
+}
+.marquee-picto {
+  width: var(--picto);
+  height: var(--picto);
+}
+@media (max-width: 640px) {
+  :root {
+    --picto: 60px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  La loupe de la brodeuse                                            */
+/* ------------------------------------------------------------------ */
+
+.loupe {
+  position: fixed;
+  z-index: 80;
+  width: 132px;
+  height: 132px;
+  margin: -66px 0 0 -66px;
+  pointer-events: none;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: #0b0b0d;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.65);
+}
+.loupe[data-shape="ronde"] {
+  border-radius: 50%;
+}
+.loupe[data-shape="carree"] {
+  border-radius: 14px;
+}
+.loupe-canvas,
+.loupe-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.loupe-svg svg {
+  width: 100%;
+  height: 100%;
+}
+.loupe-toggle {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 81;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(20, 20, 24, 0.8);
+  color: var(--color-label-2);
+  backdrop-filter: blur(8px);
+  transition: color 0.2s, border-color 0.2s;
+}
+.loupe-toggle:hover {
+  color: var(--color-label);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Le hero qui charge en pixels, puis hop                             */
+/* ------------------------------------------------------------------ */
+
+.hero-load {
+  background: rgba(255, 255, 255, 0.1);
+  animation: hero-load 1.15s ease-in-out infinite;
+}
+@keyframes hero-load {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.95;
+    background: var(--color-accent);
+  }
+}
+.hero-hop {
+  animation: hero-hop 0.6s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+@keyframes hero-hop {
+  from {
+    transform: translateY(16px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}

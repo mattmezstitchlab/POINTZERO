@@ -12,6 +12,17 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import Landing from "../components/Landing";
+
+vi.mock("../lib/convert", () => ({
+  loadRemoteImage: vi.fn(async () => ({ src: "data:image/png;base64,", width: 4, height: 4 })),
+}));
+vi.mock("../lib/dither", () => ({
+  imageToDmc: vi.fn(() => {
+    const cross = new Int16Array(44 * 44).fill(-1);
+    for (let i = 0; i < 200; i += 1) cross[i] = 0;
+    return { cross, palette: [80] };
+  }),
+}));
 import { buildDeck, orderDeck } from "../components/CardDeck";
 
 const saved = { matchMedia: globalThis.matchMedia, RO: globalThis.ResizeObserver };
@@ -19,7 +30,7 @@ const saved = { matchMedia: globalThis.matchMedia, RO: globalThis.ResizeObserver
 beforeAll(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   globalThis.matchMedia = ((query: string) => ({
-    matches: false,
+    matches: query.includes("(pointer: fine)"),
     media: query,
     onchange: null,
     addListener: vi.fn(),
@@ -56,7 +67,7 @@ beforeEach(async () => {
   document.body.appendChild(container);
   root = createRoot(container);
   await act(async () => {
-    root!.render(<Landing onOpen={vi.fn()} onGuide={vi.fn()} onPrompt={vi.fn()} />);
+    root!.render(<Landing onOpen={vi.fn()} onGuide={vi.fn()} onMotif={vi.fn()} />);
   });
 });
 afterEach(async () => {
@@ -145,5 +156,59 @@ describe("Landing : le jeu de 54 cartes", () => {
     // …mais trois ordres différents : aucun n'est l'autre.
     expect(suite(orderDeck(deck, "saison"))).not.toBe(suite(orderDeck(deck, "semaine")));
     expect(suite(orderDeck(deck, "melee"))).not.toBe(suite(orderDeck(deck, "saison")));
+  });
+});
+
+describe("Landing : le hero est un terrain de jeu", () => {
+  const frames = async (n = 24) => {
+    for (let i = 0; i < n; i += 1) {
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 40));
+      });
+    }
+  };
+
+  it("propose décrire, déposer un PDF, ou entrer", () => {
+    expect(container!.querySelector("#hero-jeu input"), "le champ de description est dans le hero").toBeTruthy();
+    expect(byText(/Voir le motif/)).toBeTruthy();
+    expect(container!.textContent).toContain("Un PDF");
+    expect(byText(/Ouvrir l'atelier/)).toBeTruthy();
+    expect(container!.textContent).toContain("demande un réseau");
+  });
+
+  it("décrit un motif : le visuel s'efface, les pixels chargent, puis hop", async () => {
+    const field = container!.querySelector("#hero-jeu input") as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, "renard endormi");
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      container!.querySelector("#hero-jeu form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await frames();
+    expect(container!.querySelector(".hero-stage"), "le visuel d'ouverture a laissé la place").toBeTruthy();
+    expect(container!.querySelector('[data-loupe="motif"] canvas'), "le motif arrive en petits pixels").toBeTruthy();
+    expect(container!.textContent).toContain("44 × 44 cases");
+    expect(byText(/Continuer dans l'atelier/), "puis hop : on continue").toBeTruthy();
+  });
+
+  it("la loupe suit la souris sur les pictos, et change de forme", async () => {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+    });
+    const picto = container!.querySelector(".marquee-picto")!;
+    await act(async () => {
+      picto.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 120, clientY: 200 }));
+      await new Promise((r) => setTimeout(r, 40));
+    });
+    const lens = container!.querySelector(".loupe") as HTMLElement;
+    expect(lens, "la lentille apparaît sur un picto").toBeTruthy();
+    expect(lens.hidden).toBe(false);
+    expect(lens.querySelector(".loupe-svg svg"), "elle redessine le picto agrandi").toBeTruthy();
+    expect(lens.getAttribute("data-shape")).toBe("ronde");
+    await act(async () => {
+      container!.querySelector(".loupe-toggle")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect((container!.querySelector(".loupe") as HTMLElement).getAttribute("data-shape")).toBe("carree");
   });
 });

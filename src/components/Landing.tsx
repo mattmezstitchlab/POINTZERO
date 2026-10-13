@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, Check, ChevronRight, FileUp, Lock, Sparkles, Wand2, X } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, FileUp, Lock, Wand2 } from "lucide-react";
 import { GROUPS } from "./landingTools";
 import LandingModules from "./LandingModules";
-import PdfPrep from "./PdfPrep";
+import HeroPlayground from "./HeroPlayground";
+import Loupe from "./Loupe";
 import type { Pattern } from "../lib/pattern";
 
 interface Props {
   onOpen: () => void;
   onGuide: () => void;
-  onPrompt: (text: string) => void;
+  onMotif: (p: Pattern) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -85,14 +86,14 @@ function PictoMarquee() {
   const row = (copy: string) => (
     <div className="marquee-row" aria-hidden={copy === "b"}>
       {tools.map((t) => (
-        <span key={copy + t.name} className="tool-demo marquee-picto" title={t.name}>
+        <span key={copy + t.name} className="tool-demo marquee-picto" data-loupe-item title={t.name}>
           {t.icon}
         </span>
       ))}
     </div>
   );
   return (
-    <section className="marquee" aria-label="Les vingt-deux outils de l'atelier, en défilé lent">
+    <section className="marquee" data-loupe="picto" aria-label="Les vingt-deux outils de l'atelier, en défilé lent">
       <div className="marquee-track">
         {row("a")}
         {row("b")}
@@ -101,11 +102,8 @@ function PictoMarquee() {
   );
 }
 
-export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
+export default function Landing({ onOpen, onGuide, onMotif }: Props) {
   const [promptText, setPromptText] = useState("");
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfDone, setPdfDone] = useState<{ w: number; h: number; floss: number } | null>(null);
-  const pdfInput = useRef<HTMLInputElement>(null);
 
   return (
     <div className="overflow-x-hidden bg-[#0a0a0b] text-label">
@@ -154,22 +152,13 @@ export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
             <p className="mt-7 max-w-[540px] text-[clamp(17px,2vw,22px)] leading-[1.45] tracking-[-0.015em] text-white/80">
               Créez le patron, préparez les vrais fils, puis brodez case après case — sans jamais perdre votre place. Un moteur unique, de la description au canevas.
             </p>
-            <div className="mt-9 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={onOpen}
-                className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#0071e3] px-6 text-[16px] font-semibold text-white transition-all hover:bg-[#0077ed] active:scale-[.97]"
-              >
-                Commencer à créer <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={onGuide}
-                className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 text-[16px] font-semibold text-white backdrop-blur-xl transition-all hover:bg-white/16 active:scale-[.97]"
-              >
-                Se laisser guider
-              </button>
-            </div>
+            <HeroPlayground
+              onOpen={onOpen}
+              onGuide={onGuide}
+              onMotif={onMotif}
+              prompt={promptText}
+              setPrompt={setPromptText}
+            />
           </div>
         </div>
       </section>
@@ -177,7 +166,7 @@ export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
       <PictoMarquee />
 
       {/* ---------------- Outils ---------------- */}
-      <section id="outils" className="scroll-mt-16 px-5 py-28 sm:px-8 sm:py-40">
+      <section id="outils" data-loupe="picto" className="scroll-mt-16 px-5 py-28 sm:px-8 sm:py-40">
         <SectionHead
           eyebrow="Le langage des outils"
           title="Chaque picto est un geste réel."
@@ -200,7 +189,7 @@ export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
                     key={t.name}
                     className="tool-card group cursor-default rounded-[18px] border border-white/[0.07] bg-white/[0.025] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:bg-white/[0.05]"
                   >
-                    <div className="tool-demo mb-4 text-accent-2 transition-colors duration-300 group-hover:text-accent">
+                    <div className="tool-demo mb-4 text-accent-2 transition-colors duration-300 group-hover:text-accent" data-loupe-item>
                       {t.icon}
                     </div>
                     <h4 className="flex items-center gap-2 text-[16px] font-semibold tracking-[-0.015em]">
@@ -296,39 +285,30 @@ export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
         />
 
         <Reveal className="mx-auto mt-16 max-w-[880px]">
-          <form
-            className="flex flex-col gap-3 rounded-[24px] border border-white/[0.09] bg-[#161619] p-4 sm:flex-row sm:items-center sm:rounded-full sm:p-2.5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              onPrompt(promptText);
-            }}
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2">
-              <Sparkles className="h-5 w-5 shrink-0 text-accent-2" aria-hidden="true" />
-              <input
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-                placeholder="une girafe dans un jardin de fleurs…"
-                aria-label="Décrivez le motif à générer"
-                className="min-w-0 flex-1 bg-transparent text-[17px] tracking-[-0.01em] outline-none placeholder:text-label-3"
-              />
-            </div>
+          <div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.09] bg-[#161619] p-6 text-center">
+            <p className="max-w-[560px] text-[15px] leading-relaxed text-label-2">
+              Le champ de génération vit dans l'ouverture, plus haut : le motif y apparaît directement,
+              en petits pixels qui se chargent, puis continue dans l'atelier.
+            </p>
             <button
-              type="submit"
-              disabled={promptText.trim().length < 3}
-              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0071e3] px-6 text-[16px] font-semibold text-white transition-all hover:bg-[#0077ed] active:scale-[.97] disabled:opacity-40"
+              type="button"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#0071e3] px-6 text-[16px] font-semibold text-white transition-all hover:bg-[#0077ed] active:scale-[.97]"
+              onClick={() => document.getElementById("hero-jeu")?.scrollIntoView({ behavior: "smooth" })}
             >
               <Wand2 className="h-4 w-4" aria-hidden="true" />
-              Générer
+              Décrire un motif plus haut
             </button>
-          </form>
+          </div>
 
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {["girafe dans un jardin de fleurs", "village pastel", "chat endormi", "pissenlit au vent"].map((ex) => (
               <button
                 key={ex}
                 type="button"
-                onClick={() => setPromptText(ex)}
+                onClick={() => {
+                  setPromptText(ex);
+                  document.getElementById("hero-jeu")?.scrollIntoView({ behavior: "smooth" });
+                }}
                 className="rounded-full border border-white/12 bg-white/[0.05] px-3.5 py-1.5 text-[13px] text-label-2 transition-colors hover:bg-white/[0.1] hover:text-label"
               >
                 {ex}
@@ -378,92 +358,22 @@ export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
             ))}
           </div>
 
-          {/* Le vrai outil d'import, intégré à la page : pas une capture, pas une maquette. */}
-          <div className="mt-8">
-            <input
-              ref={pdfInput}
-              type="file"
-              accept="application/pdf,.pdf"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  setPdfFile(f);
-                  setPdfDone(null);
-                }
-                e.target.value = "";
-              }}
-            />
-
-            {!pdfFile && (
-              <div className="flex flex-col items-center gap-6 rounded-[28px] border border-dashed border-white/18 bg-white/[0.02] px-6 py-14 text-center">
-                <div>
-                  <h3 className="text-[26px] font-semibold tracking-[-0.03em]">Essayez avec votre propre patron</h3>
-                  <p className="mx-auto mt-3 max-w-[560px] text-[15px] leading-[1.6] text-label-2">
-                    Ouvrez un PDF acheté sur Etsy et retrouvez ici exactement la même table de montage que dans l’atelier : analyse des
-                    pages, calage des blocs, assemblage en puzzle. Rien ne quitte votre appareil.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => pdfInput.current?.click()}
-                  className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#0071e3] px-6 text-[16px] font-semibold text-white transition-all hover:bg-[#0077ed] active:scale-[.97]"
-                >
-                  <FileUp className="h-4 w-4" aria-hidden="true" />
-                  Importer un patron PDF
-                </button>
-              </div>
-            )}
-
-            {pdfFile && (
-              <div className="relative">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="truncate text-[13px] text-label-2">
-                    {pdfFile.name}
-                    {pdfDone && <span className="text-menthe"> · {pdfDone.w} × {pdfDone.h} cases, {pdfDone.floss} fils DMC</span>}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPdfFile(null);
-                      setPdfDone(null);
-                    }}
-                    className="btn-icon h-8 w-8 shrink-0"
-                    aria-label="Fermer le patron"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <PdfPrep
-                  embedded
-                  file={pdfFile}
-                  onClose={() => setPdfFile(null)}
-                  onImport={(p: Pattern) => {
-                    setPdfDone({ w: p.w, h: p.h, floss: p.palette.length });
-                  }}
-                />
-
-                {pdfDone && (
-                  <div className="mt-4 flex flex-col items-center gap-3 rounded-[20px] border border-menthe/25 bg-menthe/[0.07] px-6 py-5 text-center">
-                    <p className="text-[15px] font-medium">
-                      Grille reconstituée : {pdfDone.w} × {pdfDone.h} cases avec {pdfDone.floss} fils DMC.
-                    </p>
-                    <p className="max-w-[560px] text-[13px] leading-relaxed text-label-2">
-                      Continuez dans l’atelier pour modifier la grille, préparer les fils et exporter le patron complet.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={onOpen}
-                      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#0071e3] px-5 text-[15px] font-semibold text-white transition-all hover:bg-[#0077ed] active:scale-[.97]"
-                    >
-                      Ouvrir dans l’atelier <FileUp className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+          <div className="mt-8 flex flex-col items-center gap-4 rounded-[28px] border border-dashed border-white/18 bg-white/[0.02] px-6 py-12 text-center">
+            <p className="max-w-[600px] text-[15px] leading-relaxed text-label-2">
+              Le puzzle de reconstitution se joue désormais dans l'ouverture : déposez un PDF plus haut,
+              regardez les pages se ranger d'elles-mêmes, puis continuez dans l'atelier. Le bouton pour
+              continuer reste collé en bas du panneau, où que vous soyez dans le calage.
+            </p>
+            <button
+              type="button"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#0071e3] px-6 text-[16px] font-semibold text-white transition-all hover:bg-[#0077ed] active:scale-[.97]"
+              onClick={() => document.getElementById("hero-jeu")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              <FileUp className="h-4 w-4" aria-hidden="true" />
+              Déposer un PDF plus haut
+            </button>
           </div>
+
         </Reveal>
       </section>
 
@@ -579,6 +489,8 @@ export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
           </div>
         </Reveal>
       </section>
+
+      <Loupe />
 
       {/* ---------------- Footer ---------------- */}
       <footer className="border-t border-white/[0.07] px-5 py-10 sm:px-8">

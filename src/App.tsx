@@ -61,7 +61,6 @@ export default function App() {
   const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>("real"), [workspace, setWorkspace] = useState<Workspace>("create");
   const [symbols, setSymbols] = useState(false), [panel, setPanel] = useState<Panel>(null), [file, setFile] = useState<File | null>(null), [pdfFile, setPdfFile] = useState<File | null>(null), [promptOpen, setPromptOpen] = useState(false), [selection, setSelection] = useState<Selection | null>(null), [clipboard, setClipboard] = useState<Pattern | null>(null);
   const [prefs, setPrefs] = useState(initialPreferences), [inventory, setInventory] = useState(readInventory), [saving, setSaving] = useState("Sauvegarde locale"), [busy, setBusy] = useState(""), [toast, setToast] = useState("");
-  const [promptSeed, setPromptSeed] = useState("");
   const [fitKey, setFitKey] = useState(0), desktop = useMedia("(min-width: 1024px)");
   /* -------- Le guide : un pas à la fois, validé par le geste -------- */
   const [coach, setCoach] = useState<CoachProgress>(loadCoach);
@@ -355,10 +354,9 @@ export default function App() {
           openEditor();
           openCoach();
         }}
-        onPrompt={(text) => {
+        onMotif={(motif) => {
+          setPattern(motif);
           openEditor();
-          setPromptSeed(text);
-          setPromptOpen(true);
         }}
       />
     );
@@ -391,7 +389,7 @@ export default function App() {
         />
       </ErrorBoundary>
     )}
-    {promptOpen && <PromptStudio initialPrompt={promptSeed} onClose={() => setPromptOpen(false)} onImport={(p) => { setPromptOpen(false); void loadPattern(p); setWorkspace("create"); setView("pattern"); notify("Motif généré. Vérifiez les couleurs avant de commencer."); }} />}
+    {promptOpen && <PromptStudio initialPrompt="" onClose={() => setPromptOpen(false)} onImport={(p) => { setPromptOpen(false); void loadPattern(p); setWorkspace("create"); setView("pattern"); notify("Motif généré. Vérifiez les couleurs avant de commencer."); }} />}
     {panel === "export" && <ExportStudio pattern={P} onClose={closePanel} />}
     <Coach
       open={coachOpen && !remote}

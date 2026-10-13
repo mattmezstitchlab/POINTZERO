@@ -57,6 +57,12 @@ export default function PdfPrep({
   /** Intégré dans la landing : s'affiche dans le flux de la page au lieu d'occuper tout l'écran. */
   embedded?: boolean;
 }) {
+  /* En mode intégré, le panneau a une hauteur fixe et défile : sans cela, il
+     faut chercher le bouton pour continuer, ce qui ne fait pas professionnel.
+     L'action primaire de chaque étape reste donc collée en bas du défilement. */
+  const stick = embedded
+    ? "sticky bottom-0 z-10 rounded-[14px] bg-[#0e0e11]/95 shadow-[0_-12px_32px_rgba(0,0,0,.55)] backdrop-blur-md"
+    : "";
   const [analysis, setAnalysis] = useState<PdfAnalysis | null>(null);
   const [handle, setHandle] = useState<PdfHandle | null>(null);
   const [vector, setVector] = useState<VectorResult | null>(null);
@@ -496,7 +502,7 @@ export default function PdfPrep({
                 </button>
               ))}
             </div>
-            <button className="btn-primary mt-6 w-full" onClick={() => setStage(1)}>
+            <button className={`btn-primary mt-6 w-full ${embedded ? "sticky bottom-0 z-10 shadow-[0_-12px_32px_rgba(0,0,0,.55)]" : ""}`} onClick={() => setStage(1)}>
               Continuer vers le calage
             </button>
           </section>
@@ -569,7 +575,7 @@ export default function PdfPrep({
                   </div>
                 ))}
               </div>
-              <div className="mt-4 flex gap-2">
+              <div className={`mt-4 flex gap-2 ${stick}`}>
                 <button className="btn-quiet flex-1" onClick={() => setStage(0)}>
                   Retour
                 </button>
@@ -860,7 +866,7 @@ export default function PdfPrep({
                 </label>
               </section>
 
-              <div className="flex gap-2 pt-1">
+              <div className={`flex gap-2 pt-1 ${stick}`}>
                 <button type="button" className="btn-quiet flex-1" onClick={() => setStage(1)}>
                   Calage
                 </button>

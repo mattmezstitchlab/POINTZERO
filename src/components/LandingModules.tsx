@@ -76,7 +76,7 @@ function LiveLegend() {
     <ul className="live-legend">
       {posed.slice(0, 4).map((r) => (
         <li key={r.idx} className="flex items-center gap-2.5 rounded-[10px] bg-white/[0.04] px-2.5 py-1.5">
-          <span className="h-4 w-4 shrink-0 rounded-[4px]" style={{ background: r.hex }} />
+          <span className="h-10 w-10 shrink-0 rounded-[10px]" style={{ background: r.hex }} />
           <SymbolIcon sym={assignedSymbol(p, r.idx)} size={15} />
           <span className="font-mono text-[12px] text-label">{r.code}</span>
           <span className="flex-1 truncate text-[11.5px] text-label-3">{r.name}</span>
@@ -98,7 +98,7 @@ function LiveSubstitution() {
     <ul className="space-y-1.5">
       {near.map((n) => (
         <li key={n.code} className="flex items-center gap-2.5 rounded-[10px] bg-white/[0.04] px-2.5 py-1.5">
-          <span className="h-4 w-4 shrink-0 rounded-[4px]" style={{ background: n.hex }} />
+          <span className="h-10 w-10 shrink-0 rounded-[10px]" style={{ background: n.hex }} />
           <span className="font-mono text-[12px] text-label">{n.code}</span>
           <span className="flex-1 text-[11.5px] text-label-3">ΔE00 {n.deltaE.toFixed(1)} · {deltaELabel(n.deltaE)}</span>
         </li>
