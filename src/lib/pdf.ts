@@ -176,8 +176,17 @@ export async function buildPdf(input: Pattern, opts: PdfOptions = { bw: false })
   const cols = Math.ceil(p.w / BLOCK);
   const rowsB = Math.ceil(p.h / BLOCK);
   const gridPages = cols * rowsB;
-  const perPage = BLOCK + overlap;
-  const CELL = Math.min(MAX_CELL, Math.max(MIN_CELL, Math.min((pageW - LEFT - RIGHT) / perPage, (pageH - TOP - BOTTOM) / perPage)));
+  /* La case est calculée sur le bloc réellement le plus large à imprimer, pas
+     sur le bloc nominal : un 12 × 12 ne dessine jamais 40 cases plus le
+     chevauchement, il peut donc être imprimé bien plus grand. Le chevauchement
+     est compté dès qu'il existe, car la grille le dessine vraiment (les
+     colonnes et lignes sont bornées par la taille du motif). */
+  const tileW = Math.min(p.w, BLOCK + overlap);
+  const tileH = Math.min(p.h, BLOCK + overlap);
+  const CELL = Math.min(
+    MAX_CELL,
+    Math.max(MIN_CELL, Math.min((pageW - LEFT - RIGHT) / tileW, (pageH - TOP - BOTTOM) / tileH)),
+  );
 
   const annotations = p.annotations ?? [];
   const ornaments = ornamentRows(p);
@@ -366,6 +375,44 @@ export async function buildPdf(input: Pattern, opts: PdfOptions = { bw: false })
     (eq ? ` et ${eq.palette.brand} ${eq.palette.product}, licence ${eq.palette.license}` : "") +
     ". Ces marques ne publient pas de table RGB officielle exploitable : les teintes écran sont des approximations à confirmer sur carte physique.";
   doc.text(wrap(attribution, printW), LEFT, y);
+  doc.setTextColor(0);
+
+  /* ------------------ 1bis. Échelle d'impression à vérifier ------------------ */
+  y += 8;
+  if (y > pageH - BOTTOM - 30) {
+    doc.addPage();
+    y = 24;
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(0);
+  doc.text("Échelle d'impression", LEFT, y);
+  y += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(90);
+  const rulerNote = wrap(
+    `Ce trait doit mesurer exactement 10 cm une fois imprimé. S'il est plus court ou plus long, ` +
+      `l'imprimante redimensionne la page : réglez l'échelle sur 100 % et désactivez l'ajustement à la page. ` +
+      `La taille finie annoncée et la case de ${fmt(CELL, 2)} mm ne sont justes qu'à cette condition.`,
+    printW,
+  );
+  doc.text(rulerNote, LEFT, y);
+  y += rulerNote.length * 3.6 + 6;
+  const rulerX = LEFT;
+  doc.setDrawColor(60);
+  doc.setLineWidth(0.4);
+  doc.line(rulerX, y, rulerX + 100, y);
+  doc.setLineWidth(0.25);
+  for (let mm = 0; mm <= 100; mm += 5) {
+    const major = mm % 10 === 0;
+    doc.line(rulerX + mm, y, rulerX + mm, y - (major ? 3.5 : 2));
+    if (major) {
+      doc.setFontSize(6.5);
+      doc.setTextColor(110);
+      doc.text(String(mm / 10), rulerX + mm, y + 3.2, { align: "center" });
+    }
+  }
   doc.setTextColor(0);
 
   /* --------------------------- 2. Légende des fils --------------------------- */

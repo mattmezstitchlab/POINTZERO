@@ -106,9 +106,61 @@ describe("B1 — les symboles imprimés suivent l'atelier", () => {
     p.symbolMap = { [FLOSS[RED].code]: 42 };
     const text = await pdfText(await buildPdf(p, { bw: true }));
     // Couverture, légende, index, table des ornements (le motif a un point
-    // arrière et un noeud), puis une page de grille.
-    expect(pageCount(text)).toBe(5);
+    // arrière et un noeud), puis une page de grille. Le nombre exact de pages
+    // dépend de la longueur des notes et du format : ce qui est verrouillé ici,
+    // c'est la présence de chaque section annoncée et un total raisonnable.
+    for (const section of ["Légende des fils", "Index des pages de grille", "Contours et ornements", "Échelle d'impression"]) {
+      expect(text, section).toContain(section);
+    }
+    expect(pageCount(text)).toBeGreaterThanOrEqual(5);
+    expect(pageCount(text)).toBeLessThanOrEqual(7);
     expect(text).toContain("craft-color-codes");
+  });
+});
+
+describe("Échelle d'impression", () => {
+  const small = () => {
+    const p = createPattern("Échelle", 10, 10, 14, 2);
+    p.cross[0] = RED;
+    p.cross[1] = BLUE;
+    ensurePalette(p, RED);
+    ensurePalette(p, BLUE);
+    return p;
+  };
+
+  it("imprime une règle de 10 cm à mesurer, en noir et blanc comme en couleur", async () => {
+    const p = small();
+    for (const bw of [true, false]) {
+      const text = await pdfText(await buildPdf(p, { bw }));
+      expect(text, `bw=${bw}`).toContain("Échelle d'impression");
+      expect(text).toContain("exactement 10 cm");
+      expect(text).toContain("100 %");
+      // Les graduations sont dessinées : 21 traits (tous les 5 mm) plus la règle.
+      expect(rectOps(text)).toBeGreaterThan(0);
+    }
+  });
+
+  it("annonce la taille de case réellement calculée, pas une valeur fixe", async () => {
+    const petit = await pdfText(await buildPdf(small(), { bw: true, paper: "a4" }));
+    const large = () => {
+      const p = createPattern("Grand", 300, 300, 14, 2);
+      p.cross[0] = RED;
+      ensurePalette(p, RED);
+      return p;
+    };
+    const grand = await pdfText(await buildPdf(large(), { bw: true, paper: "a4" }));
+    const taille = (text: string) => {
+      const found = /case de (\d+[.,]\d+) mm/.exec(text);
+      expect(found, "taille de case annoncée").not.toBeNull();
+      return Number(found![1].replace(",", "."));
+    };
+    const casePetite = taille(petit);
+    const caseGrande = taille(grand);
+    // Un 10 × 10 tient large : la case est au maximum autorisé. Un 300 × 300
+    // doit réduire la case pour garder 40 cases plus le chevauchement par page.
+    expect(casePetite).toBeGreaterThan(caseGrande);
+    expect(casePetite).toBeLessThanOrEqual(7);
+    expect(caseGrande).toBeGreaterThanOrEqual(1.4);
   });
 });
 

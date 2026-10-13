@@ -8,7 +8,8 @@ import { removeConfetti } from "../lib/convert";
 import { clonePattern } from "../lib/pattern";
 import { runChecks, type CheckResult } from "../lib/checks";
 import { SYMBOL_COUNT } from "../lib/symbols";
-import { sessionSummary } from "../lib/sessionStats";
+import { activityGrid, bestDay, sessionSummary } from "../lib/sessionStats";
+import type { Session } from "../lib/pattern";
 import type { Tool } from "../lib/stitch";
 import Sheet from "./Sheet";
 
@@ -108,7 +109,7 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
       {tab === "follow" && <>
         <Block title="Marquer sans modifier le patron"><div className="grid grid-cols-2 gap-1">{([['mark','Case par case'],['details','Contours / ornements'],['block','Bloc 10 × 10'],['row','Ligne entière'],['park','Garer un fil'],['unpick','À défaire'],['note','Note sur la grille']] as [Tool,string][]).map(([id,label]) => toolButton(id,label))}</div><Toggle title="Uniquement le fil actif" checked={prefs.onlyActive} onChange={() => change("onlyActive", !prefs.onlyActive)} /><p className="mt-2 text-[11px] text-label-3">Les croix et fractions sont suivies par case. Les contours, noeuds, petites croix et perles sont suivis séparément. Les fractions de plusieurs couleurs dans une même case sont marquées ensemble : vérifiez-les visuellement.</p></Block>
         <Block title="Parking et rappels"><p className="text-[12px] leading-relaxed text-label-2">{p.parked?.length ?? 0} fils garés · {p.mistakes?.length ?? 0} cases à défaire. Avec Parking, touchez le coin d’une case. Retouchez le même emplacement pour libérer le fil.</p><Label title="Texte de la prochaine annotation"><textarea className="field min-h-[80px] py-2" value={prefs.annotation} onChange={(e) => change("annotation", e.target.value)} placeholder="Ex. Vérifier les points arrière avant de finir" /></Label>{(p.annotations ?? []).map((a, i) => <div key={i} className="mt-2 flex items-start gap-2 text-[12px]"><span className="flex-1 text-label-2">({a.x},{a.y}) {a.text}</span><button aria-label="Supprimer cette note" onClick={() => onSet({ ...p, annotations: p.annotations?.filter((_, n) => n !== i) })}><X size={14} /></button></div>)}</Block>
-        <Block title="Journal du projet"><p className="text-[13px] text-label-2">{Math.round((p.sessions ?? []).reduce((n, s) => n + s.seconds, 0) / 60)} min en mode Broder · {(p.sessions ?? []).reduce((n, s) => n + s.cells, 0)} cases nettes marquées.</p><p className="mt-2 text-[12px] text-label-2">{session?.activeDays ?? 0} jour(s) actifs · meilleure série : {session?.longest ?? 0} jours · {(session?.perMinute ?? 0).toFixed(1)} cases/min enregistrées.</p>{session?.eta && <p className="mt-1 text-[12px] text-label-2">Fin indicative des croix : {session.eta}, au rythme enregistré.</p>}{(p.sessions ?? []).slice(-7).reverse().map((s, i) => <div key={i} className="mt-2 flex justify-between text-[12px] text-label-3"><span>{s.date}</span><span>{Math.round(s.seconds / 60)} min · {s.cells} cases</span></div>)}<p className="mt-2 text-[11px] text-label-3">Le temps est compté quand l’atelier est visible, en mode Broder. Ce n’est pas une mesure de la vitesse réelle de l’aiguille. L’estimation de fin apparaît après trois jours, sans garantie de délai.</p><button className="mt-3 text-[13px] text-accent-2" onClick={() => { if (window.confirm("Réinitialiser le suivi de ce patron ? Le dessin reste intact.")) { const next = clonePattern(p); next.done.fill(0); next.parked = []; next.mistakes = []; next.ornamentDone = []; onSet(next); } }}>Réinitialiser le suivi</button></Block>
+        <Block title="Journal du projet"><ActivityCalendar sessions={p.sessions ?? []} /><p className="mt-3 text-[13px] text-label-2">{Math.round((p.sessions ?? []).reduce((n, s) => n + s.seconds, 0) / 60)} min en mode Broder · {(p.sessions ?? []).reduce((n, s) => n + s.cells, 0)} cases nettes marquées.</p><p className="mt-2 text-[12px] text-label-2">{session?.activeDays ?? 0} jour(s) actifs · meilleure série : {session?.longest ?? 0} jours · {(session?.perMinute ?? 0).toFixed(1)} cases/min enregistrées.</p>{session?.eta && <p className="mt-1 text-[12px] text-label-2">Fin indicative des croix : {session.eta}, au rythme enregistré.</p>}{(p.sessions ?? []).slice(-7).reverse().map((s, i) => <div key={i} className="mt-2 flex justify-between text-[12px] text-label-3"><span>{s.date}</span><span>{Math.round(s.seconds / 60)} min · {s.cells} cases</span></div>)}<p className="mt-2 text-[11px] text-label-3">Le temps est compté quand l’atelier est visible, en mode Broder. Ce n’est pas une mesure de la vitesse réelle de l’aiguille. L’estimation de fin apparaît après trois jours, sans garantie de délai.</p><button className="mt-3 text-[13px] text-accent-2" onClick={() => { if (window.confirm("Réinitialiser le suivi de ce patron ? Le dessin reste intact.")) { const next = clonePattern(p); next.done.fill(0); next.parked = []; next.mistakes = []; next.ornamentDone = []; onSet(next); } }}>Réinitialiser le suivi</button></Block>
       </>}
 
       {tab === "settings" && <>
@@ -126,3 +127,76 @@ function Label({ title, children }: { title: string; children: React.ReactNode }
 function NumberField({ title, value, onChange, min, max, step = 1 }: { title: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number }) { return <Label title={title}><input type="number" className="field" value={value} min={min} max={max} step={step} onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, Math.round(n / step) * step))); }} /></Label>; }
 function Toggle({ title, checked, onChange }: { title: string; checked: boolean; onChange: () => void }) { return <div className="flex min-h-12 items-center justify-between gap-4"><span className="text-[13px] text-label-2">{title}</span><button type="button" role="switch" className="switch" aria-label={title} aria-checked={checked} onClick={onChange} /></div>; }
 function Block({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border-b border-white/[.08] pb-5"><h3 className="mb-3 text-[11px] font-semibold tracking-[.07em] text-label-3 uppercase">{title}</h3>{children}</section>; }
+
+/** Intensités du calendrier, de « rien » au meilleur jour de la fenêtre. */
+const LEVELS = ["bg-white/[0.06]", "bg-accent/25", "bg-accent/50", "bg-accent/75", "bg-accent"];
+const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
+
+/**
+ * Calendrier d'activité des treize dernières semaines.
+ *
+ * Le journal est déjà tenu par l'atelier (une entrée par date, secondes et
+ * cases nettes) ; il n'était lisible qu'en totaux. L'échelle des intensités est
+ * relative à la meilleure journée affichée, et c'est dit : un calendrier pâle
+ * peut être un mois régulier à vingt cases, pas forcément un mois vide.
+ */
+function ActivityCalendar({ sessions }: { sessions: Session[] }) {
+  const grid = activityGrid(sessions);
+  const peakDay = bestDay(sessions);
+  if (!sessions.length) {
+    return (
+      <p className="text-[12px] leading-relaxed text-label-3">
+        Aucune session enregistrée. Le temps est compté quand l'atelier est visible, en mode Broder ;
+        le calendrier se remplit à partir de la première journée suivie.
+      </p>
+    );
+  }
+  return (
+    <div>
+      <div className="flex items-start gap-1.5">
+        <div className="grid shrink-0 grid-rows-7 gap-[3px] pt-[1px]">
+          {WEEKDAYS.map((label, i) => (
+            <span key={i} className="grid h-[9px] w-[8px] place-items-center text-[8px] leading-none text-label-3" aria-hidden="true">
+              {label}
+            </span>
+          ))}
+        </div>
+        <div className="thin-scroll overflow-x-auto">
+          <div
+            className="grid grid-flow-col grid-rows-7 gap-[3px]"
+            role="img"
+            aria-label={`Activité des ${grid.weeks} dernières semaines : ${grid.activeDays} jour(s) suivi(s), ${grid.totalCells} cases nettes, ${grid.totalMinutes} minutes, meilleure journée ${grid.peak} cases`}
+          >
+            {grid.days.map((d) => (
+              <span
+                key={d.date}
+                className={`h-[9px] w-[9px] rounded-[2px] ${LEVELS[d.level]} ${d.today ? "ring-1 ring-accent-2" : ""}`}
+              >
+                <title>{`${d.date} — ${d.cells} case(s), ${Math.round(d.seconds / 60)} min`}</title>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-2 text-[10px] text-label-3">
+        <span>
+          {grid.activeDays} jour(s) · {grid.totalCells} cases · {Math.round(grid.totalMinutes / 60) > 0 ? `${Math.floor(grid.totalMinutes / 60)} h ` : ""}
+          {grid.totalMinutes % 60} min sur {grid.weeks} semaines
+        </span>
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          Moins
+          {LEVELS.map((level, i) => (
+            <span key={i} className={`h-[9px] w-[9px] rounded-[2px] ${level}`} aria-hidden="true" />
+          ))}
+          Plus
+        </span>
+      </div>
+      {peakDay && grid.peak > 0 && (
+        <p className="mt-1.5 text-[11px] text-label-3">
+          Meilleure journée enregistrée : {peakDay.date}, {peakDay.cells} cases nettes en {Math.round(peakDay.seconds / 60)} min.
+          Les intensités sont relatives à la meilleure journée affichée, pas à une vitesse absolue.
+        </p>
+      )}
+    </div>
+  );
+}
