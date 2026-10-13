@@ -127,3 +127,46 @@ export function drawSymbolPdf(doc: jsPDF, sym: number, cx: number, cy: number, r
     }
   }
 }
+
+/* ------------------------- Rendu SVG (texte) ------------------------- */
+
+const n2 = (v: number) => (Math.round(v * 100) / 100).toString();
+
+/**
+ * Troisième rendu de la même définition déclarative : une chaîne SVG, pour
+ * l'export vectoriel du patron. Même géométrie que le canvas et le PDF, donc
+ * un symbole changé dans l'atelier change partout à la fois.
+ */
+export function symbolMarkup(sym: number, cx: number, cy: number, r: number, color: string): string {
+  const prims = SYMBOLS[symbolFor(sym)];
+  const sw = Math.max(r * 0.32, 0.08);
+  const out: string[] = [];
+  for (const p of prims) {
+    if (p.t === "c") {
+      out.push(
+        p.f
+          ? `<circle cx="${n2(cx)}" cy="${n2(cy)}" r="${n2(p.r * r)}" fill="${color}"/>`
+          : `<circle cx="${n2(cx)}" cy="${n2(cy)}" r="${n2(p.r * r)}" fill="none" stroke="${color}" stroke-width="${n2(sw)}"/>`,
+      );
+    } else if (p.t === "r") {
+      const x = cx + p.x * r;
+      const y = cy + p.y * r;
+      out.push(
+        p.f
+          ? `<rect x="${n2(x)}" y="${n2(y)}" width="${n2(p.w * r)}" height="${n2(p.h * r)}" fill="${color}"/>`
+          : `<rect x="${n2(x)}" y="${n2(y)}" width="${n2(p.w * r)}" height="${n2(p.h * r)}" fill="none" stroke="${color}" stroke-width="${n2(sw)}"/>`,
+      );
+    } else if (p.t === "p") {
+      const pts = p.pts.map(([x, y]) => `${n2(cx + x * r)},${n2(cy + y * r)}`).join(" ");
+      out.push(
+        p.f
+          ? `<polygon points="${pts}" fill="${color}"/>`
+          : `<polygon points="${pts}" fill="none" stroke="${color}" stroke-width="${n2(sw)}" stroke-linejoin="round"/>`,
+      );
+    } else {
+      const d = p.segs.map(([x1, y1, x2, y2]) => `M${n2(cx + x1 * r)} ${n2(cy + y1 * r)}L${n2(cx + x2 * r)} ${n2(cy + y2 * r)}`).join("");
+      out.push(`<path d="${d}" fill="none" stroke="${color}" stroke-width="${n2(sw)}" stroke-linecap="round"/>`);
+    }
+  }
+  return out.join("");
+}

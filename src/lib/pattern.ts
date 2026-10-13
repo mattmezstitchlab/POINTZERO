@@ -90,6 +90,8 @@ export interface Pattern {
   fabric?: FabricSettings;
   provenance?: Provenance;
   symbolMap?: Record<string, number>;
+  /** Code DMC -> reference de perle fabricant (Miyuki Delica), choisie par la brodeuse. */
+  beadMap?: Record<string, string>;
   supplies?: Record<string, Supply>;
   mistakes?: number[];
   parked?: Parked[];
@@ -106,6 +108,10 @@ export interface Pattern {
 }
 
 const clampN = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+/** Garde-fou de désérialisation : un objet plat code -> code, ou rien. */
+const isCodeMap = (v: unknown): v is Record<string, string> =>
+  !!v && typeof v === "object" && !Array.isArray(v) &&
+  Object.values(v as Record<string, unknown>).every((x) => typeof x === "string" && x.length <= 40);
 export const makeId = () => globalThis.crypto?.randomUUID?.() ?? `pz-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 const q4 = (n: number): Pattern["q"] => [
   new Int16Array(n).fill(-1),
@@ -154,7 +160,7 @@ export function clonePattern(p: Pattern): Pattern {
     knots: p.knots.slice(),
     palette: p.palette.slice(),
     stock: { ...p.stock },
-    symbolMap: { ...p.symbolMap }, supplies: { ...p.supplies },
+    symbolMap: { ...p.symbolMap }, beadMap: { ...p.beadMap }, supplies: { ...p.supplies },
     mistakes: [...(p.mistakes ?? [])], parked: [...(p.parked ?? [])],
     special: [...(p.special ?? [])], annotations: [...(p.annotations ?? [])],
     layers: (p.layers ?? []).map((l) => ({ ...l })), sessions: [...(p.sessions ?? [])],
@@ -255,6 +261,39 @@ export interface Totals {
 
 export function pitchCm(count: Count) {
   return 2.54 / count;
+}
+
+/**
+ * Longueur cumulée de brin simple, en cm, pour une ligne de couleur et un
+ * comptage effectif donné (points par pouce). C'est la seule formule de
+ * consommation de l'app : l'export PDF et la légende l'utilisent aussi, pour
+ * que le nombre d'écheveaux annoncé soit le même partout.
+ */
+export function consumptionCm(r: ColorStat, p: Pattern, effective: number): number {
+  const pitch = 2.54 / Math.max(1, effective);
+  const strands = FLOSS[r.idx]?.blend?.reduce((n, b) => n + b.strands, 0) ?? p.strands;
+  return (
+    r.cross * strands * CROSS_K * pitch +
+    r.half * strands * HALF_K * pitch +
+    r.quarter * strands * QUARTER_K * pitch +
+    r.back * BACK_K * pitch * (p.backStrands ?? 1) +
+    r.long * LONG_K * strands * pitch +
+    r.knots * KNOT_CM * strands +
+    r.petite * CROSS_K * pitch / 2 * strands
+  );
+}
+
+/**
+ * Écheveaux nécessaires si le motif était brodé sur un autre comptage de toile.
+ * Chaque fil est arrondi séparément : on n'achète pas un quart d'écheveau.
+ */
+export function skeinsAtCount(p: Pattern, rows: ColorStat[], effective: number): number {
+  let total = 0;
+  for (const r of rows) {
+    const meters = (consumptionCm(r, p, effective) * (p.waste ?? WASTE)) / 100;
+    if (meters > 0) total += Math.ceil(meters / SKEIN_STRAND_M);
+  }
+  return total;
 }
 
 export function computeStats(input: Pattern): { rows: ColorStat[]; totals: Totals } {
@@ -364,18 +403,11 @@ export function computeStats(input: Pattern): { rows: ColorStat[]; totals: Total
     detail(k.kind, k);
   }
 
-  const pitch = 2.54 / effectiveCount(p);
   let totalM = 0;
   let totalSk = 0;
+  const pitch = 2.54 / effectiveCount(p);
   for (const s of map.values()) {
-    const strands = FLOSS[s.idx].blend?.reduce((n, b) => n + b.strands, 0) ?? p.strands;
-    const cm =
-      s.cross * strands * CROSS_K * pitch +
-      s.half * strands * HALF_K * pitch +
-      s.quarter * strands * QUARTER_K * pitch +
-      s.back * BACK_K * pitch * (p.backStrands ?? 1) +
-      s.long * LONG_K * strands * pitch +
-      s.knots * KNOT_CM * strands + s.petite * CROSS_K * pitch / 2 * strands;
+    const cm = consumptionCm(s, p, effectiveCount(p));
     // meters = somme des longueurs de chacun des brins séparés.
     s.meters = (cm * (p.waste ?? WASTE)) / 100;
     s.skeins = s.meters > 0 ? Math.ceil(s.meters / SKEIN_STRAND_M) : 0;
@@ -424,7 +456,7 @@ export function toObject(p: Pattern) {
     id: p.id, folder: p.folder, fabric: p.fabric, provenance: p.provenance,
     backStrands: p.backStrands, waste: p.waste,
     ornamentDone: p.ornamentDone,
-    symbolMap: p.symbolMap, supplies: p.supplies, mistakes: p.mistakes,
+    symbolMap: p.symbolMap, beadMap: p.beadMap, supplies: p.supplies, mistakes: p.mistakes,
     parked: p.parked, special: p.special, annotations: p.annotations,
     notes: p.notes, reference: p.reference, sessions: p.sessions, layers: p.layers, activeLayer: p.activeLayer,
     // Les points sont stockés par indices pour rester compacts. Cette table rend
@@ -508,6 +540,7 @@ export function fromObject(input: unknown): Pattern | null {
     fabric,
     provenance: o.provenance as Provenance | undefined,
     symbolMap: o.symbolMap as Record<string, number> | undefined,
+    beadMap: isCodeMap(o.beadMap) ? (o.beadMap as Record<string, string>) : undefined,
     supplies: o.supplies as Record<string, Supply> | undefined,
     mistakes: Array.isArray(o.mistakes) ? o.mistakes.filter((i) => Number.isInteger(i) && i >= 0 && i < n) : [],
     parked: Array.isArray(o.parked) ? (o.parked as Parked[]).map((k) => ({ ...k, c: remap(k.c) })).filter((k) => k.c >= 0) : [],

@@ -140,12 +140,22 @@ function addBackTo(d: Pattern, a: Node, b: Node, c: number): boolean {
 
 export function addLongTo(d: Pattern, a: Node, b: Node, c: number): boolean {
   if (a.x === b.x && a.y === b.y) return false;
+  const same = (s: Seg) =>
+    (s.x1 === a.x && s.y1 === a.y && s.x2 === b.x && s.y2 === b.y) ||
+    (s.x1 === b.x && s.y1 === b.y && s.x2 === a.x && s.y2 === a.y);
+  if (d.long.some((s) => s.c === c && same(s))) return false;
   d.long = [...d.long, { x1: a.x, y1: a.y, x2: b.x, y2: b.y, c }];
   ensurePalette(d, c);
   return true;
 }
 
+/**
+ * Un trou ne porte qu'un noeud français : reposer le même ne change rien, une
+ * autre couleur remplace la précédente. Sans la première garde, chaque re-tap
+ * créait une entrée d'historique pour un motif inchangé.
+ */
 function addKnotTo(d: Pattern, n: Node, c: number): boolean {
+  if (d.knots.some((k) => k.x === n.x && k.y === n.y && k.c === c)) return false;
   d.knots = [...d.knots.filter((k) => !(k.x === n.x && k.y === n.y)), { x: n.x, y: n.y, c }];
   ensurePalette(d, c);
   return true;
