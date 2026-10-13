@@ -726,3 +726,132 @@
     animation: none !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Bandeau défilant des outils                                        */
+/* ------------------------------------------------------------------ */
+
+.marquee {
+  overflow: hidden;
+  border-block: 1px solid rgba(255, 255, 255, 0.07);
+  background: #0c0c0f;
+  padding: 30px 0;
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 96s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+.marquee-row {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding-right: 40px;
+}
+.marquee-picto {
+  width: 76px;
+  height: 76px;
+  color: var(--color-accent-2);
+}
+.marquee-picto svg {
+  width: 100%;
+  height: 100%;
+}
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    overflow-x: auto;
+  }
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Jeu de 54 cartes                                                   */
+/* ------------------------------------------------------------------ */
+
+.deck-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  aspect-ratio: 3 / 4;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.deck-label {
+  font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--color-label-3);
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Cartes vivantes des modules                                        */
+/* ------------------------------------------------------------------ */
+
+.cal-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  width: max-content;
+}
+.cal-grid span {
+  width: 10px;
+  height: 10px;
+  border-radius: 2.5px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.cal-grid span[data-level="1"] {
+  background: #1d3a2a;
+}
+.cal-grid span[data-level="2"] {
+  background: #245c3d;
+}
+.cal-grid span[data-level="3"] {
+  background: #2f8f57;
+}
+.cal-grid span[data-level="4"] {
+  background: #48c77c;
+}
+.cal-grid span[data-today] {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.emblem path {
+  stroke: var(--color-accent-2);
+  stroke-width: 0.14;
+  stroke-linecap: round;
+  fill: none;
+}
+.emblem circle {
+  fill: var(--color-accent);
+}
+.live-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-label-3);
+}
