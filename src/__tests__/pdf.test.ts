@@ -12,8 +12,8 @@ import { normalize, pageCount, pdfText, rectOps } from "./helpers";
  *    `symbolMap` de l'atelier ;
  * B2 les calques n'étaient pas fusionnés avant impression ;
  * B3 `buildPdf` téléchargeait le fichier en plus de le renvoyer, donc chaque
- *    export produisait deux fichiers — et l'aperçu de la visite guidée en
- *    téléchargeait un sans qu'on le demande ;
+ *    export produisait deux fichiers — et un simple aperçu en téléchargeait un
+ *    sans qu'on le demande ;
  * B4 les nœuds français, points lancés, perles, petites croix et annotations
  *    étaient comptés en couverture mais dessinés nulle part.
  */

@@ -297,7 +297,7 @@ export default function ExportStudio({ pattern, onClose }: { pattern: Pattern; o
   const gridPages = Math.ceil(pattern.w / 40) * Math.ceil(pattern.h / 40);
 
   return (
-    <Sheet open onClose={onClose} guideTarget="project" title="Exporter le patron" subtitle="Contrôler avant de partager ou d'imprimer">
+    <Sheet open onClose={onClose} guideTarget="export" title="Exporter le patron" subtitle="Contrôler avant de partager ou d'imprimer">
       {pattern.provenance?.personalOnly && (
         <div className="mb-4 border-l-2 border-warn pl-3 text-[13px] leading-relaxed text-warn">
           Patron tiers : usage personnel. La conversion ne vous transfère pas le droit de redistribuer ou de vendre le motif. Source et auteur restent inscrits au PDF.

@@ -199,19 +199,24 @@ interface Props {
   onTool: (t: Tool) => void;
   color: number;
   workspace: "create" | "stitch";
+  /** Outil que le guide est en train de montrer : un seul à la fois. */
+  coachTool?: Tool | null;
 }
 
 /** Dock flottant : vertical à gauche sur iPad paysage, horizontal en bas en portrait. */
-export default function Dock({ tool, onTool, color, workspace }: Props) {
+export default function Dock({ tool, onTool, color, workspace, coachTool }: Props) {
   const hex = FLOSS[color]?.hex ?? "#000";
   const extra = workspace === "create" ? EXTRA_CREATE : EXTRA_STITCH;
   const [open, setOpen] = useState(false);
   // Un outil choisi depuis le panneau Projet doit devenir visible dans le dock,
-  // sinon l'outil actif n'est nulle part à l'écran.
+  // sinon l'outil actif n'est nulle part à l'écran. Même exigence pour l'outil
+  // que le guide est en train d'animer : un pictogramme qui pulse dans un groupe
+  // replié ne guide personne.
   const activeIsExtra = extra.some((t) => t.id === tool);
+  const coachIsExtra = !!coachTool && extra.some((t) => t.id === coachTool);
   useEffect(() => {
-    if (activeIsExtra) setOpen(true);
-  }, [activeIsExtra]);
+    if (activeIsExtra || coachIsExtra) setOpen(true);
+  }, [activeIsExtra, coachIsExtra]);
 
   const groups: ToolDef[][] =
     workspace === "create"
@@ -238,6 +243,8 @@ export default function Dock({ tool, onTool, color, workspace }: Props) {
       <button
         type="button"
         className="btn-tool"
+        data-tool={t.id}
+        data-coach={coachTool === t.id ? "on" : undefined}
         aria-pressed={tool === t.id}
         aria-label={`${t.label} (${t.key})`}
         title={`${t.label} · ${t.key}`}

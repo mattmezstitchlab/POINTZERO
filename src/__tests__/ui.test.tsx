@@ -4,6 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import type { ReactNode } from "react";
 import Dock from "../components/Dock";
 import FlossRail from "../components/FlossRail";
+import Coach from "../components/Coach";
+import { TRACKS, entryById } from "../lib/coach";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { flossIndex } from "../lib/dmc";
 
@@ -121,6 +123,145 @@ describe("Dock : les outils moins fréquents sont atteignables", () => {
     expect(byLabel("Cocher un contour ou un ornement (J)")).toBeTruthy();
     expect(byLabel("Note sur la grille (9)")).toBeTruthy();
     expect(byLabel("Perle")).toBeNull();
+  });
+});
+
+describe("Dock : le guide n'anime qu'un pictogramme", () => {
+  const outils = (mode: string) =>
+    new Set([...container.querySelectorAll(`[data-mode="${mode}"] [data-tool]`)].map((b) => b.getAttribute("data-tool")));
+
+  it("marque chaque outil d'un identifiant exploitable", () => {
+    mount(<Dock tool="cross" onTool={vi.fn()} color={RED} workspace="create" />);
+    const ids = [...container.querySelectorAll("[data-tool]")].map((b) => b.getAttribute("data-tool"));
+    expect(ids).toContain("cross");
+    expect(ids.every((id) => !!id)).toBe(true);
+    expect(new Set(ids).size, "un outil, une entrée").toBe(ids.length);
+  });
+
+  it("n'anime que le pictogramme montré, et rien quand le guide se tait", () => {
+    mount(<Dock tool="cross" onTool={vi.fn()} color={RED} workspace="create" coachTool="fill" />);
+    const on = container.querySelectorAll('[data-coach="on"]');
+    expect(on).toHaveLength(1);
+    expect(on[0].getAttribute("data-tool")).toBe("fill");
+    // Montrer un outil n'est pas l'activer à la place de l'utilisateur.
+    expect(on[0].getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("ouvre le groupe « plus » pour montrer un outil qui y était caché", () => {
+    mount(<Dock tool="cross" onTool={vi.fn()} color={RED} workspace="create" coachTool="petite" />);
+    expect(byLabel("Masquer les outils moins fréquents"), "le groupe s'est ouvert").toBeTruthy();
+    expect(byLabel("Petite croix (2)")!.getAttribute("data-coach")).toBe("on");
+  });
+
+  it("chaque outil visé par le guide existe dans le dock du mode concerné", () => {
+    // Un outil du groupe « plus » comme outil actif ouvre le groupe : les deux
+    // docks sont alors complets, et l'on peut vérifier le parcours entier.
+    mount(
+      <>
+        <div data-mode="create">
+          <Dock tool="ellipse" onTool={vi.fn()} color={RED} workspace="create" />
+        </div>
+        <div data-mode="stitch">
+          <Dock tool="note" onTool={vi.fn()} color={RED} workspace="stitch" />
+        </div>
+      </>,
+    );
+    const create = outils("create"), stitch = outils("stitch");
+    expect(create.size).toBeGreaterThan(15);
+    expect(stitch.size).toBeGreaterThan(8);
+    for (const step of TRACKS.create) {
+      if (step.target.kind === "tool") expect(create.has(step.target.tool), `${step.id} → ${step.target.tool}`).toBe(true);
+    }
+    for (const step of TRACKS.stitch) {
+      if (step.target.kind === "tool") expect(stitch.has(step.target.tool), `${step.id} → ${step.target.tool}`).toBe(true);
+    }
+  });
+});
+
+describe("Guide : un mémo, une cible, un champ de questions", () => {
+  const props = (over: Partial<React.ComponentProps<typeof Coach>> = {}) => ({
+    open: true,
+    track: "create" as const,
+    step: TRACKS.create[1],
+    index: 1,
+    total: TRACKS.create.length,
+    ask: null,
+    onAsk: vi.fn(),
+    onPick: vi.fn(),
+    onBackToStep: vi.fn(),
+    onNext: vi.fn(),
+    onPrev: vi.fn(),
+    onClose: vi.fn(),
+    ...over,
+  });
+  const type = (field: HTMLInputElement, value: string) =>
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, value);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+  it("montre une étape à la fois, avec son mémo et sa place dans le parcours", () => {
+    mount(<Coach {...props()} />);
+    expect(container.textContent).toContain(TRACKS.create[1].title);
+    expect(container.textContent).toContain(TRACKS.create[1].memo);
+    expect(container.textContent).toContain(`Étape 2 / ${TRACKS.create.length}`);
+    // Le pas à pas laisse toujours la main : Suivant et Précédent sont là.
+    expect(container.textContent).toContain("Suivant");
+    expect(container.textContent).toContain("Précédent");
+    expect(container.querySelectorAll("input")).toHaveLength(1);
+  });
+
+  it("transmet la question posée, et vide le champ", () => {
+    const onAsk = vi.fn();
+    mount(<Coach {...props({ onAsk })} />);
+    const field = container.querySelector("input") as HTMLInputElement;
+    type(field, "comment activer la symétrie");
+    act(() => {
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(onAsk).toHaveBeenCalledWith("comment activer la symétrie");
+    expect(field.value).toBe("");
+  });
+
+  it("ne transmet pas une question vide", () => {
+    const onAsk = vi.fn();
+    mount(<Coach {...props({ onAsk })} />);
+    act(() => {
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(onAsk).not.toHaveBeenCalled();
+  });
+
+  it("affiche la réponse trouvée, son mémo, et les entrées voisines", () => {
+    const symmetry = entryById("symmetry")!;
+    const shapes = entryById("shapes")!;
+    mount(<Coach {...props({ ask: { query: "symétrie", hits: [{ entry: symmetry, score: 4 }, { entry: shapes, score: 2 }] } })} />);
+    expect(container.textContent).toContain("L'atelier répond");
+    expect(container.textContent).toContain(symmetry.answer);
+    expect(container.textContent).toContain(symmetry.memo);
+    expect(container.textContent).toContain(shapes.ask);
+    expect(container.textContent).toContain("Revenir au guide pas à pas");
+    // Une réponse n'affiche plus le pas à pas : une seule chose à la fois.
+    expect(container.textContent).not.toContain(TRACKS.create[1].title);
+  });
+
+  it("dit qu'il ne sait pas, et propose de quoi repartir", () => {
+    mount(<Coach {...props({ ask: { query: "la capitale du Pérou", hits: [] } })} />);
+    expect(container.textContent).toContain("je ne sais pas répondre");
+    expect(container.textContent).toContain("plutôt que d'inventer");
+    expect(container.querySelectorAll(".chip").length).toBeGreaterThan(2);
+  });
+
+  it("un parcours terminé garde le champ de questions", () => {
+    mount(<Coach {...props({ step: null, index: TRACKS.create.length })} />);
+    expect(container.textContent).toContain("parcours est terminé");
+    expect(container.querySelectorAll("input")).toHaveLength(1);
+    expect(container.textContent).not.toContain("Suivant");
+  });
+
+  it("fermé, il ne rend rien", () => {
+    mount(<Coach {...props({ open: false })} />);
+    expect(container.textContent).toBe("");
   });
 });
 

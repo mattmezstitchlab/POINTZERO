@@ -1040,7 +1040,7 @@ export default function Canvas(props: Props) {
     tool === "hand" ? (ptrs.current.size ? "grabbing" : "grab") : tool === "pick" ? "copy" : tool === "erase" ? "cell" : "crosshair";
 
   return (
-    <div ref={wrapRef} className="absolute inset-0 overflow-hidden bg-[#0b0b0d]">
+    <div ref={wrapRef} data-guide="canvas" className="absolute inset-0 overflow-hidden bg-[#0b0b0d]">
       <canvas
         ref={canvasRef}
         role="application"

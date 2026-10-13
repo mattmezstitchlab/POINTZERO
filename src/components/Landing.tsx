@@ -384,7 +384,7 @@ export default function Landing({ onOpen, onGuide, onPrompt }: Props) {
                 onClick={onGuide}
                 className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 text-[16px] font-semibold text-white backdrop-blur-xl transition-all hover:bg-white/16 active:scale-[.97]"
               >
-                Voir la visite guidée
+                Se laisser guider
               </button>
             </div>
           </div>
