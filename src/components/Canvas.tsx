@@ -1,0 +1,1028 @@
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
+import { FLOSS, contrastOn } from "../lib/dmc";
+import { drawSymbol } from "../lib/symbols";
+import { assignedSymbol, clonePattern, compositePattern, ornamentKey, type Pattern } from "../lib/pattern";
+import { boundedSelection, clearSelection, drawShape, extractSelection, pasteSelection, type Selection } from "../lib/editing";
+import {
+  addLongTo,
+  applySample,
+  cellOf,
+  nodeOf,
+  pickAt,
+  samplePath,
+  type Node,
+  type Pt,
+  type StrokeCtx,
+  type Tool,
+} from "../lib/stitch";
+
+export type ViewMode = "real" | "flat" | "pattern";
+
+export interface Insets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+interface Props {
+  pattern: Pattern;
+  tool: Tool;
+  color: number;
+  view: ViewMode;
+  symbols: boolean;
+  highlightActive: boolean;
+  onlyActive?: boolean;
+  highContrast?: boolean;
+  pencilOnly?: boolean;
+  symmetry?: "none" | "x" | "y" | "both";
+  annotation?: string;
+  onSelection?: (s: Selection | null) => void;
+  readOnly?: boolean;
+  selection?: Selection | null;
+  halfDirection?: "auto" | "forward" | "backward";
+  insets: Insets;
+  fitKey: number;
+  onBegin: () => void;
+  onLive: (p: Pattern) => void;
+  onEnd: (changed: boolean) => void;
+  onPick: (idx: number) => void;
+}
+
+interface Stroke {
+  tool: Tool;
+  ctx: StrokeCtx;
+  last: Pt;
+  start: Node;
+  end: Node;
+  base: Pattern;
+  draft: Pattern | null;
+  changed: boolean;
+}
+
+const RT = 26; // règle haute
+const RL = 44; // règle gauche
+const MAX_S = 64;
+const FABRIC_A = "#f7f2e8";
+const FABRIC_B = "#eadfc9";
+const PAPER = "#fbfaf7";
+const AXIS = "#ff453a";
+const ACCENT = "#0a84ff";
+const DONE = "rgba(10,132,255,0.30)";
+const MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
+const NODE_TOOLS: Tool[] = ["back", "knot", "long"];
+/** Coin de départ des quarts de point : NW, NE, SE, SW. */
+const Q_CORNER: [number, number][] = [
+  [0, 0],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+];
+
+const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+const fmt = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
+
+/**
+ * Grille plein écran : zoom au pincement, défilement à deux doigts, tracé à un doigt / stylet.
+ * Trois affichages : toile brodée, aplat couleur, et « patron » (symboles noir sur blanc,
+ * comme une grille imprimée Etsy — l'avancement y reste surligné).
+ */
+export default function Canvas(props: Props) {
+  const { pattern, tool, insets, fitKey } = props;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const latest = useRef(props);
+  latest.current = props;
+
+  const view = useRef({ s: 16, ox: 0, oy: 0, fit: 16, w: 1, h: 1, dpr: 1, ready: false });
+  const frame = useRef<number | null>(null);
+  const hoverPt = useRef<Pt | null>(null);
+  const ptrs = useRef(new Map<number, { x: number; y: number }>());
+  const pan = useRef<{ x: number; y: number } | null>(null);
+  const pinch = useRef<{ d0: number; s0: number; mx: number; my: number; ox: number; oy: number } | null>(null);
+  const idle = useRef(false);
+  const stroke = useRef<Stroke | null>(null);
+  const selected = useRef<Selection | null>(null);
+  const lasso = useRef<Pt[]>([]);
+  const keyCell = useRef<Pt>({ x: 0, y: 0 });
+  const [announcement, setAnnouncement] = useState("");
+
+  const schedule = () => {
+    if (frame.current === null) frame.current = requestAnimationFrame(draw);
+  };
+
+  const content = () => {
+    const i = latest.current.insets;
+    const v = view.current;
+    return { x0: i.left + RL, y0: i.top + RT, x1: v.w - i.right, y1: v.h - i.bottom };
+  };
+
+  const minScale = () => Math.max(3, view.current.fit * 0.6);
+
+  const toWorld = (p: { x: number; y: number }): Pt => {
+    const v = view.current;
+    return { x: (p.x - v.ox) / v.s, y: (p.y - v.oy) / v.s };
+  };
+
+  const clampView = () => {
+    const P = latest.current.pattern;
+    const c = content();
+    const v = view.current;
+    const gw = P.w * v.s;
+    const gh = P.h * v.s;
+    const pad = 48;
+    const cw = c.x1 - c.x0;
+    const ch = c.y1 - c.y0;
+    if (gw + pad * 2 <= cw) v.ox = c.x0 + (cw - gw) / 2;
+    else v.ox = clamp(v.ox, c.x1 - gw - pad, c.x0 + pad);
+    if (gh + pad * 2 <= ch) v.oy = c.y0 + (ch - gh) / 2;
+    else v.oy = clamp(v.oy, c.y1 - gh - pad, c.y0 + pad);
+  };
+
+  const fitView = () => {
+    const P = latest.current.pattern;
+    const c = content();
+    const v = view.current;
+    const cw = c.x1 - c.x0;
+    const ch = c.y1 - c.y0;
+    const s = Math.max(2, Math.min(cw / P.w, ch / P.h) * 0.94);
+    v.fit = s;
+    v.s = s;
+    v.ox = c.x0 + (cw - P.w * s) / 2;
+    v.oy = c.y0 + (ch - P.h * s) / 2;
+    v.ready = true;
+  };
+
+  const zoomAt = (f: number, sx: number, sy: number) => {
+    const v = view.current;
+    const ns = clamp(v.s * f, minScale(), MAX_S);
+    const wx = (sx - v.ox) / v.s;
+    const wy = (sy - v.oy) / v.s;
+    v.s = ns;
+    v.ox = sx - wx * ns;
+    v.oy = sy - wy * ns;
+    clampView();
+    schedule();
+  };
+
+  const layout = () => {
+    const el = wrapRef.current;
+    const cv = canvasRef.current;
+    if (!el || !cv) return;
+    const r = el.getBoundingClientRect();
+    const v = view.current;
+    v.w = r.width;
+    v.h = r.height;
+    v.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    cv.width = Math.round(v.w * v.dpr);
+    cv.height = Math.round(v.h * v.dpr);
+  };
+
+  /* ---------------------------- Dessin ---------------------------- */
+
+  function draw() {
+    frame.current = null;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const v = view.current;
+    const { view: mode, symbols, highlightActive, highContrast, color: activeColor, tool: activeTool, insets: ins } = latest.current;
+    const P = compositePattern(latest.current.pattern);
+    const c = content();
+    const { s, ox, oy } = v;
+    const { w, h } = P;
+    const gw = w * s;
+    const gh = h * s;
+    const isPattern = mode === "pattern";
+
+    ctx.setTransform(v.dpr, 0, 0, v.dpr, 0, 0);
+    ctx.clearRect(0, 0, v.w, v.h);
+    ctx.fillStyle = "#0b0b0d";
+    ctx.fillRect(0, 0, v.w, v.h);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(c.x0, c.y0, c.x1 - c.x0, c.y1 - c.y0);
+    ctx.clip();
+
+    // Fond : toile Aida ou papier de patron
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetY = 16;
+    const cloth = P.fabric?.color ?? FABRIC_A;
+    ctx.fillStyle = isPattern ? PAPER : cloth;
+    ctx.fillRect(ox, oy, gw, gh);
+    ctx.restore();
+    if (isPattern) {
+      ctx.fillStyle = PAPER;
+      ctx.fillRect(ox, oy, gw, gh);
+    } else {
+      const g = ctx.createLinearGradient(ox, oy, ox + gw, oy + gh);
+      g.addColorStop(0, cloth);
+      g.addColorStop(1, P.fabric?.color ? cloth : FABRIC_B);
+      ctx.fillStyle = g;
+      ctx.fillRect(ox, oy, gw, gh);
+    }
+
+    const c0 = clamp(Math.floor((c.x0 - ox) / s), 0, w);
+    const c1 = clamp(Math.ceil((c.x1 - ox) / s), 0, w);
+    const r0 = clamp(Math.floor((c.y0 - oy) / s), 0, h);
+    const r1 = clamp(Math.ceil((c.y1 - oy) / s), 0, h);
+
+    if (c1 > c0 && r1 > r0) {
+      const minor = highContrast ? "rgba(0,0,0,0.38)" : isPattern ? "rgba(40,40,40,0.14)" : "rgba(92,70,48,0.16)";
+      const major = isPattern ? "rgba(20,20,20,0.5)" : "rgba(92,70,48,0.42)";
+
+      if (s >= 4) {
+        ctx.beginPath();
+        for (let k = c0; k <= c1; k++) {
+          if (k % 10 === 0) continue;
+          const x = Math.round(ox + k * s) + 0.5;
+          ctx.moveTo(x, c.y0);
+          ctx.lineTo(x, c.y1);
+        }
+        for (let k = r0; k <= r1; k++) {
+          if (k % 10 === 0) continue;
+          const y = Math.round(oy + k * s) + 0.5;
+          ctx.moveTo(c.x0, y);
+          ctx.lineTo(c.x1, y);
+        }
+        ctx.strokeStyle = minor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (let k = c0; k <= c1; k++) {
+          if (k % 10 !== 0) continue;
+          const x = Math.round(ox + k * s) + 0.5;
+          ctx.moveTo(x, c.y0);
+          ctx.lineTo(x, c.y1);
+        }
+        for (let k = r0; k <= r1; k++) {
+          if (k % 10 !== 0) continue;
+          const y = Math.round(oy + k * s) + 0.5;
+          ctx.moveTo(c.x0, y);
+          ctx.lineTo(c.x1, y);
+        }
+        ctx.strokeStyle = major;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Axes du point zéro
+      const ax = Math.round(ox + (w / 2) * s) + 0.5;
+      const ay = Math.round(oy + (h / 2) * s) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(ax, c.y0);
+      ctx.lineTo(ax, c.y1);
+      ctx.moveTo(c.x0, ay);
+      ctx.lineTo(c.x1, ay);
+      ctx.strokeStyle = AXIS;
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      const symPos = new Map<number, number>();
+      P.palette.forEach((idx) => symPos.set(idx, assignedSymbol(P, idx)));
+
+      if (mode === "real") {
+        // Croix brodées, regroupées par fil
+        const xs = new Map<number, Path2D>();
+        const hs = new Map<number, Path2D>();
+        const ins2 = s * 0.14;
+        const pathFor = (m: Map<number, Path2D>, k: number) => {
+          let p = m.get(k);
+          if (!p) {
+            p = new Path2D();
+            m.set(k, p);
+          }
+          return p;
+        };
+        for (let r = r0; r < r1; r++) {
+          for (let k = c0; k < c1; k++) {
+            const i = r * w + k;
+            const x = ox + k * s;
+            const y = oy + r * s;
+            const cr = P.cross[i];
+            if (cr >= 0) {
+              const p = pathFor(xs, cr);
+              p.moveTo(x + ins2, y + ins2);
+              p.lineTo(x + s - ins2, y + s - ins2);
+              p.moveTo(x + s - ins2, y + ins2);
+              p.lineTo(x + ins2, y + s - ins2);
+            }
+            const f = P.fwd[i];
+            if (f >= 0) {
+              const p = pathFor(hs, f);
+              p.moveTo(x + ins2, y + s - ins2);
+              p.lineTo(x + s - ins2, y + ins2);
+            }
+            const b = P.bwd[i];
+            if (b >= 0) {
+              const p = pathFor(hs, b);
+              p.moveTo(x + ins2, y + ins2);
+              p.lineTo(x + s - ins2, y + s - ins2);
+            }
+            for (let qk = 0; qk < 4; qk++) {
+              const qv = P.q[qk][i];
+              if (qv < 0) continue;
+              const p = pathFor(hs, qv);
+              const [qx, qy] = Q_CORNER[qk];
+              p.moveTo(x + (qx === 0 ? ins2 : s - ins2), y + (qy === 0 ? ins2 : s - ins2));
+              p.lineTo(x + s / 2, y + s / 2);
+            }
+          }
+        }
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = Math.max(1, s * 0.2);
+        ctx.strokeStyle = "rgba(60, 35, 20, 0.28)";
+        ctx.save();
+        ctx.translate(s * 0.05, s * 0.07);
+        for (const p of xs.values()) ctx.stroke(p);
+        for (const p of hs.values()) ctx.stroke(p);
+        ctx.restore();
+        for (const [idx, p] of xs) {
+          ctx.strokeStyle = FLOSS[idx].hex;
+          ctx.stroke(p);
+        }
+        for (const [idx, p] of hs) {
+          ctx.strokeStyle = FLOSS[idx].hex;
+          ctx.stroke(p);
+        }
+      } else {
+        // Aplat / patron : cases pleines (le patron ne colore que si trop dézoomé pour les symboles)
+        const paintCells = mode === "flat" || s < 9;
+        for (let r = r0; r < r1; r++) {
+          for (let k = c0; k < c1; k++) {
+            const i = r * w + k;
+            const x = ox + k * s;
+            const y = oy + r * s;
+            const cr = P.cross[i];
+            if (cr >= 0 && paintCells) {
+              ctx.fillStyle = FLOSS[cr].hex;
+              ctx.globalAlpha = isPattern ? 0.55 : 1;
+              ctx.fillRect(x, y, s + 0.5, s + 0.5);
+              ctx.globalAlpha = 1;
+            }
+            const f = P.fwd[i];
+            const b = P.bwd[i];
+            if (f >= 0) {
+              if (isPattern) {
+                ctx.strokeStyle = FLOSS[f].hex;
+                ctx.lineWidth = Math.max(1.4, s * 0.13);
+                ctx.beginPath();
+                ctx.moveTo(x + s * 0.12, y + s - s * 0.12);
+                ctx.lineTo(x + s - s * 0.12, y + s * 0.12);
+                ctx.stroke();
+              } else {
+                ctx.fillStyle = FLOSS[f].hex;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + s, y);
+                ctx.lineTo(x, y + s);
+                ctx.closePath();
+                ctx.fill();
+              }
+            }
+            if (b >= 0) {
+              if (isPattern) {
+                ctx.strokeStyle = FLOSS[b].hex;
+                ctx.lineWidth = Math.max(1.4, s * 0.13);
+                ctx.beginPath();
+                ctx.moveTo(x + s * 0.12, y + s * 0.12);
+                ctx.lineTo(x + s - s * 0.12, y + s - s * 0.12);
+                ctx.stroke();
+              } else {
+                ctx.fillStyle = FLOSS[b].hex;
+                ctx.beginPath();
+                ctx.moveTo(x + s, y);
+                ctx.lineTo(x + s, y + s);
+                ctx.lineTo(x, y + s);
+                ctx.closePath();
+                ctx.fill();
+              }
+            }
+            for (let qk = 0; qk < 4; qk++) {
+              const qv = P.q[qk][i];
+              if (qv < 0) continue;
+              const [qx, qy] = Q_CORNER[qk];
+              if (isPattern) {
+                ctx.strokeStyle = FLOSS[qv].hex;
+                ctx.lineWidth = Math.max(1.4, s * 0.13);
+                ctx.beginPath();
+                ctx.moveTo(x + qx * s, y + qy * s);
+                ctx.lineTo(x + s / 2, y + s / 2);
+                ctx.stroke();
+              } else {
+                // Aplat : triangle du quadrant (coin + milieux des deux côtés adjacents)
+                ctx.fillStyle = FLOSS[qv].hex;
+                ctx.beginPath();
+                ctx.moveTo(x + qx * s, y + qy * s);
+                ctx.lineTo(x + (qx === 0 ? s / 2 : s / 2), y + qy * s);
+                ctx.lineTo(x + qx * s, y + (qy === 0 ? s / 2 : s / 2));
+                ctx.closePath();
+                ctx.fill();
+              }
+            }
+          }
+        }
+      }
+
+      // Avancement : cases marquées brodées
+      ctx.fillStyle = DONE;
+      for (let r = r0; r < r1; r++) {
+        for (let k = c0; k < c1; k++) {
+          const i = r * w + k;
+          if (P.done[i]) ctx.fillRect(ox + k * s, oy + r * s, s, s);
+        }
+      }
+
+      // En mode Broder, le fil actif est repéré immédiatement comme dans les lecteurs
+      // de patrons professionnels : toutes ses occurrences sont mises en évidence.
+      if (highlightActive && isPattern) {
+        ctx.fillStyle = "rgba(10,132,255,0.22)";
+        for (let r = r0; r < r1; r++) {
+          for (let k = c0; k < c1; k++) {
+            const i = r * w + k;
+            const active =
+              P.cross[i] === activeColor ||
+              P.fwd[i] === activeColor ||
+              P.bwd[i] === activeColor ||
+              P.q[0][i] === activeColor ||
+              P.q[1][i] === activeColor ||
+              P.q[2][i] === activeColor ||
+              P.q[3][i] === activeColor;
+            if (active) ctx.fillRect(ox + k * s, oy + r * s, s, s);
+          }
+        }
+      }
+
+      // Symboles (toujours actifs en mode patron)
+      if ((symbols || isPattern) && s >= 9) {
+        for (let r = r0; r < r1; r++) {
+          for (let k = c0; k < c1; k++) {
+            const i = r * w + k;
+            const cr = P.cross[i];
+            if (cr >= 0) {
+              const pos = symPos.get(cr) ?? 0;
+              const col = isPattern ? "#141210" : mode === "flat" ? contrastOn(FLOSS[cr].hex) : "#1c1410";
+              drawSymbol(ctx, pos, ox + (k + 0.5) * s, oy + (r + 0.5) * s, s * 0.33, col);
+            }
+            if (isPattern && s >= 16) {
+              for (const [idx, x] of [[P.fwd[i], .24], [P.bwd[i], .76]]) {
+                if (idx >= 0) drawSymbol(ctx, assignedSymbol(P, idx), ox + (k + x) * s, oy + (r + .24) * s, s * .16, "#141210");
+              }
+              for (let q = 0; q < 4; q++) {
+                const idx = P.q[q][i]; if (idx < 0) continue;
+                const [qx, qy] = Q_CORNER[q];
+                drawSymbol(ctx, assignedSymbol(P, idx), ox + (k + (qx ? .82 : .18)) * s, oy + (r + (qy ? .72 : .28)) * s, s * .12, "#141210");
+              }
+            }
+          }
+        }
+      }
+
+      for (const k of P.special ?? []) {
+        ctx.globalAlpha = P.ornamentDone?.includes(ornamentKey(k.kind, k)) ? .38 : 1;
+        const x = ox + k.x * s, y = oy + k.y * s;
+        ctx.strokeStyle = FLOSS[k.c].hex; ctx.fillStyle = FLOSS[k.c].hex; ctx.lineWidth = Math.max(1.5, s * .12);
+        if (k.kind === "petite") {
+          ctx.beginPath(); ctx.moveTo(x - s * .18, y - s * .18); ctx.lineTo(x + s * .18, y + s * .18);
+          ctx.moveTo(x + s * .18, y - s * .18); ctx.lineTo(x - s * .18, y + s * .18); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.ellipse(x, y, Math.max(2, s * .17), Math.max(3, s * .28), -.4, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = contrastOn(FLOSS[k.c].hex); ctx.beginPath(); ctx.moveTo(x, y - s * .12); ctx.lineTo(x, y + s * .12); ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = "#ff453a"; ctx.lineWidth = 2;
+      for (const i of P.mistakes ?? []) {
+        const x = ox + (i % w) * s, y = oy + Math.floor(i / w) * s;
+        ctx.strokeRect(x + 2, y + 2, s - 4, s - 4);
+        ctx.beginPath(); ctx.moveTo(x + 3, y + 3); ctx.lineTo(x + s - 3, y + s - 3); ctx.stroke();
+      }
+      for (const park of P.parked ?? []) {
+        const [qx, qy] = Q_CORNER[park.corner];
+        const x = ox + (park.x + qx) * s, y = oy + (park.y + qy) * s;
+        ctx.fillStyle = FLOSS[park.c].hex; ctx.beginPath(); ctx.arc(x, y, Math.max(3, s * .17), 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+      for (const a of P.annotations ?? []) {
+        const x = ox + (a.x + .5) * s, y = oy + (a.y + .5) * s;
+        ctx.fillStyle = "#ff9f0a"; ctx.fillRect(x - 5, y - 5, 10, 10);
+        if (s > 18) { ctx.font = `12px ${MONO}`; ctx.fillStyle = "#222"; ctx.fillText(a.text.slice(0, 30), x + 10, y); }
+      }
+
+      const selection = selected.current;
+      if (selection) {
+        ctx.save(); ctx.fillStyle = "rgba(10,132,255,.1)"; ctx.strokeStyle = ACCENT; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+        ctx.fillRect(ox + selection.x * s, oy + selection.y * s, selection.w * s, selection.h * s);
+        ctx.strokeRect(ox + selection.x * s, oy + selection.y * s, selection.w * s, selection.h * s); ctx.restore();
+      }
+
+      // Point arrière
+      ctx.lineCap = "round";
+      for (const seg of P.back) {
+        if (Math.max(seg.x1, seg.x2) < c0 || Math.min(seg.x1, seg.x2) > c1 || Math.max(seg.y1, seg.y2) < r0 || Math.min(seg.y1, seg.y2) > r1) continue;
+        ctx.globalAlpha = P.ornamentDone?.includes(ornamentKey("back", seg)) ? .35 : 1;
+        ctx.beginPath();
+        ctx.moveTo(ox + seg.x1 * s, oy + seg.y1 * s);
+        ctx.lineTo(ox + seg.x2 * s, oy + seg.y2 * s);
+        if (!isPattern) {
+          ctx.strokeStyle = "rgba(0,0,0,0.32)";
+          ctx.lineWidth = Math.max(2, s * 0.14);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = FLOSS[seg.c].hex;
+        ctx.lineWidth = Math.max(1.4, s * 0.1);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Point lancé
+      for (const seg of P.long) {
+        if (Math.max(seg.x1, seg.x2) < c0 || Math.min(seg.x1, seg.x2) > c1 || Math.max(seg.y1, seg.y2) < r0 || Math.min(seg.y1, seg.y2) > r1) continue;
+        ctx.globalAlpha = P.ornamentDone?.includes(ornamentKey("long", seg)) ? .35 : 1;
+        ctx.beginPath();
+        ctx.moveTo(ox + seg.x1 * s, oy + seg.y1 * s);
+        ctx.lineTo(ox + seg.x2 * s, oy + seg.y2 * s);
+        if (!isPattern) {
+          ctx.strokeStyle = "rgba(0,0,0,0.26)";
+          ctx.lineWidth = Math.max(2.4, s * 0.22);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = FLOSS[seg.c].hex;
+        ctx.lineWidth = Math.max(1.8, s * 0.17);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Noeuds français
+      for (const k of P.knots) {
+        if (k.x < c0 - 1 || k.x > c1 + 1 || k.y < r0 - 1 || k.y > r1 + 1) continue;
+        ctx.globalAlpha = P.ornamentDone?.includes(ornamentKey("knot", k)) ? .35 : 1;
+        const x = ox + k.x * s;
+        const y = oy + k.y * s;
+        const rr = Math.max(2.6, s * 0.24);
+        ctx.beginPath();
+        ctx.arc(x, y, rr, 0, Math.PI * 2);
+        ctx.fillStyle = FLOSS[k.c].hex;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(0,0,0,0.35)";
+        ctx.stroke();
+        if (!isPattern) {
+          ctx.beginPath();
+          ctx.arc(x - rr * 0.3, y - rr * 0.3, rr * 0.3, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,255,255,0.45)";
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      // Aperçu du point lancé en cours
+      const st = stroke.current;
+      if (st && st.tool === "long") {
+        ctx.save();
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(ox + st.start.x * s, oy + st.start.y * s);
+        ctx.lineTo(ox + st.end.x * s, oy + st.end.y * s);
+        ctx.strokeStyle = FLOSS[st.ctx.color].hex;
+        ctx.lineWidth = Math.max(2, s * 0.17);
+        ctx.lineCap = "round";
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Survol
+      const hp = hoverPt.current;
+      if (hp && ptrs.current.size === 0 && activeTool !== "hand") {
+        if (NODE_TOOLS.includes(activeTool)) {
+          const n = nodeOf(P, hp);
+          ctx.beginPath();
+          ctx.arc(ox + n.x * s, oy + n.y * s, Math.max(5, s * 0.28), 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(10,132,255,0.35)";
+          ctx.fill();
+          ctx.strokeStyle = ACCENT;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          const cc = cellOf(P, hp);
+          const x = ox + cc.c * s;
+          const y = oy + cc.r * s;
+          ctx.fillStyle = "rgba(10,132,255,0.16)";
+          ctx.fillRect(x, y, s, s);
+          ctx.strokeStyle = ACCENT;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 1, y + 1, s - 2, s - 2);
+        }
+      }
+    }
+    ctx.restore();
+
+    drawRulers(ctx, c, P, ins);
+  }
+
+  function drawRulers(ctx: CanvasRenderingContext2D, c: { x0: number; y0: number; x1: number; y1: number }, P: Pattern, ins: Insets) {
+    const v = view.current;
+    const { s, ox, oy } = v;
+    const { w, h } = P;
+    ctx.fillStyle = "rgba(14,14,16,0.9)";
+    ctx.fillRect(c.x0, ins.top, c.x1 - c.x0, RT);
+    ctx.fillRect(ins.left, c.y0, RL, c.y1 - c.y0);
+    ctx.fillRect(ins.left, ins.top, RL, RT);
+    ctx.font = `500 10px ${MONO}`;
+    ctx.textBaseline = "middle";
+
+    ctx.textAlign = "center";
+    for (let k = 0; k <= w; k += 5) {
+      const x = ox + k * s;
+      if (x < c.x0 - 1 || x > c.x1 + 1) continue;
+      const major = k % 10 === 0;
+      if (!major && s < 7) continue;
+      ctx.fillStyle = `rgba(245,245,247,${major ? 0.7 : 0.3})`;
+      ctx.fillRect(Math.round(x), ins.top + RT - (major ? 8 : 5), 1, major ? 8 : 5);
+      if (major) {
+        ctx.fillStyle = k === w / 2 ? AXIS : "rgba(235,235,245,0.6)";
+        ctx.fillText(fmt(k - w / 2), x, ins.top + RT / 2 - 2);
+      }
+    }
+
+    ctx.textAlign = "right";
+    for (let k = 0; k <= h; k += 5) {
+      const y = oy + k * s;
+      if (y < c.y0 - 1 || y > c.y1 + 1) continue;
+      const major = k % 10 === 0;
+      if (!major && s < 7) continue;
+      ctx.fillStyle = `rgba(245,245,247,${major ? 0.7 : 0.3})`;
+      ctx.fillRect(ins.left + RL - (major ? 8 : 5), Math.round(y), major ? 8 : 5, 1);
+      if (major) {
+        ctx.fillStyle = k === h / 2 ? AXIS : "rgba(235,235,245,0.6)";
+        ctx.fillText(fmt(k - h / 2), ins.left + RL - 10, y);
+      }
+    }
+  }
+
+  /* ---------------------------- Tracé ---------------------------- */
+
+  const processSamples = (from: Pt, to: Pt) => {
+    const st = stroke.current;
+    if (!st) return;
+    const base = st.draft ?? st.base;
+    const draft = clonePattern(base);
+    let changed = false;
+    samplePath(from, to, 0.2, (q) => {
+      if (applySample(draft, st.ctx, q)) changed = true;
+      if (["cross", "half", "quarter", "threeQuarter", "petite", "bead", "erase"].includes(st.tool)) {
+        const sym = latest.current.symmetry;
+        if (sym === "x" || sym === "both") if (applySample(draft, st.ctx, { x: draft.w - q.x, y: q.y })) changed = true;
+        if (sym === "y" || sym === "both") if (applySample(draft, st.ctx, { x: q.x, y: draft.h - q.y })) changed = true;
+        if (sym === "both") if (applySample(draft, st.ctx, { x: draft.w - q.x, y: draft.h - q.y })) changed = true;
+      }
+    });
+    if (changed) {
+      st.draft = draft;
+      st.changed = true;
+      latest.current.onLive(draft);
+    }
+  };
+
+  const beginStroke = (pt: Pt) => {
+    const { pattern: P, tool: t, color, onBegin, onPick } = latest.current;
+    if (t === "hand") return;
+    if (latest.current.readOnly) return;
+    if (pt.x < 0 || pt.y < 0 || pt.x >= P.w || pt.y >= P.h) return;
+    const activeLayer = P.layers?.find((l) => l.id === P.activeLayer);
+    if (activeLayer?.locked && !["mark", "details", "block", "row", "park", "unpick", "pick", "note"].includes(t)) {
+      setAnnouncement("Ce calque est verrouillé."); return;
+    }
+    if (t === "pick") {
+      const idx = pickAt(P, pt);
+      if (idx >= 0) onPick(idx);
+      return;
+    }
+    const node = nodeOf(P, pt);
+    stroke.current = {
+      tool: t,
+      ctx: { tool: t, color, lastNode: t === "knot" ? null : node, fillDone: false, markMode: -1, onlyActive: latest.current.onlyActive, annotation: latest.current.annotation, halfDirection: latest.current.halfDirection, lookup: ["mark", "details", "block", "row"].includes(t) ? compositePattern(P) : undefined },
+      last: pt,
+      start: node,
+      end: node,
+      base: P,
+      draft: null,
+      changed: false,
+    };
+    onBegin();
+    lasso.current = [pt];
+    if (["select", "lasso", "move", "line", "rect", "ellipse"].includes(t)) return;
+    processSamples(pt, pt);
+    schedule();
+  };
+
+  const continueStroke = (pt: Pt) => {
+    const st = stroke.current;
+    if (!st) return;
+    if (["select", "lasso", "move", "line", "rect", "ellipse"].includes(st.tool)) {
+      st.last = pt;
+      if (st.tool === "lasso") lasso.current.push(pt);
+      if (st.tool === "select" || st.tool === "lasso") {
+        const pts = lasso.current;
+        const a = st.tool === "lasso" ? { x: Math.min(...pts.map((v) => v.x)), y: Math.min(...pts.map((v) => v.y)) } : lasso.current[0];
+        const b = st.tool === "lasso" ? { x: Math.max(...pts.map((v) => v.x)), y: Math.max(...pts.map((v) => v.y)) } : pt;
+        selected.current = boundedSelection(st.base, a, b, st.tool === "lasso" ? pts.slice() : undefined);
+      }
+      schedule(); return;
+    }
+    if (st.tool === "long") {
+      st.end = nodeOf(latest.current.pattern, pt);
+      schedule();
+      return;
+    }
+    processSamples(st.last, pt);
+    st.last = pt;
+  };
+
+  const endStroke = () => {
+    const st = stroke.current;
+    if (!st) return;
+    stroke.current = null;
+    if (st.tool === "select" || st.tool === "lasso") {
+      if (!selected.current) selected.current = boundedSelection(st.base, lasso.current[0], st.last);
+      latest.current.onSelection?.(selected.current);
+    } else if (["line", "rect", "ellipse"].includes(st.tool)) {
+      const d = drawShape(st.base, st.tool as "line" | "rect" | "ellipse", lasso.current[0], st.last, st.ctx.color);
+      latest.current.onLive(d); st.changed = true;
+    } else if (st.tool === "move" && selected.current) {
+      const s = selected.current, dx = Math.round(st.last.x - lasso.current[0].x), dy = Math.round(st.last.y - lasso.current[0].y);
+      const d = pasteSelection(clearSelection(st.base, s), extractSelection(st.base, s), s.x + dx, s.y + dy);
+      selected.current = { ...s, x: Math.max(0, s.x + dx), y: Math.max(0, s.y + dy) };
+      latest.current.onSelection?.(selected.current); latest.current.onLive(d); st.changed = true;
+    }
+    if (st.tool === "long" && (st.start.x !== st.end.x || st.start.y !== st.end.y)) {
+      const draft = clonePattern(st.draft ?? st.base);
+      if (addLongTo(draft, st.start, st.end, st.ctx.color)) {
+        st.draft = draft;
+        st.changed = true;
+        latest.current.onLive(draft);
+      }
+    }
+    latest.current.onEnd(st.changed);
+    schedule();
+  };
+
+  const cancelStroke = () => {
+    const st = stroke.current;
+    if (!st) return;
+    stroke.current = null;
+    if (st.changed) latest.current.onLive(st.base);
+    latest.current.onEnd(false);
+    schedule();
+  };
+
+  /* ---------------------------- Pointeurs ---------------------------- */
+
+  const local = (e: { clientX: number; clientY: number }) => {
+    const r = canvasRef.current?.getBoundingClientRect();
+    return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) };
+  };
+
+  const updateTip = (p: { x: number; y: number }) => {
+    const tip = tipRef.current;
+    if (!tip) return;
+    const P = latest.current.pattern;
+    const wpt = toWorld(p);
+    const inside = wpt.x >= 0 && wpt.y >= 0 && wpt.x <= P.w && wpt.y <= P.h;
+    if (!inside) {
+      hoverPt.current = null;
+      tip.style.opacity = "0";
+      return;
+    }
+    hoverPt.current = wpt;
+    let lx: number;
+    let ly: number;
+    let code = "";
+    if (NODE_TOOLS.includes(latest.current.tool)) {
+      const n = nodeOf(P, wpt);
+      lx = n.x - P.w / 2;
+      ly = n.y - P.h / 2;
+    } else {
+      const { c, r } = cellOf(P, wpt);
+      lx = c - P.w / 2;
+      ly = r - P.h / 2;
+      const idx = pickAt(P, wpt);
+      if (idx >= 0) code = `DMC ${FLOSS[idx].code}`;
+    }
+    tip.textContent = `${fmt(lx)} · ${fmt(ly)}${code ? `   ${code}` : ""}`;
+    tip.style.transform = `translate(${Math.min(p.x + 16, view.current.w - 180)}px, ${Math.max(p.y - 40, 8)}px)`;
+    tip.style.opacity = "1";
+    schedule();
+  };
+
+  const onDown = (e: RPointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const p = local(e);
+    ptrs.current.set(e.pointerId, p);
+    if (ptrs.current.size >= 2) {
+      cancelStroke();
+      pan.current = null;
+      const [a, b] = [...ptrs.current.values()];
+      const v = view.current;
+      pinch.current = {
+        d0: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        s0: v.s,
+        mx: (a.x + b.x) / 2,
+        my: (a.y + b.y) / 2,
+        ox: v.ox,
+        oy: v.oy,
+      };
+      idle.current = true;
+      hoverPt.current = null;
+      schedule();
+      return;
+    }
+    idle.current = false;
+    const t = latest.current.tool;
+    if (t === "hand" || e.button === 1 || e.button === 2 || (latest.current.pencilOnly && e.pointerType === "touch")) {
+      pan.current = p;
+      return;
+    }
+    if (e.button !== 0) return;
+    beginStroke(toWorld(p));
+  };
+
+  const onMove = (e: RPointerEvent<HTMLCanvasElement>) => {
+    const p = local(e);
+    if (ptrs.current.has(e.pointerId)) ptrs.current.set(e.pointerId, p);
+    const v = view.current;
+    if (ptrs.current.size >= 2 && pinch.current) {
+      const [a, b] = [...ptrs.current.values()];
+      const pc = pinch.current;
+      const ns = clamp((pc.s0 * Math.hypot(a.x - b.x, a.y - b.y)) / pc.d0, minScale(), MAX_S);
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const wx = (pc.mx - pc.ox) / pc.s0;
+      const wy = (pc.my - pc.oy) / pc.s0;
+      v.s = ns;
+      v.ox = mx - wx * ns;
+      v.oy = my - wy * ns;
+      clampView();
+      schedule();
+      return;
+    }
+    if (ptrs.current.size === 0) {
+      if (e.pointerType !== "touch") updateTip(p);
+      return;
+    }
+    if (idle.current) return;
+    if (pan.current && ptrs.current.size === 1) {
+      v.ox += p.x - pan.current.x;
+      v.oy += p.y - pan.current.y;
+      pan.current = p;
+      clampView();
+      schedule();
+      return;
+    }
+    if (stroke.current && ptrs.current.size === 1) continueStroke(toWorld(p));
+  };
+
+  const onUp = (e: RPointerEvent<HTMLCanvasElement>) => {
+    ptrs.current.delete(e.pointerId);
+    if (pinch.current && ptrs.current.size < 2) pinch.current = null;
+    if (ptrs.current.size === 0) {
+      pan.current = null;
+      idle.current = false;
+      endStroke();
+    }
+  };
+
+  const onLeave = () => {
+    if (ptrs.current.size === 0) {
+      hoverPt.current = null;
+      if (tipRef.current) tipRef.current.style.opacity = "0";
+      schedule();
+    }
+  };
+
+  /* ---------------------------- Effets ---------------------------- */
+
+  useEffect(() => {
+    schedule();
+  });
+
+  useEffect(() => {
+    if (latest.current.selection !== undefined) selected.current = latest.current.selection;
+    schedule();
+  }, [props.selection]);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      layout();
+      if (!view.current.ready) fitView();
+      else clampView();
+      schedule();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const control = (e: Event) => {
+      const d = (e as CustomEvent<{ action: string; x?: number; y?: number; scale?: number }>).detail;
+      if (d.action === "fit") fitView();
+      if (d.action === "focus") {
+        const c = content(), v = view.current;
+        v.s = d.scale ?? 24; v.ox = (c.x0 + c.x1) / 2 - (d.x ?? 0) * v.s; v.oy = (c.y0 + c.y1) / 2 - (d.y ?? 0) * v.s;
+        clampView();
+      }
+      if (d.action === "clearSelection") { selected.current = null; latest.current.onSelection?.(null); }
+      schedule();
+    };
+    window.addEventListener("pointzero:canvas", control);
+    return () => window.removeEventListener("pointzero:canvas", control);
+  }, []);
+
+  const dimsKey = `${pattern.w}x${pattern.h}`;
+  const insetsKey = `${insets.top}-${insets.right}-${insets.bottom}-${insets.left}`;
+  useEffect(() => {
+    layout();
+    fitView();
+    schedule();
+  }, [dimsKey, insetsKey, fitKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      const sx = e.clientX - r.left;
+      const sy = e.clientY - r.top;
+      if (e.ctrlKey || e.metaKey) {
+        zoomAt(Math.exp(-e.deltaY * 0.01), sx, sy);
+      } else {
+        const v = view.current;
+        v.ox -= e.deltaX;
+        v.oy -= e.deltaY;
+        clampView();
+        schedule();
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    };
+  }, []);
+
+  const cursor =
+    tool === "hand" ? (ptrs.current.size ? "grabbing" : "grab") : tool === "pick" ? "copy" : tool === "erase" ? "cell" : "crosshair";
+
+  return (
+    <div ref={wrapRef} className="absolute inset-0 overflow-hidden bg-[#0b0b0d]">
+      <canvas
+        ref={canvasRef}
+        role="application"
+        tabIndex={0}
+        aria-label="Grille de broderie. Flèches : changer de case. Entrée : utiliser l'outil. Plus et moins : zoomer."
+        className="block h-full w-full touch-none select-none"
+        style={{ cursor }}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={(e) => { ptrs.current.delete(e.pointerId); cancelStroke(); }}
+        onKeyDown={(e) => {
+          const q = keyCell.current, P = latest.current.pattern;
+          if (e.key === "+" || e.key === "-") { e.preventDefault(); zoomAt(e.key === "+" ? 1.25 : .8, view.current.w / 2, view.current.h / 2); return; }
+          if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+            e.preventDefault();
+            q.x = clamp(q.x + (e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0), 0, P.w - 1);
+            q.y = clamp(q.y + (e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0), 0, P.h - 1);
+            hoverPt.current = { x: q.x + .5, y: q.y + .5 };
+            const idx = pickAt(P, hoverPt.current);
+            setAnnouncement(`Colonne ${q.x + 1}, rangée ${q.y + 1}, ${idx >= 0 ? `DMC ${FLOSS[idx].code}` : "toile vide"}`); schedule();
+          }
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); beginStroke({ x: q.x + .5, y: q.y + .5 }); endStroke(); }
+        }}
+        onPointerLeave={onLeave}
+        onContextMenu={(e) => e.preventDefault()}
+      />
+      <span className="sr-only" role="status" aria-live="polite">{announcement}</span>
+      <div
+        ref={tipRef}
+        className="glass pointer-events-none absolute top-0 left-0 rounded-[10px] px-2.5 py-1.5 font-mono text-[12px] whitespace-nowrap text-label opacity-0 transition-opacity duration-150"
+        aria-hidden="true"
+      />
+    </div>
+  );
+}

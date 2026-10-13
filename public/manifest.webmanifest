@@ -1,0 +1,11 @@
+{
+  "name": "Point Zero - Atelier B",
+  "short_name": "Point Zero",
+  "lang": "fr",
+  "start_url": "./#atelier",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [{ "src": "./app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
