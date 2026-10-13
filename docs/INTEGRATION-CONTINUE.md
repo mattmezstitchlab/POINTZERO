@@ -89,7 +89,7 @@ jobs:
 | Étape | Commande | Ce qu'elle attrape |
 | --- | --- | --- |
 | Types | `tsc --noEmit` | Toute régression de typage. Le projet est en `strict` avec `noUnusedLocals` et `noUnusedParameters` : une variable morte fait échouer la fusion. |
-| Tests | `vitest run` | 161 tests sur 9 fichiers, dont les 12 auto-tests du moteur (`src/lib/checks.ts`) exécutés à chaque passage : export PDF, sérialisation par codes, symétrie, formats, tables couleur, journal, guide. |
+| Tests | `vitest run` | 162 tests sur 9 fichiers, dont les 12 auto-tests du moteur (`src/lib/checks.ts`) exécutés à chaque passage : export PDF, sérialisation par codes, symétrie, formats, tables couleur, journal, guide. |
 | Build | `vite build` | L'application se construit réellement, en monofichier, avec les tables de données embarquées. |
 
 `npm ci` plutôt que `npm install` : le dépôt doit pouvoir être reconstruit

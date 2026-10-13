@@ -454,7 +454,7 @@ statuts sont ceux du code livré, pas des intentions.
 
 **P1 — crédibilité technique** ✅
 
-- Harnais vitest + jsdom, 9 fichiers, **161 tests** au total ; `npm run verify` enchaîne
+- Harnais vitest + jsdom, 9 fichiers, **162 tests** au total ; `npm run verify` enchaîne
   `tsc --noEmit`, `vitest run` et `build`. Les 12 auto-tests de `checks.ts` sont
   exécutés à chaque passage de la suite : une régression du moteur fait échouer
   `engine.test.ts`.
@@ -536,7 +536,7 @@ statuts sont ceux du code livré, pas des intentions.
   Deux pistes (Créer, Broder) qui suivent le mode en cours, reprise là où l'on
   s'est arrêté, démarrage seul à la première ouverture, boussole pour rejouer.
 - Champ de questions : recherche dans une base écrite depuis le source
-  (`src/lib/coach.ts`, 40 entrées couvrant les 26 outils, les panneaux, les
+  (`src/lib/coach.ts`, 54 entrées couvrant les 26 outils, les panneaux, les
   formats, la toile, les mélanges, les correspondances, le journal, le partage,
   l'accessibilité et les limites assumées). **Aucun modèle distant** : hors ligne,
   sans compte ni clé, un agent appelé sur le réseau se tairait sans connexion et
@@ -547,7 +547,7 @@ statuts sont ceux du code livré, pas des intentions.
 - L'animation respecte « réduire les animations » (règle globale déjà en place),
   et la cible reste identifiable sans mouvement : le contour est dessiné dans les
   deux cas.
-- 39 tests : pertinence et refus de la recherche, intégrité de la base et du
+- 40 tests : pertinence et refus de la recherche, intégrité de la base et du
   parcours, reprise de progression et nettoyage d'un état illisible, rendu du
   guide, et invariant d'intégration — **chaque outil visé par une étape existe
   réellement dans le dock du mode concerné**.
@@ -572,7 +572,7 @@ statuts sont ceux du code livré, pas des intentions.
 | Contrôle | Avant (`7d2982b`) | Après |
 | --- | --- | --- |
 | `npx tsc --noEmit` | 0 erreur | 0 erreur |
-| Tests automatisés | aucun | 161, sur 9 fichiers |
+| Tests automatisés | aucun | 162, sur 9 fichiers |
 | `npm run verify` | inexistant | tsc + tests + build |
 | CI | aucune | workflow écrit dans `docs/INTEGRATION-CONTINUE.md`, non installé (permission `workflows` absente du jeton), jamais exécuté |
 | README / LICENSE | absents | écrits, avec attribution par table |
@@ -581,7 +581,7 @@ statuts sont ceux du code livré, pas des intentions.
 | Outils exposés dans le Dock | 16 sur 26 | 26 |
 | Symétrie | aucune | 3 axes, formes et remplissage inclus |
 | Documentation | 1 audit interne | audit, feuille de route statuée, contrat OXS, CI |
-| Aide dans l'atelier | studio vidéo à filmer soi-même | guide pas à pas validé par le geste + 40 réponses hors ligne |
+| Aide dans l'atelier | studio vidéo à filmer soi-même | guide pas à pas validé par le geste + 54 réponses hors ligne |
 
 Le poids ajouté est celui des données, pas du code : 71 ko de tables de
 correspondance en plus des 149 ko de la Delica, soit environ 48 ko gzippés. Le

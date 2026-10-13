@@ -111,6 +111,13 @@ describe("Recherche dans la base de connaissances", () => {
     expect(a).toEqual(b);
   });
 
+  it("la base ne rétrécit pas en silence", () => {
+    // La documentation cite un nombre d'entrées, et surtout : si la base fond,
+    // le guide continue de compiler et cesse simplement de savoir répondre.
+    // Personne ne s'en aperçoit sans ce plancher.
+    expect(KNOWLEDGE.length).toBeGreaterThanOrEqual(54);
+  });
+
   it("toute entrée est joignable et cohérente", () => {
     const ids = new Set<string>();
     for (const entry of KNOWLEDGE) {
