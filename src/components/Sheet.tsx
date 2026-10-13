@@ -15,6 +15,12 @@ interface Props {
 /**
  * Panneau coulissant : latéral en paysage (≥ 1024 px), feuille basse en portrait.
  * La feuille basse se ferme en la glissant vers le bas par sa poignée.
+ *
+ * Portrait : panneau modal — fond assombri, `aria-modal`, et la tabulation reste
+ * bouclée à l'intérieur. Paysage : panneau volontairement non modal, l'atelier
+ * doit rester utilisable à côté ; boucler le focus ici empêcherait d'atteindre
+ * la grille, le dock ou le rail de fils. Fermer rend le focus à l'élément qui
+ * l'avait.
  */
 export default function Sheet({ open, onClose, title, subtitle, children, toolbar, guideTarget }: Props) {
   const wide = useMedia("(min-width: 1024px)");
@@ -43,10 +49,23 @@ export default function Sheet({ open, onClose, title, subtitle, children, toolba
   const hidden = wide ? "translateX(calc(100% + 40px))" : "translateY(100%)";
   const shown = wide ? "translateX(0)" : `translateY(${dy}px)`;
 
+  const wasOpen = useRef(false);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpen.current = false;
+      return;
+    }
+    // L'effet se rejoue aussi quand la largeur change (le panneau passe de
+    // feuille basse à panneau latéral). Dans ce cas il ne faut ni reprendre le
+    // focus, ni le rendre en nettoyant : pivoter l'iPad en pleine broderie
+    // renvoyait le focus dans le panneau.
+    const justOpened = !wasOpen.current;
+    wasOpen.current = true;
     const before = document.activeElement as HTMLElement | null;
-    const timeout = window.setTimeout(() => panel.current?.querySelector<HTMLButtonElement>("button")?.focus(), 50);
+    const timeout = justOpened
+      ? window.setTimeout(() => panel.current?.querySelector<HTMLButtonElement>("button")?.focus(), 50)
+      : 0;
     const keys = (e: KeyboardEvent) => {
       if (e.key === "Escape") { e.stopPropagation(); closeRef.current(); }
       if (e.key === "Tab" && !wide) {
@@ -58,7 +77,11 @@ export default function Sheet({ open, onClose, title, subtitle, children, toolba
     };
     panel.current?.addEventListener("keydown", keys);
     const el = panel.current;
-    return () => { window.clearTimeout(timeout); el?.removeEventListener("keydown", keys); before?.focus(); };
+    return () => {
+      window.clearTimeout(timeout);
+      el?.removeEventListener("keydown", keys);
+      if (justOpened) before?.focus();
+    };
   }, [open, wide]);
 
   return (

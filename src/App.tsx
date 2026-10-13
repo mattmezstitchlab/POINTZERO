@@ -31,7 +31,21 @@ import PeerShare from "./components/PeerShare";
 type Panel = "palette" | "project" | "library" | "studio" | "share" | "export" | null;
 type Workspace = "create" | "stitch";
 const STITCH_TOOLS = new Set<Tool>(["hand", "pick", "mark", "details", "block", "row", "park", "unpick", "note"]);
-const KEYS: Record<string, Tool> = { v: "hand", x: "cross", d: "half", q: "quarter", r: "back", k: "knot", l: "long", i: "pick", g: "fill", e: "erase", m: "mark", j: "details", b: "block", h: "row", u: "unpick", s: "select" };
+/**
+ * Raccourcis d'outils.
+ *
+ * Les lettres couvrent les outils du dock ; les chiffres, ceux qui n'étaient
+ * accessibles que depuis le panneau Projet. T, P et F restent réservés : T cycle
+ * l'affichage, P ouvre la palette (ou gare un fil en mode Broder), F ouvre la
+ * palette.
+ */
+const KEYS: Record<string, Tool> = {
+  v: "hand", x: "cross", d: "half", q: "quarter", r: "back", k: "knot", l: "long",
+  i: "pick", g: "fill", e: "erase", m: "mark", j: "details", b: "block", h: "row",
+  u: "unpick", s: "select",
+  "1": "threeQuarter", "2": "petite", "3": "bead", "4": "line", "5": "rect",
+  "6": "ellipse", "7": "lasso", "8": "move", "9": "note",
+};
 
 function initialPreferences(): Preferences {
   try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem("point-zero:preferences") ?? "{}") }; } catch { return DEFAULT_PREFS; }

@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Check, Minus, Plus, Search, X } from "lucide-react";
+import { GLASS_LABEL, beadByCode, deltaELabel, loadBeads, nearestBeads, type BeadPalette } from "../lib/beads";
 import { contrastOn, FLOSS } from "../lib/dmc";
 import { assignedSymbol, computeStats, type ColorStat, type Pattern, type Supply } from "../lib/pattern";
 import { SYMBOL_COUNT } from "../lib/symbols";
@@ -157,6 +158,21 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
               <div className="mt-2 grid grid-cols-2 gap-2"><label className="text-[10px] text-label-3">Mètres partiels, 6 brins<input className="field mt-1 h-9 text-[12px]" type="number" min={0} max={800} step={.1} value={value.partialMeters} onChange={(e) => stock(part.code, { ...value, partialMeters: Math.max(0, +e.target.value) })} /></label><label className="text-[10px] text-label-3">Lot de teinture<input className="field mt-1 h-9 text-[12px]" value={value.lot} placeholder="Facultatif" onChange={(e) => stock(part.code, { ...value, lot: e.target.value })} /></label></div>
             </div>;
           })}
+          {(row.beads > 0 || pattern.beadMap?.[row.code]) && (
+            <BeadBlock
+              code={row.code}
+              lab={FLOSS[row.idx].lab}
+              beads={row.beads}
+              value={pattern.beadMap?.[row.code]}
+              onPick={(ref) => {
+                const map = { ...(pattern.beadMap ?? {}) };
+                if (ref) map[row.code] = ref;
+                else delete map[row.code];
+                onPattern({ ...pattern, beadMap: Object.keys(map).length ? map : undefined });
+              }}
+            />
+          )}
+
           <button className="mt-3 text-[12px] text-accent-2" type="button" onClick={() => setChoosingSymbol(!choosingSymbol)}>Personnaliser le symbole</button>
           {choosingSymbol && <div className="mt-2 grid max-h-[150px] grid-cols-8 gap-1 overflow-auto">{Array.from({ length: SYMBOL_COUNT }, (_, symbol) => <button key={symbol} className={`grid h-7 place-items-center rounded-[5px] ${row.pos === symbol ? "bg-accent" : "bg-white/[.06]"}`} title={`Symbole ${symbol + 1}`} onClick={() => { const other = pattern.palette.find((c) => c !== row.idx && assignedSymbol(pattern, c) === symbol); const map = { ...pattern.symbolMap, [row.code]: symbol }; if (other !== undefined) map[FLOSS[other].code] = row.pos; onPattern({ ...pattern, symbolMap: map }); setChoosingSymbol(false); }}><SymbolIcon sym={symbol} size={13} /></button>)}</div>}
 
@@ -180,6 +196,155 @@ function Info({ value, label }: { value: string; label: string }) {
     <div className="rounded-[11px] bg-white/[0.06] px-1 py-2">
       <p className="font-mono text-[13px] font-semibold tabular-nums">{value}</p>
       <p className="mt-0.5 text-[10px] text-label-3">{label}</p>
+    </div>
+  );
+}
+
+/**
+ * Référence de perle fabricant pour une couleur du motif.
+ *
+ * L'atelier sait dessiner et suivre des perles depuis le début, mais ne savait
+ * pas les nommer : la référence devait être recopiée à la main dans les notes.
+ * La table Miyuki Delica 11/0 (1 288 références, statut « measured ») vient de
+ * craft-color-codes, déjà en dépendance pour le DMC, et n'est chargée que si le
+ * motif porte vraiment des perles de cette couleur.
+ *
+ * L'écart de teinte est affiché tel quel, jamais arrondi à une correspondance
+ * exacte : la source mesure la moyenne sRGB de la photo produit officielle et,
+ * comparée à deux jeux de données indépendants, la famille de couleur tombe
+ * juste sur tous les codes mais la teinte diffère de 6 à 12 ΔE00 en médiane.
+ * C'est la bonne perle, pas la bonne teinte — et les perles métallisées,
+ * galvanisées, AB ou silver-lined ne peuvent pas être une couleur plate.
+ */
+function BeadBlock({ code, lab, beads, value, onPick }: {
+  code: string;
+  lab: [number, number, number];
+  beads: number;
+  value?: string;
+  onPick: (reference: string | null) => void;
+}) {
+  const [palette, setPalette] = useState<BeadPalette | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [typed, setTyped] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    loadBeads()
+      .then((p) => { if (live) setPalette(p); })
+      .catch(() => { if (live) setFailed(true); });
+    return () => { live = false; };
+  }, []);
+
+  const chosen = palette && value ? beadByCode(palette.colors, value) : undefined;
+  // Une référence choisie ouvre sur ses substituts disponibles ; sans
+  // référence, on part de la couleur du fil.
+  const proposals = palette
+    ? chosen
+      ? nearestBeads(chosen.lab, palette.colors, 3).filter((b) => b.code !== chosen.code)
+      : nearestBeads(lab, palette.colors, 3)
+    : [];
+  const typedBead = palette ? beadByCode(palette.colors, typed) : undefined;
+  const beadLabel = (b: { code: string; name: string; glass?: string }) =>
+    `${b.code} · ${b.name}${b.glass ? ` · ${GLASS_LABEL[b.glass] ?? b.glass}` : ""}`;
+
+  return (
+    <div className="mt-3 border-t border-white/10 pt-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[12px] font-medium">Perles Miyuki Delica 11/0</p>
+          <p className="text-[10px] text-label-3">
+            {beads > 0 ? `${beads} perle(s) de cette couleur dans le motif` : "Référence prévue pour ce fil"}
+          </p>
+        </div>
+        {value && (
+          <button
+            type="button"
+            className="shrink-0 text-[11px] text-label-3 underline"
+            aria-label={`Retirer la référence de perle du DMC ${code}`}
+            onClick={() => onPick(null)}
+          >
+            Retirer
+          </button>
+        )}
+      </div>
+
+      {!palette && !failed && <p className="mt-2 text-[11px] text-label-3">Chargement des 1 288 références…</p>}
+      {failed && (
+        <p className="mt-2 text-[11px] text-warn">
+          Table des perles indisponible. Une référence exacte peut quand même être saisie ci-dessous.
+        </p>
+      )}
+
+      {chosen && (
+        <div className="mt-2 flex items-center gap-2 rounded-[10px] bg-white/[0.06] p-2">
+          <span className="h-7 w-7 shrink-0 rounded-full ring-1 ring-black/30" style={{ background: chosen.hex }} aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="font-mono text-[12px] font-semibold">{chosen.code}</p>
+            <p className="truncate text-[10px] text-label-3">{chosen.name}{chosen.glass ? ` · ${GLASS_LABEL[chosen.glass] ?? chosen.glass}` : ""}</p>
+          </div>
+          {chosen.discontinued && (
+            <span className="ml-auto shrink-0 rounded-[6px] bg-warn/20 px-1.5 py-0.5 text-[9px] text-warn">arrêtée</span>
+          )}
+        </div>
+      )}
+
+      {proposals.length > 0 && (
+        <>
+          <p className="mt-2 text-[10px] text-label-3">
+            {chosen ? "Remplaçantes disponibles les plus proches" : "Les plus proches de ce fil"}
+          </p>
+          <div className="mt-1 grid gap-1">
+            {proposals.map((b) => (
+              <button
+                key={b.code}
+                type="button"
+                onClick={() => onPick(b.code)}
+                className="flex items-center gap-2 rounded-[9px] bg-white/[0.04] p-1.5 text-left transition-colors hover:bg-white/[0.09]"
+                aria-label={`Choisir la perle ${beadLabel(b)}, écart ${b.deltaE.toFixed(1)} (${deltaELabel(b.deltaE)})`}
+              >
+                <span className="h-6 w-6 shrink-0 rounded-full ring-1 ring-black/30" style={{ background: b.hex }} aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-mono text-[11px]">{b.code}</span>
+                  <span className="block truncate text-[10px] text-label-3">{b.name}{b.glass ? ` · ${GLASS_LABEL[b.glass] ?? b.glass}` : ""}</span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className="block font-mono text-[10px] tabular-nums">ΔE {b.deltaE.toFixed(1)}</span>
+                  <span className="block text-[9px] text-label-3">{deltaELabel(b.deltaE)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <label className="mt-2 block text-[10px] text-label-3" htmlFor={`perle-${code}`}>
+        Référence exacte
+        <span className="mt-1 flex gap-1">
+          <input
+            id={`perle-${code}`}
+            className="field h-9 min-w-0 flex-1 font-mono text-[12px]"
+            value={typed}
+            placeholder="DB0361"
+            autoCapitalize="characters"
+            spellCheck={false}
+            onChange={(e) => setTyped(e.target.value)}
+          />
+          <button type="button" className="btn-tinted h-9 shrink-0 px-3 text-[12px]" disabled={!typedBead} onClick={() => { if (typedBead) { onPick(typedBead.code); setTyped(""); } }}>
+            Choisir
+          </button>
+        </span>
+      </label>
+      {typed.trim() && palette && !typedBead && (
+        <p className="mt-1 text-[10px] text-warn">Référence absente de la table Miyuki Delica.</p>
+      )}
+
+      <p className="mt-2 text-[10px] leading-relaxed text-label-3">
+        Teinte approchée, à confirmer sur carte physique : la couleur est la moyenne sRGB de la photo
+        produit Miyuki, et l'écart médian avec deux jeux de données indépendants est de 6 à 12 ΔE00.
+        Les références métallisées, galvanisées, AB et silver-lined ne sont pas une couleur plate.
+        La référence choisie est reprise dans la légende du SVG et sur la page perles du PDF.
+        Données : craft-color-codes (MakeBead), CC BY 4.0.
+      </p>
     </div>
   );
 }
