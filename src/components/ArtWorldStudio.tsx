@@ -74,8 +74,8 @@ export default function ArtWorldStudio({onBack,onPattern,onDesign}:Props){
   useEffect(()=>{try{localStorage.setItem(ART_KEY,JSON.stringify(project));}catch{setStatus("Stockage local saturé. Exportez votre œuvre JSON.");}},[project]);
   const analysis=useMemo(()=>artPaletteAnalysis(project),[project]);
   const currentColor=ink??artColor(active);
-  const stepWidth=tool==="watercolor"?34:tool==="tape"?33:tool==="pastel"?17:tool==="charcoal"?11:tool==="pin"?12:tool==="stencil"?24:tool==="cross"?17:size;
-  const stepOpacity=tool==="watercolor"?.34:tool==="tape"?.55:tool==="pastel"?.72:opacity;
+  const stepWidth=size;
+  const stepOpacity=opacity;
   const choices=useMemo(()=>{
     const q=search.trim().toLowerCase();
     return q?BASE_FLOSS.map((f,i)=>({...f,i})).filter(f=>f.code.toLowerCase().includes(q)||f.name.toLowerCase().includes(q)).slice(0,85):
@@ -221,7 +221,7 @@ export default function ArtWorldStudio({onBack,onPattern,onDesign}:Props){
       {!galleryMode?<><h3 className="mb-2 text-xs font-semibold">Outils d'artiste</h3>
         <div className="grid grid-cols-2 gap-2" aria-label="Outils de l'atelier libre">
           {ART_TOOLS.map(t=><button key={t.id} type="button" aria-label={"Outil "+t.name} aria-pressed={tool===t.id}
-            onClick={()=>{setTool(t.id);if(t.id==="eraser")setSize(25);}}
+            onClick={()=>{setTool(t.id);setSize(({pencil:4,brush:14,watercolor:34,pastel:19,charcoal:12,tape:34,stencil:28,cross:14,pin:12,eraser:25,move:12} as Record<ArtTool,number>)[t.id]);setOpacity(t.id==="watercolor"?.34:t.id==="pastel"?.64:t.id==="tape"?.5:1);}}
             className={"min-h-[61px] rounded-[5px] border px-2 py-2 text-left "+(tool===t.id?"border-white bg-white text-black":"border-white/15 bg-white/[.04] text-white/80 hover:bg-white/10")}>
             <span className="block text-xs font-semibold">{t.name}</span>
             <span className={"mt-1 block text-[10px] "+(tool===t.id?"text-black/60":"text-white/55")}>{t.description}</span>
