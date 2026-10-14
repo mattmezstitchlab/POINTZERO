@@ -2,7 +2,7 @@ import {beforeEach,describe,expect,it} from "vitest";
 import {FLOSS,flossIndex} from "../lib/dmc";
 import {adaptPatternToProfile,defaultBrodeuseProfile,loadBrodeuseProfile,saveBrodeuseProfile,previewBoutiqueVariants} from "../lib/brodeuseProfile";
 import {addSuggestedLeaves,floralDemo,suggestLeaves} from "../lib/floralComposition";
-import {affectedBounds,attachSubject,changeSubject,detectSubjects,recomposeSubjects,reorderSubject,sceneFromPattern} from "../lib/subjectEngine";
+import {affectedBounds,attachSubject,changeSubject,detectSubjects,recomposeSubjects,removeSubject,reorderSubject,sceneFromPattern} from "../lib/subjectEngine";
 import {fromObject,toObject,createPattern,ensurePalette} from "../lib/pattern";
 import {buildPdf} from "../lib/pdf";
 
@@ -41,6 +41,14 @@ describe("Bouquet indépendant, profondeur brodable et stock",()=>{
     expect(out.q[0][cell]).toBe(-1);
     expect(out.fwd[cell]).toBe(-1);
     expect(out.back.some(seg=>seg.c===a && (seg.x1+seg.x2)/2>=9 && (seg.x1+seg.x2)/2<13)).toBe(false);
+  });
+  it("une feuille proposée peut être retirée sans détruire la composition ni la source",()=>{
+    const source=floralDemo(),extra=addSuggestedLeaves(source);
+    expect(extra.layers.length).toBeGreaterThan(source.layers.length);
+    let restored=extra;
+    for(const layer of extra.layers.slice(source.layers.length))restored=removeSubject(restored,layer.id);
+    expect(recomposeSubjects(restored).cross).toEqual(recomposeSubjects(source).cross);
+    expect(restored.source).toBe(source.source);
   });
   it("le mode profondeur renforcée ne dessine que sur les superpositions et reste désactivable",()=>{
     const scene=floralDemo();
