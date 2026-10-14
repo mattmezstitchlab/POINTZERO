@@ -114,6 +114,7 @@ export default function PdfPrep({
   const [addingZone, setAddingZone] = useState(false);
   const [zoneDraft, setZoneDraft] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const zoneStart = useRef<{ x: number; y: number } | null>(null);
+  const draggedCard = useRef<string | null>(null);
 
   const handleRef = useRef<PdfHandle | null>(null);
   const registry = useRef(new SymbolRegistry());
@@ -936,11 +937,25 @@ export default function PdfPrep({
 
               <section className="rounded-[14px] bg-white/5 p-3.5">
                 <h3 className="mb-2 text-[13px] font-semibold">Ordre des cartes du puzzle</h3>
-                <p className="mb-2 text-[11px] text-label-3">Changez l'ordre des pages avant l'assemblage. Le tableau magnétique peut ensuite être ajusté à la main.</p>
+                <p className="mb-2 text-[11px] text-label-3">Glissez les cartes pour les réordonner (ou utilisez les flèches). Ajustez ensuite les positions sur le tableau magnétique.</p>
                 <div className="max-h-48 space-y-1 overflow-y-auto">
                   {effective.map((b, i) => (
-                    <div key={b.id} className="flex items-center gap-2 rounded-md border border-white/10 bg-black/15 p-2">
+                    <div key={b.id} draggable
+                      onDragStart={e => { draggedCard.current = b.id; e.dataTransfer.effectAllowed = "move"; }}
+                      onDragOver={e => { if (draggedCard.current) e.preventDefault(); }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        const from = effective.findIndex(x => x.id === draggedCard.current);
+                        if (from >= 0) moveCard(from, i - from);
+                        draggedCard.current = null;
+                      }}
+                      onDragEnd={() => { draggedCard.current = null; }}
+                      className="flex cursor-grab items-center gap-2 rounded-md border border-white/10 bg-black/15 p-2 active:cursor-grabbing">
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-white/10 text-[11px]">{i + 1}</span>
+                      {analysis?.pages.find(p => p.n === b.page)?.thumb && (
+                        <img src={analysis.pages.find(p => p.n === b.page)!.thumb}
+                          className="h-10 w-8 shrink-0 rounded-sm bg-white object-cover" alt={`Aperçu page ${b.page}`} draggable={false} />
+                      )}
                       <span className="min-w-0 flex-1 truncate text-xs">Page {b.page} · {b.cols} × {b.rows}</span>
                       <button type="button" disabled={i === 0} className="px-2 py-1 text-xs disabled:opacity-20" aria-label={`Monter la carte ${i + 1}`} onClick={() => moveCard(i, -1)}>↑</button>
                       <button type="button" disabled={i === effective.length - 1} className="px-2 py-1 text-xs disabled:opacity-20" aria-label={`Descendre la carte ${i + 1}`} onClick={() => moveCard(i, 1)}>↓</button>
@@ -1101,7 +1116,7 @@ function autoOrder(blocks: PdfBlock[]) {
   return [...blocks].sort((a, b) => a.page - b.page || a.y0 - b.y0 || a.x0 - b.x0);
 }
 
-function assembleFromTileLayout(
+export function assembleFromTileLayout(
   list: Placed[],
   layout: { b: PdfBlock; x: number; y: number; w: number; h: number }[],
   name: string,
@@ -1133,12 +1148,17 @@ function assembleFromTileLayout(
   for (const p of list) {
     const t = layout.find((item) => item.b.id === p.b.id);
     if (!t) continue;
-    for (let r = 0; r < p.b.rows; r++) {
-      for (let c = 0; c < p.b.cols; c++) {
-        const gx = Math.min(W - 1, Math.max(0, t.x + c));
-        const gy = Math.min(H - 1, Math.max(0, t.y + r));
-        const v = p.data.cells[r * p.b.cols + c];
-        if (v >= 0) raw[gy * W + gx] = v;
+    // Une carte peut être ajustée à des dimensions communes. Si c'est
+    // le cas, rééchantillonner ses cellules de façon explicite, sans trou.
+    for (let r = 0; r < t.h; r++) {
+      for (let c = 0; c < t.w; c++) {
+        const srcX = Math.min(p.b.cols - 1, Math.floor(c * p.b.cols / t.w));
+        const srcY = Math.min(p.b.rows - 1, Math.floor(r * p.b.rows / t.h));
+        const gx = t.x + c;
+        const gy = t.y + r;
+        if (gx < 0 || gy < 0 || gx >= W || gy >= H) continue;
+        const value = p.data.cells[srcY * p.b.cols + srcX];
+        if (value >= 0) raw[gy * W + gx] = value;
       }
     }
   }
