@@ -26,6 +26,7 @@ import MusicProductionStudio from "./components/MusicProductionStudio";
 import AccessibilityStudio from "./components/AccessibilityStudio";
 import AcademyStudio from "./components/AcademyStudio";
 import OneSpaceStudio from "./components/OneSpaceStudio";
+import LegalStudio from "./components/LegalStudio";
 import ArtWorldStudio from "./components/ArtWorldStudio";
 import AimeLanding from "./components/AimeLanding";
 import type { MiniSite } from "./lib/miniSiteCore";
@@ -78,18 +79,18 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 export default function App() {
   const [boot] = useState(loadStored);
   // Existing embroidery projects resume untouched; newcomers open the multiformat studio.
-  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production" | "accessibility" | "academy" | "one-space" | "causal">(() => {
+  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production" | "accessibility" | "academy" | "one-space" | "causal" | "legal">(() => {
     try {
       const chosen = localStorage.getItem("pointzero:workspace");
       if(new URLSearchParams(window.location.search).get("site")==="le-monde-aime")return "aime-landing";
-      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" || chosen === "generation" || chosen === "music" || chosen === "art-world" || chosen === "aime-landing" || chosen === "music-production" || chosen === "accessibility" || chosen === "academy" || chosen === "one-space" || chosen === "causal" ? chosen : boot ? "embroidery" : "design";
+      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" || chosen === "generation" || chosen === "music" || chosen === "art-world" || chosen === "aime-landing" || chosen === "music-production" || chosen === "accessibility" || chosen === "academy" || chosen === "one-space" || chosen === "causal" || chosen === "legal" ? chosen : boot ? "embroidery" : "design";
     } catch { return "embroidery"; }
   });
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
   const [miniSiteHandoff,setMiniSiteHandoff] = useState<MiniSite|null>(null);
   const [openPrivateGallery,setOpenPrivateGallery]=useState(false);
   const [linkedProject,setLinkedProject] = useState<{id:string;name:string}|null>(null);
-  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production" | "accessibility" | "academy" | "one-space" | "causal") => {
+  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production" | "accessibility" | "academy" | "one-space" | "causal" | "legal") => {
     if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
     setStudioMode(mode);
     if(mode!=="aime-landing"&&new URLSearchParams(window.location.search).has("site")){
@@ -409,7 +410,7 @@ export default function App() {
         onPhoto={() => switchStudio("photo")} onFashion={() => switchStudio("fashion")}
         onBudget={() => switchStudio("budget")} onProgramme={() => switchStudio("programme")} onAdmin={() => switchStudio("admin")}
         onMiniSite={() => switchStudio("mini-site")} onPDF={() => switchStudio("pdf")}
-        onGeneration={() => switchStudio("generation")} onMusic={() => switchStudio("music")} onMusicProduction={() => switchStudio("music-production")} onAccessibility={() => switchStudio("accessibility")} onAcademy={() => switchStudio("academy")} onSpace={() => switchStudio("one-space")} onCausal={() => switchStudio("causal")}
+        onGeneration={() => switchStudio("generation")} onMusic={() => switchStudio("music")} onMusicProduction={() => switchStudio("music-production")} onAccessibility={() => switchStudio("accessibility")} onAcademy={() => switchStudio("academy")} onSpace={() => switchStudio("one-space")} onCausal={() => switchStudio("causal")} onLegal={() => switchStudio("legal")}
         onArtWorld={() => {setOpenPrivateGallery(false);switchStudio("art-world");}}
         onAimeLanding={() => switchStudio("aime-landing")}
         incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
@@ -430,7 +431,7 @@ export default function App() {
     : studioMode === "admin"
     ? <AdminStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
     : studioMode === "mini-site"
-    ? <MiniSiteStudio onBack={() => {setMiniSiteHandoff(null);switchStudio("design");}} incomingDraft={miniSiteHandoff} />
+    ? <MiniSiteStudio onBack={() => {setMiniSiteHandoff(null);switchStudio("design");}} incomingDraft={miniSiteHandoff} onLegal={() => switchStudio("legal")} />
     : studioMode === "pdf"
     ? <PDFStudio onBack={() => switchStudio("design")} onConvertToPattern={file => {
         setPdfFile(file);switchStudio("embroidery");
@@ -446,7 +447,9 @@ export default function App() {
     : studioMode === "accessibility"
     ? <AccessibilityStudio onBack={() => switchStudio("design")} />
     : studioMode === "academy"
-    ? <AcademyStudio onBack={() => switchStudio("design")} onAccessibility={() => switchStudio("accessibility")} />
+    ? <AcademyStudio onBack={() => switchStudio("design")} onAccessibility={() => switchStudio("accessibility")} onLegal={() => switchStudio("legal")} />
+    : studioMode === "legal"
+    ? <LegalStudio onBack={() => switchStudio("design")} onMiniSite={() => switchStudio("mini-site")} onAcademy={() => switchStudio("academy")} />
     : studioMode === "one-space" || studioMode === "causal"
     ? <OneSpaceStudio initialScreen={studioMode === "causal" ? "causal" : "espace"}
         onBack={() => switchStudio("design")} onStudio={target => {
