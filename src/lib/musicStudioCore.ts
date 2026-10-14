@@ -1,10 +1,12 @@
 /** POINTZERO Musique — local, inclusive and intergenerational composition. */
+import { BASE_FLOSS } from "./dmc";
+import { dmcSound } from "./artWorldCore";
 export const MUSIC_KEY="pointzero:music:v1";
 export const MUSIC_SECONDS=225;
 export type Gesture="point"|"circle"|"square"|"line"|"wave"|"group"|"star"|"text";
 export type Emotion="Joie"|"Sérénité"|"Amour"|"Énergie"|"Nature"|"Méditation"|"Mystère"|"Courage"|"Tristesse";
 export type MusicAudience="ensemble"|"decouverte"|"transmission";
-export interface MusicNote {id:string;gesture:Gesture;time:number;pitch:0|1|2;emotion:Emotion;intensity:number;label:string;author:string}
+export interface MusicNote {id:string;gesture:Gesture;time:number;pitch:0|1|2;emotion:Emotion;intensity:number;label:string;author:string;dmcCode?:string}
 export interface MusicScore {version:1;id:string;title:string;intention:string;audience:MusicAudience;notes:MusicNote[];tempo:number}
 export type MusicVoice="bell"|"pad"|"pluck"|"drum";
 export interface MusicEvent {time:number;duration:number;midi:number;velocity:number;voice:MusicVoice;noteId:string}
@@ -44,6 +46,7 @@ export const makeMusicScore=():MusicScore=>({
 });
 export const emptyMusicScore=():MusicScore=>({version:1,id:unique(),title:"Nouvelle partition",intention:"",audience:"ensemble",tempo:120,notes:[]});
 const gestureIds=new Set(GESTURES.map(x=>x.id)),emotionIds=new Set(EMOTIONS.map(x=>x.id));
+const validDMC=new Set(BASE_FLOSS.map(f=>f.code));
 export function safeMusicScore(raw:unknown):MusicScore|null{
  if(!raw||typeof raw!=="object")return null;
  const s=raw as Partial<MusicScore>;
@@ -56,7 +59,8 @@ export function safeMusicScore(raw:unknown):MusicScore|null{
   if(!n||typeof n.id!=="string"||n.id.length>100||seen.has(n.id)||
    !gestureIds.has(n.gesture)||!emotionIds.has(n.emotion)||!Number.isFinite(n.time)||n.time<0||n.time>=MUSIC_SECONDS||
    ![0,1,2].includes(n.pitch)||!Number.isFinite(n.intensity)||n.intensity<0||n.intensity>1||
-   typeof n.label!=="string"||n.label.length>120||typeof n.author!=="string"||n.author.length>70)return null;
+   typeof n.label!=="string"||n.label.length>120||typeof n.author!=="string"||n.author.length>70||
+   (n.dmcCode!==undefined&&(typeof n.dmcCode!=="string"||!validDMC.has(n.dmcCode))))return null;
   seen.add(n.id);
  }
  return s as MusicScore;
@@ -80,9 +84,11 @@ export function musicEvents(score:MusicScore):MusicEvent[]{
  for(const n of score.notes){
   if(n.gesture==="text")continue;
   const base=pitchIndex(n.pitch),v=clamp(n.intensity*emotionVelocity(n.emotion),.06,.95);
+  const floss=n.dmcCode?BASE_FLOSS.find(f=>f.code===n.dmcCode):null;
+  const shift=floss?dmcSound(floss.code,floss.hex).midi-deg(base):0;
   const add=(offset:number,midi:number,dur:number,voice:MusicVoice,ratio=1)=>{
    const time=n.time+offset;if(time<0||time>=MUSIC_SECONDS)return;
-   events.push({time,duration:Math.min(dur,MUSIC_SECONDS-time),midi,velocity:clamp(v*ratio,.04,.95),voice,noteId:n.id});
+   events.push({time,duration:Math.min(dur,MUSIC_SECONDS-time),midi:clamp(midi+shift,36,96),velocity:clamp(v*ratio,.04,.95),voice,noteId:n.id});
   };
   switch(n.gesture){
    case "point":add(0,deg(base+1),.32,"pluck");break;
