@@ -1,12 +1,12 @@
 /**
- * La landing en modules : ce qui s'y voit doit exister.
+ * La toile infinie : il n'y a plus de page d'accueil, il y a une grille.
  *
- * Ces tests montent la page d'accueil entière et vérifient trois choses que
- * le reste de la suite ne regarde pas : le bandeau défilant porte bien les
- * pictos réels, les neuf modules sont présents avec leur badge d'état, et le
- * jeu de 54 cartes se range dans deux ordres qui veulent chacun dire quelque
- * chose. Le tableau honnête est vérifié lui aussi : c'est lui qui interdit à
- * cette page de promettre plus que le code.
+ * Ces tests montent la toile entière et vérifient le nouveau contrat :
+ * le hero est une feuille paysage posée sur la grille, on dézoome à l'infini
+ * (molette, glisser, recentrer), des voisines brodent en direct autour, et
+ * l'on peut s'approprier un motif — paiement simulé, mais motif réel, livré
+ * directement dans l'atelier sans fichier ni dossier. La loupe, elle, a
+ * disparu : on s'était mal compris sur le curseur.
  */
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import { act } from "react";
@@ -24,6 +24,7 @@ vi.mock("../lib/dither", () => ({
   }),
 }));
 import { buildDeck, orderDeck } from "../components/CardDeck";
+import { miniDesign, VOISINES } from "../components/ToileInfinie";
 
 const saved = { matchMedia: globalThis.matchMedia, RO: globalThis.ResizeObserver };
 
@@ -53,6 +54,8 @@ afterAll(() => {
 
 let root: Root | null = null;
 let container: HTMLElement | null = null;
+let openSpy: ReturnType<typeof vi.fn>;
+let motifSpy: ReturnType<typeof vi.fn>;
 
 const click = async (el: Element) => {
   await act(async () => {
@@ -61,13 +64,23 @@ const click = async (el: Element) => {
 };
 const byText = (re: RegExp) =>
   [...(container?.querySelectorAll("button") ?? [])].find((b) => re.test(b.textContent || "")) ?? null;
+const sleep = async (ms: number) => {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, ms));
+  });
+};
+const toile = () => container!.querySelector(".toile")!;
+const monde = () => container!.querySelector(".toile-monde") as HTMLElement;
+const kActuel = () => parseFloat(monde().dataset.k || "0");
 
 beforeEach(async () => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
+  openSpy = vi.fn();
+  motifSpy = vi.fn();
   await act(async () => {
-    root!.render(<Landing onOpen={vi.fn()} onGuide={vi.fn()} onMotif={vi.fn()} />);
+    root!.render(<Landing onOpen={openSpy} onMotif={motifSpy} />);
   });
 });
 afterEach(async () => {
@@ -77,96 +90,129 @@ afterEach(async () => {
   container = null;
 });
 
-describe("Landing : le bandeau et les modules", () => {
-  it("fait défiler les pictos réels, en grand et en deux copies", () => {
-    const pictos = container!.querySelectorAll(".marquee-picto");
-    expect(pictos.length).toBeGreaterThan(20);
-    expect(pictos.length % 2, "deux copies pour une boucle sans couture").toBe(0);
-    expect(container!.querySelector(".marquee-track")).toBeTruthy();
+describe("La toile : le site entier est une grille", () => {
+  it("pose le hero en feuille paysage sur deux grilles, avec les voisines autour", () => {
+    expect(toile(), "la toile prend tout l'écran").toBeTruthy();
+    expect(container!.querySelector(".toile-grille.blocs"), "les repères de patron, tous les dix points").toBeTruthy();
+    expect(container!.querySelector(".toile-grille.fines"), "la grille fine case par case").toBeTruthy();
+    expect(container!.querySelector(".hero-sheet"), "le hero est une feuille posée sur la toile").toBeTruthy();
+    expect(container!.querySelectorAll(".motif-vivant").length).toBe(VOISINES.length);
+    expect(container!.textContent).toContain("vous êtes dans la grille");
+    expect(container!.textContent, "honnêteté : voisines locales, paiement simulé").toContain("simulées");
   });
 
-  it("présente neuf modules, et dit lequel est en construction", () => {
-    const modules = [...container!.querySelectorAll("[data-module]")].map((m) => m.getAttribute("data-module"));
-    expect(modules).toEqual(["atelier", "fil", "lecteur", "imprimeur", "compagnon", "guide", "confort", "lien", "sal"]);
-    const sal = container!.querySelector('[data-module="sal"]')!;
-    expect(sal.textContent).toContain("en construction");
-    expect(container!.querySelector('[data-module="atelier"]')!.textContent).not.toContain("en construction");
-  });
-
-  it("montre une légende calculée, pas décorée", () => {
-    const legende = container!.querySelector(".live-legend")!;
-    expect(legende.querySelectorAll("li").length).toBe(4);
-    expect(legende.textContent, "l’atelier écrit ses décimales au point, comme partout").toMatch(/\d+\.\d m/);
-    expect(legende.textContent).toContain("321");
-  });
-
-  it("laisse exécuter les tests du moteur depuis la page", async () => {
-    await click(byText(/Exécuter les tests du moteur/)!);
-    expect(container!.textContent).toMatch(/\d+\/\d+ vérifications passent/);
-  });
-
-  it("le tableau honnête rattrape le code", () => {
-    const texte = container!.textContent || "";
-    expect(texte).toContain("504 symboles");
-    expect(texte).not.toContain("24 symboles");
-    expect(texte).not.toContain("les symboles se répètent");
-  });
-});
-
-describe("Landing : le jeu de 54 cartes", () => {
-  const cartes = () => [...container!.querySelectorAll(".deck-card")].map((c) => c.getAttribute("title") || "");
-
-  it("compte 52 semaines et 2 repos", () => {
-    const deck = buildDeck();
-    expect(deck).toHaveLength(54);
-    expect(deck.filter((c) => c.joker)).toHaveLength(2);
-    expect(new Set(deck.filter((c) => !c.joker).map((c) => c.week)).size).toBe(52);
-  });
-
-  it("commence mélangé : le désordre est le point de départ", () => {
-    expect(container!.querySelector("[data-deck]")!.getAttribute("data-deck")).toBe("melee");
-    expect(cartes()).toHaveLength(54);
-    expect(cartes()[0], "la première carte n'est pas la semaine 1").not.toBe("Semaine 1 · Hiver · sem. 1");
-  });
-
-  it("en un clic, range par saison : l'année de haut en bas", async () => {
-    await click(byText(/^Ranger par saison$/)!);
-    expect(container!.querySelector("[data-deck]")!.getAttribute("data-deck")).toBe("saison");
-    const t = cartes();
-    expect(t[0]).toBe("Semaine 1 · Hiver · sem. 1");
-    expect(t[13]).toBe("Semaine 14 · Printemps · sem. 1");
-    expect(t[52].toLowerCase()).toContain("repos");
-  });
-
-  it("en un clic, range par semaine : le rythme, pas le calendrier", async () => {
-    await click(byText(/^Ranger par semaine$/)!);
-    const t = cartes();
-    expect(t[0]).toBe("Semaine 1 · Hiver · sem. 1");
-    expect(t[1], "même colonne, même semaine de chaque saison").toBe("Semaine 14 · Printemps · sem. 1");
-    expect(t[3]).toBe("Semaine 40 · Automne · sem. 1");
-  });
-
-  it("les deux rangements sont des mélanges du même jeu", () => {
-    const deck = buildDeck();
-    const suite = (o: typeof deck) => o.map((c) => c.id).join(",");
-    const trie = (o: typeof deck) => o.map((c) => c.id).sort((a, b) => a - b).join(",");
-    // Même jeu dans les trois ordres…
-    expect(trie(orderDeck(deck, "saison"))).toBe(trie(orderDeck(deck, "semaine")));
-    expect(trie(orderDeck(deck, "melee"))).toBe(trie(orderDeck(deck, "saison")));
-    // …mais trois ordres différents : aucun n'est l'autre.
-    expect(suite(orderDeck(deck, "saison"))).not.toBe(suite(orderDeck(deck, "semaine")));
-    expect(suite(orderDeck(deck, "melee"))).not.toBe(suite(orderDeck(deck, "saison")));
-  });
-});
-
-describe("Landing : le hero est un terrain de jeu", () => {
-  const frames = async (n = 24) => {
-    for (let i = 0; i < n; i += 1) {
+  it("dézoome à l'infini : la grille fine s'efface, les repères restent", async () => {
+    const avant = kActuel();
+    for (let i = 0; i < 10; i += 1) {
       await act(async () => {
-        await new Promise((r) => setTimeout(r, 40));
+        toile().dispatchEvent(
+          new WheelEvent("wheel", { deltaY: 120, clientX: 512, clientY: 300, bubbles: true, cancelable: true }),
+        );
       });
     }
+    const apres = kActuel();
+    expect(apres, "on a dézoomé").toBeLessThan(avant * 0.5);
+    const fines = container!.querySelector(".toile-grille.fines") as HTMLElement;
+    expect(fines.style.opacity, "trop fines au loin : elles disparaissent").toBe("0");
+  });
+
+  it("se déplace en glissant, et le glisser n'achète rien", async () => {
+    const avant = monde().style.transform;
+    await act(async () => {
+      toile().dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 400, clientY: 300 }));
+      toile().dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 350, clientY: 280 }));
+      toile().dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 350, clientY: 280 }));
+    });
+    expect(monde().style.transform, "la toile a suivi le geste").not.toBe(avant);
+    expect(container!.querySelector(".achat-voile"), "glisser n'ouvre aucune feuille d'achat").toBeFalsy();
+  });
+
+  it("revient au hero en un clic", async () => {
+    const depart = kActuel();
+    await act(async () => {
+      toile().dispatchEvent(
+        new WheelEvent("wheel", { deltaY: 120, clientX: 512, clientY: 300, bubbles: true, cancelable: true }),
+      );
+    });
+    expect(kActuel()).toBeLessThan(depart);
+    await click(container!.querySelector('button[aria-label="Revenir au hero"]')!);
+    expect(kActuel(), "recentré sur la feuille paysage").toBe(depart);
+  });
+});
+
+describe("Les voisines brodent en direct", () => {
+  it("miniDesign : un vrai petit motif symétrique, pas du bruit", () => {
+    const d = miniDesign(7);
+    expect(d.palette.length).toBeGreaterThanOrEqual(3);
+    expect(d.ordre.length, "des centaines de points à poser").toBeGreaterThan(80);
+    for (let y = 0; y < d.h; y += 1) {
+      for (let x = 0; x < d.w; x += 1) {
+        expect(d.cross[y * d.w + x], "symétrie miroir").toBe(d.cross[y * d.w + (d.w - 1 - x)]);
+        expect(d.cross[y * d.w + x]).toBe(d.cross[(d.h - 1 - y) * d.w + x]);
+      }
+    }
+    for (const i of d.ordre) expect(d.cross[i]).toBeGreaterThanOrEqual(0);
+  });
+
+  it("la landing vit : les motifs avancent sous nos yeux", async () => {
+    const carte = () => container!.querySelector(".motif-vivant [data-progres]") as HTMLElement;
+    const avant = parseInt(carte().dataset.progres || "0", 10);
+    expect(container!.querySelector(".mv-direct")!.textContent).toContain("en direct");
+    expect(container!.querySelector(".motif-vivant canvas"), "chaque voisine a sa toile").toBeTruthy();
+    await sleep(2600);
+    const apres = parseInt(carte().dataset.progres || "0", 10);
+    expect(apres, "ça brode : la progression avance").toBeGreaterThan(avant);
+  });
+
+  it("certains motifs sont des SAL à rejoindre", () => {
+    expect(container!.textContent).toContain("Rejoindre le SAL");
+    expect(container!.textContent).toMatch(/SAL · \d+ brodeuses/);
+  });
+});
+
+describe("S'approprier un motif : tout est là, pas besoin de fichier", () => {
+  it("on regarde, on paie (démo), et le motif réel part dans l'atelier", async () => {
+    await click(container!.querySelector(".motif-vivant [data-cta]")!);
+    const voile = container!.querySelector(".achat-voile");
+    expect(voile, "la feuille d'appropriation s'ouvre").toBeTruthy();
+    expect(voile!.textContent).toContain("Renard des bois");
+    expect(voile!.textContent).toContain("40 × 40 cases");
+    expect(voile!.textContent).toContain("simulé");
+    expect(voile!.querySelector("canvas"), "l'aperçu complet du motif").toBeTruthy();
+
+    await click(voile!.querySelector("[data-confirmer]")!);
+    expect(motifSpy, "le motif est livré à l'atelier").toHaveBeenCalledTimes(1);
+    const p = motifSpy.mock.calls[0][0];
+    expect(p.name).toBe("Renard des bois");
+    expect(p.w).toBe(40);
+    expect(p.h).toBe(40);
+    expect(p.palette.length, "une vraie palette DMC").toBeGreaterThanOrEqual(3);
+    expect(p.provenance.kind).toBe("demo");
+    expect(p.provenance.license).toContain("simulé");
+    expect(p.cross.some((v: number) => v >= 0), "des croix réelles, case par case").toBe(true);
+    expect(container!.querySelector(".achat-voile"), "la feuille se referme").toBeFalsy();
+  });
+});
+
+describe("Le hero : sobre, sur la feuille blanche", () => {
+  const frames = async (n = 24) => {
+    for (let i = 0; i < n; i += 1) {
+      await sleep(40);
+    }
   };
+
+  it("le titre noir seul, fond blanc animé, champ centré, sans les deux boutons", () => {
+    const hero = container!.querySelector("#hero-jeu")!;
+    expect(hero.textContent).not.toContain("Se laisser guider");
+    expect(hero.textContent).not.toContain("Ouvrir l'atelier");
+    expect(container!.querySelector(".hero-texture"), "le dithering blanc anime la feuille").toBeTruthy();
+    expect(container!.querySelector(".hero-texture-css"), "sans WebGL, la texture CSS prend le relais").toBeTruthy();
+    const h1 = container!.querySelector("h1")!;
+    expect(h1.textContent).toMatch(/De l.image au dernier point/);
+    expect(h1.className, "titre noir sur fond blanc").toContain("text-black");
+    expect(container!.textContent).not.toContain("Point Zéro");
+    expect(container!.querySelector(".loupe"), "plus de loupe : mal compris sur le curseur").toBeFalsy();
+  });
 
   it("propose décrire, déposer un PDF, ou entrer", () => {
     expect(container!.querySelector("#hero-jeu input"), "le champ de description est dans le hero").toBeTruthy();
@@ -176,7 +222,7 @@ describe("Landing : le hero est un terrain de jeu", () => {
     expect(container!.textContent).toContain("demande un réseau");
   });
 
-  it("décrit un motif : le visuel s'efface, les pixels chargent, puis hop", async () => {
+  it("décrit un motif : les pixels chargent, puis hop", async () => {
     const field = container!.querySelector("#hero-jeu input") as HTMLInputElement;
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, "renard endormi");
@@ -186,40 +232,29 @@ describe("Landing : le hero est un terrain de jeu", () => {
       container!.querySelector("#hero-jeu form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     });
     await frames();
-    expect(container!.querySelector(".hero-stage"), "le visuel d'ouverture a laissé la place").toBeTruthy();
-    expect(container!.querySelector('[data-loupe="motif"] canvas'), "le motif arrive en petits pixels").toBeTruthy();
+    expect(container!.querySelector(".hero-stage"), "la scène de génération prend la feuille").toBeTruthy();
+    expect(container!.querySelector(".hero-stage canvas"), "le motif arrive en petits pixels").toBeTruthy();
     expect(container!.textContent).toContain("44 × 44 cases");
+    expect(container!.textContent).toContain("prêt à broder");
     expect(byText(/Continuer dans l'atelier/), "puis hop : on continue").toBeTruthy();
   });
+});
 
-  it("sobre : le titre seul, le champ centré, sans les deux boutons", () => {
-    const hero = container!.querySelector("#hero-jeu")!;
-    expect(hero.textContent).not.toContain("Se laisser guider");
-    expect(hero.textContent).not.toContain("Ouvrir l'atelier");
-    expect(container!.querySelector(".hero-texture"), "le fond animé est là").toBeTruthy();
-    expect(container!.querySelector(".hero-texture-css"), "sans WebGL, la texture CSS prend le relais").toBeTruthy();
-    const h1 = container!.querySelector("h1")!;
-    expect(h1.textContent).toMatch(/De l.image au dernier point/);
-    expect(h1.previousElementSibling, "plus d'eyebrow « Point Zéro » au-dessus du titre").toBeFalsy();
+describe("Le jeu de 54 cartes (la logique demeure)", () => {
+  it("compte 52 semaines et 2 repos", () => {
+    const deck = buildDeck();
+    expect(deck).toHaveLength(54);
+    expect(deck.filter((c) => c.joker)).toHaveLength(2);
+    expect(new Set(deck.filter((c) => !c.joker).map((c) => c.week)).size).toBe(52);
   });
 
-  it("la loupe suit la souris sur les pictos, et change de forme", async () => {
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 30));
-    });
-    const picto = container!.querySelector(".marquee-picto")!;
-    await act(async () => {
-      picto.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 120, clientY: 200 }));
-      await new Promise((r) => setTimeout(r, 40));
-    });
-    const lens = container!.querySelector(".loupe") as HTMLElement;
-    expect(lens, "la lentille apparaît sur un picto").toBeTruthy();
-    expect(lens.hidden).toBe(false);
-    expect(lens.querySelector(".loupe-svg svg"), "elle redessine le picto agrandi").toBeTruthy();
-    expect(lens.getAttribute("data-shape")).toBe("ronde");
-    await act(async () => {
-      container!.querySelector(".loupe-toggle")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    expect((container!.querySelector(".loupe") as HTMLElement).getAttribute("data-shape")).toBe("carree");
+  it("les deux rangements sont des mélanges du même jeu", () => {
+    const deck = buildDeck();
+    const suite = (o: typeof deck) => o.map((c) => c.id).join(",");
+    const trie = (o: typeof deck) => o.map((c) => c.id).sort((a, b) => a - b).join(",");
+    expect(trie(orderDeck(deck, "saison"))).toBe(trie(orderDeck(deck, "semaine")));
+    expect(trie(orderDeck(deck, "melee"))).toBe(trie(orderDeck(deck, "saison")));
+    expect(suite(orderDeck(deck, "saison"))).not.toBe(suite(orderDeck(deck, "semaine")));
+    expect(suite(orderDeck(deck, "melee"))).not.toBe(suite(orderDeck(deck, "saison")));
   });
 });

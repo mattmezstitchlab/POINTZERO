@@ -124,7 +124,7 @@ export default function HeroPlayground({
     return (
       <div id="hero-jeu" className="mt-9 scroll-m-24">
         <form
-          className="glass-strong mx-auto flex w-full max-w-[680px] flex-col gap-3 rounded-[22px] p-3 sm:flex-row sm:items-center"
+          className="hero-form mx-auto flex w-full max-w-[680px] flex-col gap-3 rounded-[22px] p-3 sm:flex-row sm:items-center"
           onSubmit={(e) => {
             e.preventDefault();
             void generate(seed);
@@ -145,7 +145,7 @@ export default function HeroPlayground({
             <input type="file" accept="application/pdf" className="sr-only" onChange={onPdf} />
           </label>
         </form>
-        <p className="mt-3 text-center text-[11.5px] leading-relaxed text-label-3">
+        <p className="mt-3 text-center text-[11.5px] leading-relaxed text-black/55">
           La génération appelle un service tiers d'images : elle demande un réseau. Le PDF, lui, se
           reconstitue entièrement chez vous — et tout l'atelier fonctionne hors ligne.
         </p>
@@ -199,12 +199,12 @@ export default function HeroPlayground({
 
         {phase.kind === "motif" && (
           <div className="flex flex-col items-center gap-6">
-            <div data-loupe="motif" className="rounded-[18px] border border-white/10 bg-white/[0.03] p-4">
+            <div className="rounded-[18px] border border-white/10 bg-white/[0.03] p-4">
               <canvas ref={canvasRef} className="max-w-[min(78vw,520px)]" aria-label="Aperçu du motif en petits pixels" />
             </div>
             <p className="text-center text-[14px] text-label-2" role="status">
               {phase.p.w} × {phase.p.h} cases · {phase.p.palette.length} fils DMC
-              {revealed ? " · la loupe suit votre souris sur le motif" : " · chargement…"}
+              {revealed ? " · prêt à broder" : " · chargement…"}
             </p>
             <div className={`flex flex-wrap justify-center gap-3 transition-all duration-500 ${revealed ? "hero-hop opacity-100" : "pointer-events-none opacity-0"}`}>
               <button type="button" className="btn-primary min-h-12 px-6" onClick={() => onMotif(phase.p)}>

@@ -350,10 +350,6 @@ export default function App() {
     return (
       <Landing
         onOpen={openEditor}
-        onGuide={() => {
-          openEditor();
-          openCoach();
-        }}
         onMotif={(motif) => {
           setPattern(motif);
           openEditor();

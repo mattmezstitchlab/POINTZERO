@@ -7,8 +7,8 @@ import { Dithering } from "@paper-design/shaders-react";
  * Clin d'œil exact : le dithering est le geste même qui, dans l'atelier,
  * convertit une image en croix — trame de Bayer, erreur diffusée. Le voir
  * onduler lentement derrière le titre, c'est montrer le moteur sans le
- * raconter. Réglages repris de la référence Paper, couleurs ramenées à deux
- * gris presque noirs : sobre, comme demandé.
+ * raconter. Réglages repris de la référence Paper, sur fond blanc : le
+ * dithering gris perle respire à peine, le titre noir tranche.
  *
  * Sans WebGL — navigateur ancien, économie d'énergie, tests — une texture CSS
  * en point de croix prend le relais, dérivant lentement elle aussi. Le hero
@@ -36,8 +36,8 @@ export default function HeroTexture() {
           size={1.5}
           scale={0.86}
           colorBack="#00000000"
-          colorFront="#232329"
-          style={{ position: "absolute", inset: 0, backgroundColor: "#0b0b0d", width: "100%", height: "100%" }}
+          colorFront="#d9d9df"
+          style={{ position: "absolute", inset: 0, backgroundColor: "#ffffff", width: "100%", height: "100%" }}
         />
       )}
       {webgl === false && <div className="hero-texture-css" />}
