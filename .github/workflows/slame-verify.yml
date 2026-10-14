@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/slame-music-communication-prototype
+      - feat/clean-home-pdf-atelier-puzzle
 jobs:
   verify:
     runs-on: ubuntu-latest
