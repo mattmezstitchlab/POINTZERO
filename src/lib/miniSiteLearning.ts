@@ -3,6 +3,7 @@
  * Lessons attach to the original document, never a copied site.
  */
 import {contrastGrade} from "./accessibilityCore";
+import {safeHref} from "./academyCore";
 import {type MiniSite} from "./miniSiteCore";
 export const MINI_COACH_KEY="pointzero:minisite-academy:v1";
 export type CoachPhase="intention"|"hero"|"navigation"|"lisibilite"|"seo"|"verification";
@@ -63,10 +64,10 @@ export function miniSiteAudit(doc:MiniSite,profile:MiniCoachProfile):CoachIssue[
  if(trim(doc.subtitle).length<30||defaultSubtitles.includes(trim(doc.subtitle)))add("hero-subtitle","hero","a-corriger","Promesse peu informative",
   "Le sous-titre doit compléter le titre par une information utile : pour qui, quoi ou quand.",
   "Rédiger un sous-titre d'au moins quelques mots précis.","hero");
- if(!trim(doc.heroActionLabel??"")||!trim(doc.heroActionHref??""))
+ if(!trim(doc.heroActionLabel??"")||!trim(doc.heroActionHref??"")||!safeHref(doc.heroActionHref??""))
   add("hero-action","hero","a-corriger","Aucune action visible dès l'accueil",
    "Un premier écran utile peut orienter immédiatement vers le programme, le contact ou les informations essentielles.",
-   "Ajouter un libellé et un lien au bouton principal.","hero");
+   "Ajouter un libellé et une destination valide au bouton principal.","hero");
  const visible=doc.sections.filter(s=>s.visible);
  if(visible.length<2)add("structure","navigation","a-verifier","Parcours très court",
   "Une navigation doit refléter de vraies informations. Plusieurs blocs ne sont pas obligatoires si une page courte suffit.",
