@@ -99,7 +99,7 @@ export default function GenerationStudio({onBack,onPattern,onImage,onMiniSite}:P
     onBack={onBack} leftLabel="Types et idées" rightLabel="Paramètres de génération" actions={actions}
     left={<>
       <h2 className="mb-3 text-xs font-semibold">Destination</h2>
-      <div className="space-y-1.5">{modes.map(([id,label])=><button key={id} onClick={()=>setTarget(id)}
+      <div className="space-y-1.5">{modes.map(([id,label])=><button key={id} aria-label={label} onClick={()=>setTarget(id)}
         aria-pressed={target===id} className={"w-full rounded-[5px] border px-3 py-3 text-left text-xs "+(target===id?"border-white bg-white text-black":"border-white/15 bg-white/[.05] text-white/80 hover:bg-white/10")}>{label}</button>)}</div>
       <div className="mt-5 border-t border-white/10 pt-4">
         <h3 className="mb-3 text-xs font-semibold">Inspirations</h3>
