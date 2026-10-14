@@ -1656,3 +1656,99 @@
 @media (max-width: 420px) {
   .pz-atelier .btn-tool { width: 38px; height: 40px; }
 }
+
+/*
+ * POINTZERO / langage visuel unique.
+ * Le menu noir « Plus » est la référence de toutes les palettes.
+ * Les valeurs s'appliquent uniquement à l'atelier et n'altèrent pas les
+ * moteurs de conversion, l'impression ou les composants hors atelier.
+ */
+.pz-atelier {
+  --color-label: #ffffff;
+  --color-label-2: #d1d1d7;
+  --color-label-3: #a5a5ae;
+}
+.pz-atelier .pz-surface {
+  background: #09090b;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 7px;
+  color: #fff;
+  box-shadow: 0 16px 48px rgba(0,0,0,.34);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.pz-atelier .pz-panel.sheet {
+  height: fit-content;
+  opacity: 0;
+  transform: translateY(-8px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+.pz-atelier .pz-panel.sheet.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity .16s ease, transform .16s ease, visibility 0s;
+}
+.pz-atelier .pz-panel .pz-panel-body {
+  color: #f5f5f7;
+  max-height: calc(100dvh - 235px);
+}
+.pz-atelier .pz-panel h1,
+.pz-atelier .pz-panel h2,
+.pz-atelier .pz-panel h3,
+.pz-atelier .pz-panel h4 {
+  color: #fff;
+}
+.pz-atelier .pz-panel .text-label-2 { color: #d1d1d7; }
+.pz-atelier .pz-panel .text-label-3 { color: #aaaab2; }
+.pz-atelier .pz-panel .menu-row {
+  color: #ededf2;
+  min-height: 42px;
+  padding: 10px 4px;
+  border-radius: 5px;
+}
+.pz-atelier .pz-panel .menu-row:hover { background: rgba(255,255,255,.09); }
+.pz-atelier .pz-panel .field {
+  color: #fff;
+  background: #1c1c20;
+  border: 1px solid rgba(255,255,255,.26);
+  border-radius: 5px;
+}
+.pz-atelier .pz-panel .field::placeholder { color: #adaeb6; }
+.pz-atelier .pz-panel .field:focus-visible {
+  outline: 2px solid rgba(255,255,255,.86);
+  outline-offset: 1px;
+}
+.pz-atelier .pz-panel .btn-tinted {
+  background: #27272c;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 5px;
+  color: #fff;
+  font-size: 13px;
+}
+.pz-atelier .pz-panel .btn-tinted:hover:not(:disabled) {
+  background: #35353c;
+}
+.pz-atelier .pz-panel .btn-quiet {
+  border-radius: 5px;
+  color: #f5f5f7;
+}
+.pz-atelier .pz-panel .seg { background: #242428; border-radius: 5px; }
+.pz-atelier .pz-panel .seg button { border-radius: 4px; color: #e2e2e8; }
+.pz-atelier .pz-panel .seg button[aria-pressed="true"] {
+  background: #fff;
+  color: #09090b;
+}
+.pz-atelier .thin-scroll {
+  scrollbar-color: rgba(255,255,255,.32) transparent;
+}
+@media (max-width: 639px) {
+  .pz-atelier .pz-panel.sheet { width: auto; }
+  .pz-atelier .pz-panel .pz-panel-body { max-height: calc(100dvh - 248px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pz-atelier .pz-panel.sheet { transition: none; }
+}
