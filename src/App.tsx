@@ -23,6 +23,7 @@ import ImportStudio from "./components/ImportStudio";
 import PdfPrep from "./components/PdfPrep";
 import PromptStudio from "./components/PromptStudio";
 import CompositionStudio from "./components/CompositionStudio";
+import AutomaticImageImport from "./components/AutomaticImageImport";
 import ExportStudio from "./components/ExportStudio";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Coach, { type Ask } from "./components/Coach";
@@ -60,6 +61,7 @@ export default function App() {
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
+  const [autoImage, setAutoImage] = useState<File | null>(null);
   const P = remote ?? store.present;
   const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>("real"), [workspace, setWorkspace] = useState<Workspace>("create");
   const [symbols, setSymbols] = useState(false), [panel, setPanel] = useState<Panel>(null), [file, setFile] = useState<File | null>(null), [pdfFile, setPdfFile] = useState<File | null>(null), [promptOpen, setPromptOpen] = useState(false), [selection, setSelection] = useState<Selection | null>(null), [clipboard, setClipboard] = useState<Pattern | null>(null);
@@ -258,8 +260,9 @@ export default function App() {
     importFile: (f: File) => {
       closePanel();
       if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") setPdfFile(f);
-      else setFile(f);
+      else setAutoImage(f);
     },
+    importAdvanced: (f: File) => { closePanel(); setFile(f); },
     openFile: (f: File) => { void openProjectFromFile(f); },
     export: () => setPanel("export" as Panel), save: () => { saveProjectFile(P); notify("Fichier projet téléchargé"); },
     new: (w: number, h: number) => { try { const next = createPattern("Nouveau motif", w, h, P.count, P.strands); next.fabric = P.fabric; void loadPattern(next); } catch (e) { notify(e instanceof Error ? e.message : "Dimensions invalides"); } },
@@ -365,6 +368,7 @@ export default function App() {
   }, [coachOpen, coachStep, ask, color, strokes, panel, coachNext]);
 
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const openEditor = () => { window.location.hash = "atelier"; setScreen("editor"); };
   const openComposition = () => { if (!remote) { closePanel(); setCompositionInput(P); } };
   const openSlame = () => { window.location.hash = "slame"; setScreen("slame"); };
@@ -379,6 +383,7 @@ export default function App() {
       <Landing
         onOpen={openEditor}
         onSlame={openSlame}
+        onImage={(image) => { setAutoImage(image); setWorkspace("create"); setView("pattern"); openEditor(); }}
         onProjectFile={(file) => openProjectFromFile(file, true)}
         onPdf={(file) => {
           // Le fichier n'est jamais rendu sur la landing. Le calage, le puzzle
@@ -399,6 +404,14 @@ export default function App() {
     );
   return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-black ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
+      ref={imageInputRef}
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      className="sr-only"
+      aria-label="Choisir une image à composer"
+      onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)setAutoImage(selected);}}
+    />
+    <input
       ref={projectInputRef}
       type="file"
       accept=".json,.oxs,application/json"
@@ -416,13 +429,16 @@ export default function App() {
       onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); if (changed) setStrokes((n) => n + 1); }}
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }} />
     <button type="button" onClick={openSlame} className="fixed right-4 top-[78px] z-40 rounded-xl border border-[#baa5ff] bg-[#473677] px-4 py-2 text-sm font-semibold text-white shadow-lg" aria-label="Ouvrir SLÂME : broder la musique et parler">♫ SLÂME</button>
-    <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onImportProject={() => projectInputRef.current?.click()} onCompose={openComposition} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
+    <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onImportProject={() => projectInputRef.current?.click()} onCompose={openComposition} onImportImage={() => imageInputRef.current?.click()} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
     <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} coachTool={coachOpen ? coachTool : null} />
     {selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
     <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || !!file} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
     <WorkspacePanel open={panel === "project"} onClose={closePanel} pattern={P} onSet={setPattern} actions={panelActions} prefs={prefs} onPrefs={setPrefs} onTool={chooseTool} tool={tool} color={color} onColor={(idx) => setColor(idx)} workspace={workspace} />
     <LibrarySheet open={panel === "library"} onClose={closePanel} onLoad={(p) => void loadPattern(p)} onNew={() => panelActions.new(80, 80)} inventory={inventory} />
+    {autoImage && <AutomaticImageImport file={autoImage}
+      onCancel={() => setAutoImage(null)}
+      onReady={p => { setAutoImage(null); setCompositionInput(p); setWorkspace("create"); setView("pattern"); }}/> }
     {file && <ImportStudio file={file} onClose={() => setFile(null)} onImport={(p) => {
       setFile(null); setWorkspace("create"); setView("pattern");
       setCompositionInput(p);
