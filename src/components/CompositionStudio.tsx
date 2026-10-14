@@ -207,6 +207,8 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
             </div>
             <div className="flex max-w-[620px] flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-white/65">
               <span>{result.pattern.back.length} segments arrière</span>
+              <span>Difficulté indicative : {result.estimatedDifficulty}</span>
+              <span>{result.coverage.source} croix source · {result.coverage.result} résultat</span>
               <span>{[...result.pattern.fwd,...result.pattern.bwd].filter(x=>x>=0).length} demi-points</span>
               <span>{result.decisions.find(x=>x.kind==="confetti")?.count??0} confettis réharmonisés</span>
             </div>
@@ -216,7 +218,12 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
               <button type="button" className="rounded-md border border-white/20 px-3 py-2 text-xs" onClick={()=>saveProjectFile(result.pattern)}><FileJson size={14} className="mr-1 inline"/> JSON réutilisable</button>
             </div>
             {message&&<p role="status" className="text-xs text-white/65">{working&&<LoaderCircle size={12} className="mr-1 inline animate-spin"/>}{message}</p>}
-            {compare&&<div className="grid w-full max-w-[680px] grid-cols-3 gap-2 pt-4">
+            {compare&&<div className="grid w-full max-w-[740px] grid-cols-2 gap-2 pt-4 sm:grid-cols-4">
+              <div className="rounded-md border border-white/15 p-2 text-xs">
+                <StitchPreview pattern={source} max={150}/>
+                <span className="mt-2 block">Source originale</span>
+                <span className="mt-1 block text-white/50">Non modifiée</span>
+              </div>
               {variants.map(v=><button type="button" key={v.detail} onClick={()=>choose("detail",v.detail)} className={"rounded-md border p-2 text-xs "+(settings.detail===v.detail?"border-[#ad99ff]":"border-white/15")}>
                 <StitchPreview pattern={v.result.pattern} max={150}/>
                 <span className="mt-2 block capitalize">{v.detail==="equilibree"?"Équilibré":v.detail}</span>
