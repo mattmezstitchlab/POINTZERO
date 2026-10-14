@@ -62,6 +62,34 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre Mon Espace et suit un Jour J fictif jusqu'au plan causal sans notifications", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Mon Espace · Tous les mondes"));
+    expect(container?.querySelector('[aria-label="Espace Mon Espace"]')).toBeTruthy();
+    await click(button("Démarrer le parcours Jour J"));
+    expect(container?.querySelector('[aria-label="Progression de formation Jour J"]')).toBeTruthy();
+    await click(button("Simuler un retard pour le Jour J"));
+    expect(container?.querySelector('[aria-label="Aperçu de l\'onde causale"]')).toBeTruthy();
+    await click(button("Retard 20 minutes"));
+    await click(button("Enregistrer un brouillon causal"));
+    await click(button("Valider le plan causal sans envoyer"));
+    expect(container?.textContent).toContain("aucun envoi");
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+  it("ouvre Studio Causal en direct avec une page vide et permet de retrouver son espace", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Studio Causal · RIPPLE"));
+    expect(container?.querySelector('[aria-label="Espace Studio Causal"]')).toBeTruthy();
+    await click(button("Afficher Ma page"));
+    expect(container?.querySelector('[aria-label="Espace Studio Causal"]')).toBeTruthy();
+    expect(button("Créer mon espace")).toBeTruthy();
+  });
+
   it("ouvre POINTZERO Academy puis son parcours No Code en mode apprenant et formateur", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
