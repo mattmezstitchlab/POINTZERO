@@ -231,15 +231,34 @@ export default function App() {
     window.addEventListener("keydown", keys); return () => window.removeEventListener("keydown", keys);
   }, [screen, chooseTool, remote, workspace, closePanel]);
 
+  /** Même décodeur, quel que soit le point d'entrée : accueil, atelier, panneau Projet. */
+  const openProjectFromFile = async (f: File, navigateToEditor = false): Promise<string | null> => {
+    try {
+      if (!/\.(json|oxs)$/i.test(f.name)) throw new Error("Choisissez un fichier .pointzero.json, .json ou .oxs.");
+      if (f.size > 25 * 1024 * 1024) throw new Error("Ce projet dépasse 25 Mo.");
+      const p = /\.oxs$/i.test(f.name) ? fromOxs(await f.text()) : await readProjectFile(f);
+      if (!p) throw new Error("Projet invalide ou format JSON incompatible. Le fichier original reste intact.");
+      await loadPattern(p);
+      setWorkspace("create");
+      setView("pattern");
+      setTool("cross");
+      if (navigateToEditor) { window.location.hash = "atelier"; setScreen("editor"); }
+      notify(`« ${p.name} » ouvert · ${p.w} × ${p.h} points · ${p.palette.length} couleurs DMC`);
+      return null;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Impossible d’ouvrir ce projet.";
+      notify(message);
+      return message;
+    }
+  };
+
   const panelActions = {
     importFile: (f: File) => {
       closePanel();
       if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") setPdfFile(f);
       else setFile(f);
     },
-    openFile: async (f: File) => {
-      try { const p = /\.oxs$/i.test(f.name) ? fromOxs(await f.text()) : await readProjectFile(f); if (!p) throw new Error("Projet invalide ou ancienne version sans table de codes fiable"); await loadPattern(p); notify(`« ${p.name} » ouvert`); } catch (e) { notify(e instanceof Error ? e.message : "Impossible d’ouvrir ce fichier"); }
-    },
+    openFile: (f: File) => { void openProjectFromFile(f); },
     export: () => setPanel("export" as Panel), save: () => { saveProjectFile(P); notify("Fichier projet téléchargé"); },
     new: (w: number, h: number) => { try { const next = createPattern("Nouveau motif", w, h, P.count, P.strands); next.fabric = P.fabric; void loadPattern(next); } catch (e) { notify(e instanceof Error ? e.message : "Dimensions invalides"); } },
     library: () => setPanel("library" as Panel), guide: () => openCoach(), share: () => setPanel("share" as Panel), prompt: () => { closePanel(); setPromptOpen(true); }, notify,
@@ -343,6 +362,7 @@ export default function App() {
     // Les étapes « outil » se valident dans chooseTool, au toucher.
   }, [coachOpen, coachStep, ask, color, strokes, panel, coachNext]);
 
+  const projectInputRef = useRef<HTMLInputElement>(null);
   const openEditor = () => { window.location.hash = "atelier"; setScreen("editor"); };
   const openSlame = () => { window.location.hash = "slame"; setScreen("slame"); };
   const openLanding = () => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); closePanel(); history.pushState(null, "", window.location.pathname + window.location.search); setScreen("landing"); window.scrollTo(0, 0); };
@@ -356,6 +376,7 @@ export default function App() {
       <Landing
         onOpen={openEditor}
         onSlame={openSlame}
+        onProjectFile={(file) => openProjectFromFile(file, true)}
         onPdf={(file) => {
           // Le fichier n'est jamais rendu sur la landing. Le calage, le puzzle
           // et la livraison dans la grille DMC appartiennent à l'atelier.
@@ -374,13 +395,25 @@ export default function App() {
       />
     );
   return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-black ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+    <input
+      ref={projectInputRef}
+      type="file"
+      accept=".json,.oxs,application/json"
+      aria-label="Sélectionner un projet POINTZERO JSON"
+      className="sr-only"
+      onChange={e => {
+        const chosen = e.target.files?.[0];
+        e.target.value = "";
+        if (chosen) void openProjectFromFile(chosen);
+      }}
+    />
     <Canvas pattern={P} tool={remote ? "hand" : tool} color={color} view={view} symbols={symbols} highlightActive={workspace === "stitch"} insets={insets} fitKey={fitKey} onlyActive={prefs.onlyActive} highContrast={prefs.highContrast} pencilOnly={prefs.pencilOnly} symmetry={prefs.symmetry} annotation={prefs.annotation} readOnly={!!remote} selection={selection} halfDirection={prefs.halfDirection}
       onSelection={setSelection} onBegin={() => { if (!remote) dispatch({ type: "begin" }); }}
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
       onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); if (changed) setStrokes((n) => n + 1); }}
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }} />
     <button type="button" onClick={openSlame} className="fixed right-4 top-[78px] z-40 rounded-xl border border-[#baa5ff] bg-[#473677] px-4 py-2 text-sm font-semibold text-white shadow-lg" aria-label="Ouvrir SLÂME : broder la musique et parler">♫ SLÂME</button>
-    <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
+    <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onImportProject={() => projectInputRef.current?.click()} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
     <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} coachTool={coachOpen ? coachTool : null} />
     {selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
     <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || !!file} />
