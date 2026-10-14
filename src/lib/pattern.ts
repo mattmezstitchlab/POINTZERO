@@ -75,7 +75,7 @@ export interface CompositionMetadata {
     detail: "simple" | "equilibree" | "precise";
     difficulty: "debutant" | "intermediaire" | "expert";
     palette: "originale" | "harmonisee" | "personnalisee";
-    codes: string; width: number; height: number;
+    codes: string; width: number; height: number; count?: Count;
   };
   cards: { id: string; name: string; visible: boolean; overrideCode?: string }[];
 }
