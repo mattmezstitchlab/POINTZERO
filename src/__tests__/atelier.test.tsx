@@ -62,6 +62,22 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre Mini-site et PDF depuis les studios, puis revient à l'atelier", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Mini-site"));
+    expect(container?.querySelector('[aria-label="Espace Mini-site"]')).toBeTruthy();
+    expect(container?.querySelector('iframe[title="Prévisualisation du mini-site"]')).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio PDF"));
+    expect(container?.querySelector('[aria-label="Espace PDF"]')).toBeTruthy();
+    expect(container?.querySelector('input[aria-label="Choisir des PDF"]')).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("aligne la structure de Broderie sur Photo avec la bande DMC bord à bord", async () => {
     await mount();
     expect(container?.querySelector('.pz-embroidery-header')).toBeTruthy();
