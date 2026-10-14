@@ -3,7 +3,7 @@ import {flossIndex} from "../lib/dmc";
 import {createPattern,ensurePalette,fromObject,toObject} from "../lib/pattern";
 import {multiSubjectDemo} from "../lib/subjectDemo";
 import {
-  attachSubject, changeSubject, detectSubjects, duplicateSubject, mergeSubjects,
+  affectedBounds, attachSubject, changeSubject, detectSubjects, duplicateSubject, mergeSubjects,
   recomposeSubjects, reorderSubject, sceneFromPattern, splitSubject, spriteForExport,
 } from "../lib/subjectEngine";
 
@@ -60,6 +60,31 @@ describe("Moteur sujets POINTZERO · scène multi-sujets",()=>{
     const split=splitSubject(scene,chosen.id,rect);
     expect(split.layers).toHaveLength(4);
     expect(recomposeSubjects(split).cross).toEqual(recomposeSubjects(scene).cross);
+  });
+  it("le recalcul par rectangle modifié est identique à une recomposition intégrale",()=>{
+    const source=multiSubjectDemo(),scene=detectSubjects(source).scene;
+    const original=recomposeSubjects(scene),bird=scene.layers[0];
+    const changed=changeSubject(scene,bird.id,{x:bird.x+5,y:bird.y-3,tint:"321"});
+    const dirty=affectedBounds(bird,changed.layers[0]);
+    const incremental=recomposeSubjects(changed,original,dirty);
+    const full=recomposeSubjects(changed);
+    expect(incremental.cross).toEqual(full.cross);
+    expect(incremental.fwd).toEqual(full.fwd);
+    expect(incremental.bwd).toEqual(full.bwd);
+    expect(incremental.q).toEqual(full.q);
+    expect(incremental.back).toEqual(full.back);
+    expect(incremental.palette.slice().sort((a,b)=>a-b)).toEqual(full.palette.slice().sort((a,b)=>a-b));
+    const reset=changeSubject(changed,bird.id,{x:bird.x,y:bird.y,tint:undefined});
+    const restored=recomposeSubjects(reset,incremental,affectedBounds(changed.layers[0],bird));
+    expect(restored.cross).toEqual(original.cross);
+  });
+  it("cacher un sujet par recomposition locale restitue exactement le fond",()=>{
+    const scene=detectSubjects(multiSubjectDemo()).scene,prev=recomposeSubjects(scene);
+    const old=scene.layers[1],changed=changeSubject(scene,old.id,{visible:false});
+    const part=recomposeSubjects(changed,prev,affectedBounds(old,changed.layers[1]));
+    const full=recomposeSubjects(changed);
+    expect(part.cross).toEqual(full.cross);
+    expect(part.back).toEqual(full.back);
   });
   it("supporte les teintes DMC dans un sujet isolé",()=>{
     const scene=detectSubjects(multiSubjectDemo()).scene;
