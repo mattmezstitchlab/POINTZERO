@@ -56,7 +56,7 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
   return (
     <>
       <aside
-        className="glass no-scrollbar fixed right-3 bottom-[max(12px,env(safe-area-inset-bottom))] left-3 z-30 flex h-[64px] items-center gap-2 overflow-x-auto rounded-[18px] p-2 lg:right-auto lg:bottom-3 lg:left-1/2 lg:max-w-[min(760px,calc(100vw-260px))] lg:-translate-x-1/2"
+        className="pz-surface no-scrollbar fixed right-3 bottom-[max(12px,env(safe-area-inset-bottom))] left-3 z-30 flex h-[64px] items-center gap-2 overflow-x-auto p-2 lg:right-auto lg:bottom-3 lg:left-1/2 lg:max-w-[min(760px,calc(100vw-260px))] lg:-translate-x-1/2"
         aria-label="Fils du motif"
         data-guide="floss"
       >
@@ -115,7 +115,7 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
 
       {row && (
         <section
-          className="glass-strong thin-scroll fixed right-3 bottom-[160px] z-40 max-h-[calc(100dvh-250px)] w-[300px] overflow-y-auto rounded-[22px] p-4 lg:right-auto lg:bottom-[88px] lg:left-1/2 lg:max-h-[calc(100dvh-180px)] lg:-translate-x-1/2"
+          className="pz-surface thin-scroll fixed right-3 bottom-[160px] z-40 max-h-[calc(100dvh-250px)] w-[300px] overflow-y-auto p-4 lg:right-auto lg:bottom-[88px] lg:left-1/2 lg:max-h-[calc(100dvh-180px)] lg:-translate-x-1/2"
           aria-label={`Informations DMC ${row.code}`}
         >
           <button type="button" onClick={() => setDetail(null)} className="btn-icon absolute top-2 right-2 h-8 w-8 rounded-full bg-white/[0.07]" aria-label="Fermer">

@@ -110,6 +110,32 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(dialog("Créer")?.classList.contains("is-open")).toBe(true);
     expect(dialog("Créer")?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
   });
+  it("unifie Créer, Fils et le menu Plus sur une même surface noire", async () => {
+    await mount();
+    await click(button("POINTZERO : créer un motif"));
+    const create = dialog("Créer");
+    expect(create?.classList.contains("pz-panel")).toBe(true);
+    expect(create?.classList.contains("pz-surface")).toBe(true);
+    expect(create?.querySelectorAll("h1")).toHaveLength(0); // Pas de titre répété.
+    expect(create?.querySelector("textarea")).toBeTruthy();
+    await click(create?.querySelector('button[aria-label="Fermer"]'));
+    await click(category("Fils"));
+    const threads = dialog("Fils & toile");
+    expect(threads?.classList.contains("pz-surface")).toBe(true);
+    expect(threads?.classList.contains("pz-panel")).toBe(true);
+    expect(threads?.querySelector(".pz-panel-body")).toBeTruthy();
+    await click(button("Plus d'options"));
+    expect(container?.querySelector('[aria-label="Options d\'affichage"]')?.classList.contains("pz-surface")).toBe(true);
+  });
+  it("range les fonctions avancées en accordéons, sans les supprimer", async () => {
+    await mount();
+    await click(category("Dessiner"));
+    const composer = dialog("Composer");
+    const blocks = Array.from(composer?.querySelectorAll("details") ?? []);
+    expect(blocks.length).toBeGreaterThan(4);
+    expect(blocks.some(b => b.textContent?.includes("Lettrage compté"))).toBe(true);
+    expect(blocks.some(b => b.textContent?.includes("Outils de conception") && b.open)).toBe(true);
+  });
   it("autorise un import unique d'images, PDF, JSON et OXS", async () => {
     await mount();
     const picker = container?.querySelector('input[aria-label="Importer image, PDF ou projet JSON/OXS"]') as HTMLInputElement;

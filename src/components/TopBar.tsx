@@ -39,11 +39,11 @@ export default function TopBar(p: Props) {
       <button type="button" className={iconButton} aria-label="Exporter et partager" title="Exporter" onClick={p.onExport}><ArrowDownToLine size={17}/></button>
       <button type="button" className={iconButton} aria-label="Réglages et aide" title="Réglages" onClick={p.onSettings}><Settings2 size={17}/></button>
       <button type="button" className={iconButton} aria-label="Plus d'options" aria-expanded={more} onClick={() => setMore(v => !v)}><Ellipsis size={19}/></button>
-      {more && <div className="absolute right-0 top-[calc(100%+8px)] grid w-[205px] gap-1 rounded-md border border-white/15 bg-[#09090b] p-2 text-sm text-white shadow-xl" aria-label="Options d'affichage">
-        <button className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-left hover:bg-white/10" onClick={() => { cycle(); setMore(false); }}><Layers size={16}/> Affichage · {p.view}</button>
-        <button className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-left hover:bg-white/10" onClick={() => { p.onSymbols(); setMore(false); }} aria-pressed={p.symbols}><Type size={16}/> Symboles</button>
-        <button className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-left hover:bg-white/10" onClick={() => { p.onFit(); setMore(false); }}><Maximize size={16}/> Recentrer</button>
-        <button className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-left hover:bg-white/10" onClick={() => { p.onShare(); setMore(false); }}><Share2 size={16}/> Partager</button>
+      {more && <div className="pz-surface absolute right-0 top-[calc(100%+8px)] grid w-[205px] gap-1 p-2 text-sm text-white" aria-label="Options d'affichage">
+        <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { cycle(); setMore(false); }}><Layers size={16}/> Affichage · {p.view}</button>
+        <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onSymbols(); setMore(false); }} aria-pressed={p.symbols}><Type size={16}/> Symboles</button>
+        <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onFit(); setMore(false); }}><Maximize size={16}/> Recentrer</button>
+        <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onShare(); setMore(false); }}><Share2 size={16}/> Partager</button>
       </div>}
     </div>
     <span className="sr-only" role="status">{p.pattern.name} · {p.saving}</span>

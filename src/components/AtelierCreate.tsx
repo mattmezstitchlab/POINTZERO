@@ -20,10 +20,10 @@ export default function AtelierCreate({
   return (
     <section
       aria-label="Créer ou reprendre un motif"
-      className={compact ? "space-y-3 text-white" : "w-[min(490px,calc(100vw-28px))] rounded-md border border-white/15 bg-[#09090b]/95 p-5 text-white shadow-[0_20px_65px_#0006] backdrop-blur-xl sm:p-6"}
+      className={compact ? "space-y-3 text-white" : "pz-surface w-[min(460px,calc(100vw-28px))] p-5 text-white sm:p-6"}
     >
       {!compact && <p className="text-[11px] font-semibold uppercase tracking-[.18em] text-white/45">POINTZERO · Atelier</p>}
-      <h1 className="text-[clamp(20px,3vw,28px)] font-semibold tracking-[-.04em]">Que voulez-vous broder ?</h1>
+      {!compact && <h1 className="mt-2 text-[clamp(20px,3vw,28px)] font-semibold tracking-[-.04em] text-white">Que voulez-vous broder ?</h1>}
       <form className="mt-3 space-y-3" onSubmit={submit}>
         <label htmlFor={compact ? "atelier-description-panel" : "atelier-description"} className="sr-only">Description du motif</label>
         <textarea
@@ -33,7 +33,7 @@ export default function AtelierCreate({
           value={prompt}
           onChange={(event) => onPrompt(event.target.value)}
           placeholder="Décrivez votre motif…"
-          className="w-full resize-none rounded-[5px] border border-white/20 bg-[#1c1c1f] px-3 py-3 text-sm text-white outline-none placeholder:text-white/45 focus:border-white/60"
+          className="w-full resize-none rounded-[5px] border border-white/30 bg-[#202024] px-3 py-3 text-sm text-white outline-none placeholder:text-[#b3b3bc] focus:border-white/80"
         />
         <div className="flex flex-wrap gap-2">
           <button type="submit" disabled={prompt.trim().length < 3} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[5px] bg-white px-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40"><Sparkles size={16} />Générer</button>
@@ -42,7 +42,7 @@ export default function AtelierCreate({
       </form>
       <input ref={fileInput} type="file" className="sr-only" aria-label="Importer image, PDF ou projet JSON/OXS" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf,.json,.oxs,application/json" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (file) onImport(file); }} />
       <div className="flex flex-wrap justify-center gap-5 border-t border-white/10 pt-3">
-        <button type="button" onClick={onBlank} className="inline-flex min-h-9 items-center gap-1.5 text-xs text-white/60 hover:text-white"><FilePlus2 size={15} />Grille vierge</button>
+        <button type="button" onClick={onBlank} className="inline-flex min-h-9 items-center gap-1.5 text-xs text-white/80 hover:text-white"><FilePlus2 size={15} />Grille vierge</button>
         <button type="button" onClick={onLibrary} className="inline-flex min-h-9 items-center gap-1.5 text-xs text-white/60 hover:text-white"><FolderOpen size={15} />Mes projets</button>
       </div>
     </section>

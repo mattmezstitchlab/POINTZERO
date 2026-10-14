@@ -63,7 +63,7 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
     <input type="file" accept=".pdf,application/pdf" className="hidden" ref={pdfRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) actions.importFile(file); e.target.value = ""; }} />
     <input type="file" accept=".json,.oxs,application/json,application/xml" className="hidden" ref={fileRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) actions.openFile(file); e.target.value = ""; }} />
     <datalist id="all-floss">{BASE_FLOSS.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</datalist>
-    <div className="space-y-5">
+    <div className="space-y-2.5">
       {tab === "prepare" && <>
         <Block title="Mon stock de fils et préférences"><BrodeuseProfilePanel profile={brodeuseProfile} onChange={setBrodeuseProfile} /></Block>
         <Block title="Tissu, comptage et dimensions"><div className="grid grid-cols-2 gap-3"><Label title="Tissu"><select className="field" value={f.type} onChange={(e) => onSet({ ...p, fabric: { ...f, type: e.target.value as typeof f.type, over: e.target.value === "aida" ? 1 : f.over } })}><option value="aida">Aida / Binca</option><option value="linen">Lin</option><option value="evenweave">Evenweave</option></select></Label><Label title="Comptage réel"><select className="field" value={p.count} onChange={(e) => onSet({ ...p, count: +e.target.value as Pattern["count"] })}>{COUNTS.map((c) => <option key={c} value={c}>{c} ct</option>)}</select></Label><Label title="Sur combien de fils"><select className="field" value={f.over} disabled={f.type === "aida"} onChange={(e) => onSet({ ...p, fabric: { ...f, over: +e.target.value as 1 | 2 } })}><option value={1}>Sur 1</option><option value={2}>Sur 2</option></select></Label><Label title="Unités"><select className="field" value={f.units} onChange={(e) => onSet({ ...p, fabric: { ...f, units: e.target.value as "cm" | "in" } })}><option value="cm">Centimètres</option><option value="in">Pouces</option></select></Label><NumberField title="Brins croix (1–6)" value={p.strands} min={1} max={6} onChange={(v) => onSet({ ...p, strands: v })} /><NumberField title="Brins arrière" value={p.backStrands ?? 1} min={1} max={6} onChange={(v) => onSet({ ...p, backStrands: v })} /><NumberField title="Marge par côté (cm)" value={f.margin} min={0} max={30} step={.5} onChange={(v) => onSet({ ...p, fabric: { ...f, margin: v } })} /><Label title="Couleur de toile"><input type="color" className="field p-1" value={f.color} onChange={(e) => onSet({ ...p, fabric: { ...f, color: e.target.value } })} /></Label></div>
@@ -138,7 +138,21 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
 function Label({ title, children }: { title: string; children: React.ReactNode }) { return <label className="mt-2 block text-[12px] text-label-2"><span className="mb-1.5 block">{title}</span>{children}</label>; }
 function NumberField({ title, value, onChange, min, max, step = 1 }: { title: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number }) { return <Label title={title}><input type="number" className="field" value={value} min={min} max={max} step={step} onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, Math.round(n / step) * step))); }} /></Label>; }
 function Toggle({ title, checked, onChange }: { title: string; checked: boolean; onChange: () => void }) { return <div className="flex min-h-12 items-center justify-between gap-4"><span className="text-[13px] text-label-2">{title}</span><button type="button" role="switch" className="switch" aria-label={title} aria-checked={checked} onClick={onChange} /></div>; }
-function Block({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border-b border-white/[.08] pb-5"><h3 className="mb-3 text-[11px] font-semibold tracking-[.07em] text-label-3 uppercase">{title}</h3>{children}</section>; }
+/** Les réglages secondaires se découvrent à la demande : aucune fonction supprimée. */
+function Block({ title, children }: { title: string; children: React.ReactNode }) {
+  const openByDefault = [
+    "Outils de conception",
+    "Mon stock de fils et préférences",
+    "Marquer sans modifier le patron",
+    "Confort et accessibilité",
+  ].includes(title);
+  return <details className="group rounded-[6px] border border-white/15 bg-white/[.035] px-3 py-2" open={openByDefault}>
+    <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 text-left text-[12px] font-semibold text-white/90 [&::-webkit-details-marker]:hidden">
+      <span>{title}</span><span aria-hidden="true" className="text-white/55 transition-transform group-open:rotate-180">⌄</span>
+    </summary>
+    <div className="border-t border-white/10 pt-3 pb-2">{children}</div>
+  </details>;
+}
 
 /** Intensités du calendrier, de « rien » au meilleur jour de la fenêtre. */
 const LEVELS = ["bg-white/[0.06]", "bg-accent/25", "bg-accent/50", "bg-accent/75", "bg-accent"];
