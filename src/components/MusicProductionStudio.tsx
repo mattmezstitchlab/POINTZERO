@@ -34,6 +34,7 @@ export default function MusicProductionStudio({onBack,linkedProject}:Props){
  const [assetsVersion,setAssetsVersion]=useState(0);
  const files=useRef(new Map<string,string>());
  const importRequest=useRef<HTMLInputElement>(null);
+ const attachTrackFile=useRef<HTMLInputElement>(null);
  const projectChoices=useMemo(()=>loadProjectOptions(),[]);
  const sessions=useMemo(()=>{
    try{
@@ -108,6 +109,15 @@ export default function MusicProductionStudio({onBack,linkedProject}:Props){
    setData(fresh);
    setAssetsVersion(v=>v+1);
    setNotice(count+" fichiers locaux chargés ; "+added+" nouvelles fiches. L'audio n'est pas conservé à la fermeture.");
+ };
+ const attachCurrentTrack=(e:ChangeEvent<HTMLInputElement>)=>{
+   const file=e.target.files?.[0];e.target.value="";
+   if(!file||!track)return;
+   if(file.size>80_000_000||(!file.type.startsWith("audio/")&&!/\.(wav|mp3|flac|m4a|ogg)$/i.test(file.name)))
+     return setNotice("Fichier audio invalide ou trop volumineux (80 Mo maximum).");
+   const old=files.current.get(track.id);if(old)URL.revokeObjectURL(old);
+   files.current.set(track.id,URL.createObjectURL(file));
+   setAssetsVersion(v=>v+1);setNotice("Audio local associé à « "+track.title+" ». Il sera accessible dans la radio liée à l'événement.");
  };
  const createArtist=()=>{
    if(!artistName.trim())return;
@@ -253,6 +263,8 @@ export default function MusicProductionStudio({onBack,linkedProject}:Props){
             <option value="unknown">À vérifier</option><option value="own">Droits sur l'enregistrement détenus</option><option value="licensed">Licence d'usage acquise</option>
           </select>
         </label>
+        <div className="sm:col-span-2"><button aria-label="Associer un fichier audio à ce titre" onClick={()=>attachTrackFile.current?.click()} className={studioButton}><Upload size={14}/> Associer un fichier à « {track.title} »</button>
+          <p className="mt-1 text-[11px] text-white/50">L'enregistrement reste dans ce navigateur pour cette session. Aucun transfert vers un serveur.</p></div>
       </section>}
       <p className="text-[11px] text-white/55">ISRC : identifiant d'enregistrement ; ISWC : œuvre. Ces champs et les dates sont préparatoires. Rien n'est envoyé à DistroKid ou aux plateformes de streaming.</p>
     </>}
@@ -275,6 +287,7 @@ export default function MusicProductionStudio({onBack,linkedProject}:Props){
     </>}
     {notice&&<p role="status" className="rounded-[6px] border border-white/20 bg-white/5 p-3 text-xs">{notice}</p>}
    </div>
+   <input aria-label="Importer un fichier audio pour la fiche titre" className="sr-only" type="file" ref={attachTrackFile} accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a" onChange={attachCurrentTrack}/>
    <input aria-label="Charger une proposition musicale JSON" className="sr-only" ref={importRequest} type="file" accept=".json,application/json" onChange={e=>void importGuestFile(e)}/>
  </StudioFrame>;
 }
