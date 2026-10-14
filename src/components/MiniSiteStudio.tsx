@@ -6,9 +6,9 @@ import { loadProjectOptions } from "../lib/budgetCore";
 const load=():MiniSite=>{try{return safeMiniSite(JSON.parse(localStorage.getItem(MINI_KEY)??"null"))??createMiniSite();}catch{return createMiniSite();}};
 const loadDrafts=():MiniSite[]=>{try {const json=JSON.parse(localStorage.getItem(MINI_DRAFTS)??"[]") as unknown;return Array.isArray(json)?json.map(safeMiniSite).filter((x):x is MiniSite=>!!x).slice(0,12):[];}catch{return [];}};
 const slug=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-")||"mini-site";
-interface Props {onBack:()=>void}
-export default function MiniSiteStudio({onBack}:Props) {
-  const [doc,setDoc]=useState<MiniSite>(load);
+interface Props {onBack:()=>void;incomingDraft?:MiniSite|null}
+export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
+  const [doc,setDoc]=useState<MiniSite>(()=>incomingDraft??load());
   const [drafts,setDrafts]=useState<MiniSite[]>(loadDrafts);
   const [selected,setSelected]=useState<string|null>(null);
   const [viewport,setViewport]=useState<"phone"|"desktop">("desktop");

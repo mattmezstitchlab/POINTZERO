@@ -71,6 +71,7 @@ export default function PdfPrep({
   onClose,
   onImport,
   embedded = false,
+  studioEmbedded = false,
   echelleMonde = 1,
 }: {
   file: File;
@@ -78,6 +79,8 @@ export default function PdfPrep({
   onImport: (p: Pattern) => void;
   /** Intégré dans la landing : s'affiche dans le flux de la page au lieu d'occuper tout l'écran. */
   embedded?: boolean;
+  /** Mode PDF Studio : hauteur responsive et forme harmonisée. */
+  studioEmbedded?: boolean;
   /** Posé sur la toile zoomée : les deltas de souris arrivent déjà zoomés. */
   echelleMonde?: number;
 }) {
@@ -397,6 +400,12 @@ export default function PdfPrep({
       setSnapGuides(null);
     }
 
+    // The exact vector parser fixes coordinates to their source pages.
+    // Switch to symbol/image reconciliation only when a card truly moves,
+    // otherwise a magnetic adjustment would be silently ignored on export.
+    if ((newX !== drag.startTileX || newY !== drag.startTileY) && mode === "vecteur") {
+      setMode("auto");
+    }
     setManualPositions((prev) => ({
       ...prev,
       [drag.id]: { x: Math.max(0, newX), y: Math.max(0, newY) },
@@ -418,6 +427,7 @@ export default function PdfPrep({
   const arrangeMosaic = (cols: number) => {
     setPerRow(cols);
     setManualPositions(positionsPuzzle(effective, cols, uniformSizes, uniformDim));
+    if (mode === "vecteur") setMode("auto");
   };
 
   const moveCard = (index: number, delta: number) => {
@@ -430,6 +440,7 @@ export default function PdfPrep({
     });
     // Les positions suivent le nouvel ordre.
     setManualPositions({});
+    if (mode === "vecteur") setMode("auto");
   };
 
   const resetToDefault = () => {
@@ -556,7 +567,7 @@ export default function PdfPrep({
   return (
     <div
       className={`glass-strong flex flex-col overflow-hidden bg-[#0e0e11] ${
-        embedded ? "h-[860px] w-full rounded-[26px] ring-1 ring-white/10" : "fixed inset-0 z-[75]"
+        embedded ? (studioEmbedded ? "h-[min(85dvh,980px)] min-h-[600px] w-full rounded-[6px] border border-white/15" : "h-[860px] w-full rounded-[26px] ring-1 ring-white/10") : "fixed inset-0 z-[75]"
       }`}
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3">
@@ -566,7 +577,7 @@ export default function PdfPrep({
           </button>
         )}
         <div className="min-w-0">
-          <h2 className="truncate text-[16px] font-semibold">Préparation du patron PDF</h2>
+          <h2 className="truncate text-[16px] font-semibold">{studioEmbedded?"Cartes magnétiques · grille PDF":"Préparation du patron PDF"}</h2>
           <p className="truncate text-[12px] text-label-3">
             {file.name}
             {analysis ? ` · ${analysis.pages.length} pages` : ""}
@@ -738,7 +749,7 @@ export default function PdfPrep({
                 <button className="btn-quiet flex-1" onClick={() => setStage(0)}>
                   Retour
                 </button>
-                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => { setCenterTab(mode === "vecteur" ? "preview" : "puzzle"); setStage(2); }}>
+                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => { setCenterTab(studioEmbedded ? "puzzle" : (mode === "vecteur" ? "preview" : "puzzle")); setStage(2); }}>
                   Monter le puzzle →
                 </button>
               </div>
@@ -1022,7 +1033,7 @@ export default function PdfPrep({
                 </div>
                 <p className="text-[11.5px] leading-relaxed text-label-3">
                   {mode === "vecteur"
-                    ? "Codes DMC de la légende associés aux symboles vectoriels. L’assemblage suit les axes du PDF (pas le déplacement manuel des tuiles). Les symboles inconnus restent vides."
+                    ? "Codes DMC de la légende et symboles vectoriels. Dès qu’une carte est déplacée, la lecture automatique prend le relais pour respecter les positions magnétiques. Vérifiez les codes obtenus."
                     : mode === "auto"
                       ? "Associe les symboles lisibles à la légende DMC ; pour les cases visiblement colorées, propose le fil le plus proche."
                       : "Photographie couleur : estimation des références DMC à partir des pixels imprimés. À vérifier avant de broder."}

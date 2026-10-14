@@ -2,18 +2,22 @@ import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "r
 import { ArrowLeft, ArrowRight, CheckSquare, Download, FileText, RotateCcw, RotateCw, Scissors, Trash2, Upload } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { StudioFrame, studioButton, saveStudioFile } from "./StudioFrame";
+import PdfPrep from "./PdfPrep";
+import type { Pattern } from "../lib/pattern";
 import { openPdf } from "../lib/pdfimport";
 import { exportablePages, MAX_PDF_PAGES, outputPageDims, pageRotation, pdfSummary, repositionPage, rotatedCanvas, type PDFPage, type PDFSource } from "../lib/pdfStudioCore";
 
 const unique=()=>globalThis.crypto?.randomUUID?.()??Math.random().toString(36).slice(2);
-interface Props {onBack:()=>void;onConvertToPattern?:(file:File)=>void}
-export default function PDFStudio({onBack,onConvertToPattern}:Props){
+interface Props {onBack:()=>void;onConvertToPattern?:(file:File)=>void;onUsePattern?:(pattern:Pattern)=>void}
+export default function PDFStudio({onBack,onConvertToPattern,onUsePattern}:Props){
   const [sources,setSources]=useState<PDFSource[]>([]);
   const [pages,setPages]=useState<PDFPage[]>([]);
   const [selected,setSelected]=useState<string|null>(null);
   const [preview,setPreview]=useState("");
   const [busy,setBusy]=useState("");
   const [notice,setNotice]=useState("");
+  const [mode,setMode]=useState<"pages"|"magnetic">("pages");
+  const [magneticSourceId,setMagneticSourceId]=useState<string|null>(null);
   const picker=useRef<HTMLInputElement>(null);
   const sourcesRef=useRef<PDFSource[]>([]);
   const drag=useRef<string|null>(null);
@@ -22,6 +26,7 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
   useEffect(()=>()=>{sourcesRef.current.forEach(s=>s.handle.destroy());},[]);
   const current=pages.find(p=>p.id===selected)??null;
   const summary=pdfSummary(pages);
+  const magneticSource=sources.find(s=>s.id===magneticSourceId)??sources[0]??null;
   useEffect(()=>{
     if(!current){setPreview("");return;}
     const source=sources.find(s=>s.id===current.sourceId);
@@ -61,6 +66,7 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
         }
         setPages(old=>[...old,...newPages]);
         setSelected(old=>old??newPages[0]?.id??null);
+        setMagneticSourceId(old=>old??id);
         for(const item of newPages) {
           try {
             const thumb=await handle.render(item.page,180);
@@ -81,6 +87,7 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
     sourcesRef.current=sourcesRef.current.filter(s=>s.id!==id);
     setPages(old=>old.filter(p=>p.sourceId!==id));
     setSelected(pages.find(p=>p.sourceId!==id)?.id??null);
+    if(magneticSourceId===id){setMagneticSourceId(sources.find(s=>s.id!==id)?.id??null);setMode("pages");}
     target?.handle.destroy();
   };
   const exportRaster=async()=>{
@@ -141,7 +148,9 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
       <div className="mt-4 space-y-2">{sources.map(source=><div key={source.id} className="flex items-start gap-2 rounded-[5px] border border-white/15 p-3 text-xs">
         <FileText size={17} className="shrink-0 text-white/70"/>
         <div className="min-w-0 flex-1"><p className="truncate font-semibold" title={source.name}>{source.name}</p><p className="mt-1 text-[11px] text-white/55">{source.handle.pages} page(s)</p>
-          {onConvertToPattern&&<button className="mt-2 text-[11px] text-white underline" onClick={()=>onConvertToPattern(source.file)}>Envoyer vers Broderie ↗</button>}
+          <button type="button" className="mt-2 block text-left text-[11px] font-semibold text-white underline underline-offset-2"
+            onClick={()=>{setMagneticSourceId(source.id);setMode("magnetic");}}>Recomposer la grille ↗</button>
+          {onConvertToPattern&&<button className="mt-2 text-[11px] text-white underline" onClick={()=>onConvertToPattern(source.file)}>Ouvrir dans Broderie (ancien parcours) ↗</button>}
         </div>
         <button type="button" aria-label={"Retirer "+source.name} title="Retirer ce PDF" onClick={()=>removeSource(source.id)} className="text-white/60 hover:text-white"><Trash2 size={15}/></button>
       </div>)}</div>
@@ -151,7 +160,8 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
       <h2 className="mb-4 text-sm font-semibold">Pages et export</h2>
       <div className="rounded-[5px] border border-white/15 bg-white/5 p-3 text-xs"><p>{summary.kept} page(s) conservées</p>
         <p className="mt-1 text-white/60">{summary.excluded} exclue(s) · {summary.sources} fichier(s)</p></div>
-      {current&&<div className="mt-4 space-y-3">
+      {mode==="magnetic"&&<div className="mt-4 rounded-[5px] border border-white/15 bg-white/5 p-3 text-xs leading-relaxed text-white/75"><p className="mb-2 font-semibold text-white">Recomposition magnétique</p>Les pages de grille deviennent des cartes à déplacer sur un plateau. Aimantation des bords, zoom, mosaïque, lecture des symboles et correspondances DMC sont conservés. La conversion en patron reste distincte de l’assemblage PDF.</div>}
+      {mode==="pages"&&current&&<div className="mt-4 space-y-3">
         <h3 className="text-xs font-semibold">Page {current.page}</h3>
         <p className="truncate text-[11px] text-white/60">{current.name}</p>
         <div className="grid grid-cols-2 gap-2">
@@ -161,12 +171,12 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
         <button onClick={()=>change(current.id,{enabled:!current.enabled})} aria-pressed={current.enabled} className={studioButton+" w-full"}><CheckSquare size={15}/>{current.enabled?"Incluse dans l'export":"Exclue de l'export"}</button>
         <p className="text-[11px] text-white/55">Rotation : {current.rotation}° · format : {Math.round(current.width)} × {Math.round(current.height)} pt</p>
       </div>}
-      <div className="mt-5 space-y-2 border-t border-white/15 pt-4">
+      {mode==="pages"&&<div className="mt-5 space-y-2 border-t border-white/15 pt-4">
         <button disabled={!summary.kept||!!busy} onClick={()=>void exportRaster()} className={studioButton+" w-full"}><Download size={15}/> Assembler et exporter PDF</button>
         <button disabled={!summary.kept||!!busy} onClick={()=>void extractText()} className={studioButton+" w-full"}><Scissors size={15}/> Extraire le texte .txt</button>
-      </div>
-      <p className="mt-4 text-[11px] leading-relaxed text-white/60"><strong className="text-white">Limite importante :</strong> l'export PDF reconstruit les pages comme images. Il conserve l'apparence, mais pas les textes vectoriels, champs, signatures ni liens interactifs du PDF original.</p>
-      <p className="mt-2 text-[11px] text-white/55">Aucune modification des fichiers originaux. Pas de signature, de suppression définitive de contenu ou d'OCR.</p>
+      </div>}
+      {mode==="pages"&&<p className="mt-4 text-[11px] leading-relaxed text-white/60"><strong className="text-white">Limite importante :</strong> l'export PDF reconstruit les pages comme images. Il conserve l'apparence, mais pas les textes vectoriels, champs, signatures ni liens interactifs du PDF original.</p>}
+      {mode==="pages"&&<p className="mt-2 text-[11px] text-white/55">Aucune modification des fichiers originaux. Pas de signature, de suppression définitive de contenu ou d'OCR.</p>}
     </>}
   >
     <div className="mx-auto max-w-[1000px]">
@@ -174,7 +184,24 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
         <div><p className="text-[11px] font-semibold uppercase tracking-widest text-white/60">Planche de pages</p><h2 className="mt-1 text-lg font-semibold">{pages.length?"Organiser le PDF":"Importer un document"}</h2></div>
         {pages.length>0&&<p className="text-xs text-white/60">{summary.kept} / {summary.total} pages sélectionnées</p>}
       </div>
-      {!pages.length?<div className="mx-auto mt-[8vh] max-w-md rounded-[7px] border border-white/15 bg-[#09090b] p-7 text-center">
+      <div className="mb-4 inline-flex gap-1 rounded-[5px] border border-white/20 bg-[#09090b] p-1" role="group" aria-label="Mode du Studio PDF">
+        <button type="button" aria-pressed={mode==="pages"} onClick={()=>setMode("pages")}
+          className={`rounded-[4px] px-3 py-2 text-xs ${mode==="pages"?"bg-white font-semibold text-black":"text-white/75 hover:bg-white/10"}`}>Assembler les pages</button>
+        <button type="button" aria-label="Grilles magnétiques" aria-pressed={mode==="magnetic"} disabled={!sources.length} onClick={()=>setMode("magnetic")}
+          className={`rounded-[4px] px-3 py-2 text-xs disabled:opacity-30 ${mode==="magnetic"?"bg-white font-semibold text-black":"text-white/75 hover:bg-white/10"}`}>Grilles magnétiques</button>
+      </div>
+      {mode==="magnetic"&&magneticSource
+        ? <div aria-label="Tableau des cartes magnétiques" className="min-w-0">
+            <PdfPrep key={magneticSource.id} file={magneticSource.file} embedded studioEmbedded
+              onClose={()=>setMode("pages")}
+              onImport={p=>{
+                if(onUsePattern)onUsePattern(p);
+                else if(onConvertToPattern)onConvertToPattern(magneticSource.file);
+                else setNotice("Patron prêt. Activez l’atelier Broderie pour l’importer.");
+              }}/>
+          </div>
+        : null}
+      {mode==="pages"&&(!pages.length?<div className="mx-auto mt-[8vh] max-w-md rounded-[7px] border border-white/15 bg-[#09090b] p-7 text-center">
         <FileText className="mx-auto mb-4 text-white/70" size={34}/>
         <h3 className="text-lg font-semibold">Votre Studio PDF</h3>
         <p className="mt-2 text-sm text-white/60">Regroupez des PDF, choisissez les pages, réorganisez-les puis exportez votre document.</p>
@@ -201,7 +228,7 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Page sélectionnée · {current.page}</h3><span className="text-xs text-white/60">{current.rotation}°</span></div>
           {preview?<img className="mx-auto max-h-[65vh] max-w-full rounded-[4px] bg-white object-contain" src={preview} alt={"Aperçu page "+current.page}/>:<div className="py-10 text-center text-xs text-white/60">Préparation de l'aperçu…</div>}
         </section>}
-      </>}
+      </>)}
       {busy&&<p role="status" className="mt-4 rounded-[5px] bg-[#09090b] p-3 text-xs text-white">{busy}</p>}
       {notice&&<p role="status" className="mt-4 rounded-[5px] bg-[#09090b] p-3 text-xs text-white">{notice}</p>}
     </div>

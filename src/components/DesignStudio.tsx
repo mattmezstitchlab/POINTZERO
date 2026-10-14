@@ -57,10 +57,11 @@ interface Props {
   onAdmin?: () => void;
   onMiniSite?: () => void;
   onPDF?: () => void;
+  onGeneration?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -240,7 +241,8 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               {name:"Programme",icon:<BookOpen size={16}/>,onClick:onProgramme},
               {name:"Admin / Documents",icon:<Files size={16}/>,onClick:onAdmin},
               {name:"Mini-site",icon:<Globe size={16}/>,onClick:onMiniSite},
-              {name:"PDF",icon:<FileText size={16}/>,onClick:onPDF}
+              {name:"PDF",icon:<FileText size={16}/>,onClick:onPDF},
+              {name:"Génération",icon:<WandSparkles size={16}/>,onClick:onGeneration}
             ]).filter(i=>!!i.onClick).map(item=>
               <button type="button" key={item.name} aria-label={"Ouvrir le studio "+item.name}
                 className="flex min-h-11 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs text-white/85 hover:bg-white/10 hover:text-white"
