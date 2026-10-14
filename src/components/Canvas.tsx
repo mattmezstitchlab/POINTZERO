@@ -84,6 +84,7 @@ const Q_CORNER: [number, number][] = [
 ];
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+const fmt = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
 
 /**
  * Grille plein écran : zoom au pincement, défilement à deux doigts, tracé à un doigt / stylet.
@@ -215,8 +216,6 @@ export default function Canvas(props: Props) {
     const c = content();
     const { s, ox, oy } = v;
     const { w, h } = P;
-    const gw = w * s;
-    const gh = h * s;
     const isPattern = mode === "pattern";
 
     // La grille se prolonge jusqu'aux quatre bords de l'écran : aucun
