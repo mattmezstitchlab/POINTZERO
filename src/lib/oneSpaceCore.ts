@@ -175,12 +175,12 @@ export function linkedModuleInfo(tile:SpaceTile):{label:string;id:string}|null{
   }
   if(tile.kind==="programme"){
    const p=safeProgrammeStore(JSON.parse(localStorage.getItem(PROGRAMME_STORAGE)??"null"));
-   const hit=p?.programmes.find(v=>v.id===tile.refId)??p?.programmes[0];
+   const hit=tile.refId?p?.programmes.find(v=>v.id===tile.refId):p?.programmes[0];
    return hit?{label:hit.title,id:hit.id}:null;
   }
   if(tile.kind==="musique"){
    const music=safeMusicLabel(JSON.parse(localStorage.getItem(MUSIC_LABEL_KEY)??"null"));
-   const event=music?.events.find(e=>e.id===tile.refId)??music?.events[0];
+   const event=tile.refId?music?.events.find(e=>e.id===tile.refId):music?.events[0];
    return event?{label:event.title,id:event.id}:null;
   }
  }catch{/* Invalid cross-studio data is not imported. */}
