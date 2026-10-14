@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckSquare, Download, FileText, RotateCcw, RotateCw, Scissors, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckSquare, Download, FileText, RotateCcw, RotateCw, Scissors, Trash2, Upload } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { StudioFrame, studioButton, saveStudioFile } from "./StudioFrame";
 import { openPdf } from "../lib/pdfimport";
@@ -21,7 +21,6 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
   useEffect(()=>{sourcesRef.current=sources;},[sources]);
   useEffect(()=>()=>{sourcesRef.current.forEach(s=>s.handle.destroy());},[]);
   const current=pages.find(p=>p.id===selected)??null;
-  const selectedSource=current?sources.find(s=>s.id===current.sourceId):null;
   const summary=pdfSummary(pages);
   useEffect(()=>{
     if(!current){setPreview("");return;}
@@ -47,7 +46,7 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
         let handle;
         try{handle=await openPdf(file);}
         catch{setNotice("Impossible d'ouvrir « "+file.name+" » (PDF protégé, corrompu ou non pris en charge).");continue;}
-        const currentLength=pages.length+sourcesRef.current.reduce((sum,s)=>sum+s.handle.pages,0);
+        const currentLength=sourcesRef.current.reduce((sum,s)=>sum+s.handle.pages,0);
         if(handle.pages>MAX_PDF_PAGES||currentLength+handle.pages>MAX_PDF_PAGES){handle.destroy();setNotice("Limite de "+MAX_PDF_PAGES+" pages par montage. Exportez un document avant d'en ajouter d'autres.");continue;}
         const id=unique(),info:PDFSource={id,name:file.name,file,handle};
         sourcesRef.current=[...sourcesRef.current,info];
