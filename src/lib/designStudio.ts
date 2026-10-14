@@ -119,9 +119,9 @@ function renderMotif(presetId: string, box: DesignElement): string {
   return '<svg x="' + box.x + '" y="' + box.y + '" width="' + box.w + '" height="' + box.h +
     '" viewBox="0 0 ' + pattern.w + ' ' + pattern.h + '" preserveAspectRatio="xMidYMid meet">' + squares.join("") + "</svg>";
 }
-export function designToSVG(doc: DesignDocument): string {
+export function designToSVG(doc: DesignDocument, transparent = false): string {
   const pieces: string[] = [];
-  pieces.push('<rect x="0" y="0" width="' + doc.width + '" height="' + doc.height + '" fill="' + doc.background + '"/>');
+  if (!transparent) pieces.push('<rect x="0" y="0" width="' + doc.width + '" height="' + doc.height + '" fill="' + doc.background + '"/>');
   for (const e of doc.elements) {
     if (e.kind === "shape") pieces.push('<' + (e.shape === "ellipse" ? "ellipse" : "rect") +
       (e.shape === "ellipse" ? ' cx="' + (e.x + e.w/2) + '" cy="' + (e.y + e.h/2) + '" rx="' + e.w/2 + '" ry="' + e.h/2 + '"' :
