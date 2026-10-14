@@ -62,6 +62,24 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre la génération universelle et ses destinations sans perdre le studio graphique", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Génération"));
+    expect(container?.querySelector('[aria-label="Espace Génération"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Description pour génération universelle"]')).toBeTruthy();
+    await click(button("Broderie DMC"));
+    expect(container?.querySelector('[aria-label="Grille DMC · largeur"]')).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio PDF"));
+    expect(container?.querySelector('[aria-label="Mode du Studio PDF"]')).toBeTruthy();
+    expect(button("Grilles magnétiques")?.hasAttribute("disabled")).toBe(true);
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("ouvre Mini-site et PDF depuis les studios, puis revient à l'atelier", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
