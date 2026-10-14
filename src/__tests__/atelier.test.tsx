@@ -62,6 +62,25 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre Studio Music et propose invités, Radio Mix, pré-mastering et SACEM", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Music · Radio & Label"));
+    expect(container?.querySelector('[aria-label="Espace Music · Radio & Label"]')).toBeTruthy();
+    expect(button("Ouvrir Radio & Mix")).toBeTruthy();
+    await click(button("Ouvrir Playlists & invités"));
+    expect(container?.querySelector('[aria-label="Titre demandé par l\'invité"]')).toBeTruthy();
+    await click(button("Ouvrir Pré-mastering"));
+    expect(container?.querySelector('[aria-label="Profil de pré-master"]')).toBeTruthy();
+    await click(button("Ouvrir Artistes & Label"));
+    expect(container?.querySelector('[aria-label="Fiche du morceau musical"]')).toBeTruthy();
+    await click(button("Ouvrir Événements & SACEM"));
+    expect(button("Exporter un programme SACEM préparatoire")).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("affiche la landing claire LE MONDE AIME depuis son lien direct, puis ouvre les ateliers", async () => {
     window.history.replaceState(null,"","/?site=le-monde-aime");
     await mount();
