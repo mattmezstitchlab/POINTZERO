@@ -1,4 +1,5 @@
 /** POINTZERO mini-sites: responsive static pages generated locally, without hosting or server forms. */
+import {safeHref} from "./academyCore";
 export type MiniKind = "mariage" | "portfolio" | "evenement" | "presentation";
 export type MiniSectionKind = "texte" | "programme" | "informations" | "galerie" | "contact";
 export interface MiniSection {
@@ -8,6 +9,7 @@ export interface MiniSite {
   version:1;id:string;name:string;kind:MiniKind;title:string;subtitle:string;
   eyebrow:string;date:string;place:string;contact:string;
   primaryColor:string;background:string;heroImage:string;
+  heroAlt?:string;heroActionLabel?:string;heroActionHref?:string;
   sections:MiniSection[]; projectId:string;
 }
 export const MINI_KEY="pointzero:minisite:v1";
@@ -33,7 +35,7 @@ const defaults:Record<MiniKind,[string,string,string,string,string]>={
 export function createMiniSite(kind:MiniKind="mariage"):MiniSite{
   const [title,subtitle,eyebrow,primaryColor,background]=defaults[kind];
   return {version:1,id:id(),name:MINI_KINDS.find(x=>x.id===kind)!.name+" sans titre",kind,title,subtitle,eyebrow,date:"",place:"",contact:"",primaryColor,background,heroImage:"",
-    sections:defaultBlocks[kind].map(([k,t,b])=>section(k,t,b)),projectId:""};
+    sections:defaultBlocks[kind].map(([k,t,b])=>section(k,t,b)),projectId:"",heroAlt:"",heroActionLabel:"",heroActionHref:""};
 }
 export const miniSection=(kind:MiniSectionKind):MiniSection=>{
   const titles:Record<MiniSectionKind,string>={texte:"Nouvelle section",programme:"Programme",informations:"Informations",galerie:"Galerie",contact:"Contact"};
@@ -48,7 +50,10 @@ export function safeMiniSite(value:unknown):MiniSite|null {
     !["name","title","subtitle","eyebrow","date","place","contact","projectId"].every(k=>{
       const v=d[k as keyof MiniSite];return typeof v==="string"&&v.length<1000;
     })||!validHex(d.primaryColor)||!validHex(d.background)||!safeHero(d.heroImage)||
-    !Array.isArray(d.sections)||d.sections.length>16)return null;
+    !Array.isArray(d.sections)||d.sections.length>16||
+    !["heroAlt","heroActionLabel","heroActionHref"].every(key=>{
+      const v=d[key as keyof MiniSite];return v===undefined||(typeof v==="string"&&v.length<320);
+    })|| (d.heroActionHref!==undefined&&d.heroActionHref!==""&&!safeHref(d.heroActionHref)))return null;
   const ids=new Set<string>();
   for(const s of d.sections){
     if(!s||typeof s.id!=="string"||s.id.length>120||ids.has(s.id)||
@@ -75,7 +80,9 @@ export function miniSiteToHTML(doc:MiniSite):string {
   // Every visible user field is escaped. No JavaScript, embedded fonts, third-party resources or tracking.
   const sections=doc.sections.filter(s=>s.visible);
   const links=sections.map(s=>'<a href="#s-'+esc(s.id)+'">'+esc(s.title)+'</a>').join("");
-  const hero=doc.heroImage&&safeHero(doc.heroImage)?'<img class="hero-image" alt="" src="'+doc.heroImage+'">':"";
+  const hero=doc.heroImage&&safeHero(doc.heroImage)?'<img class="hero-image" alt="'+esc(doc.heroAlt??"")+'" src="'+doc.heroImage+'">':"";
+  const heroCTA=doc.heroActionLabel&&doc.heroActionHref&&safeHref(doc.heroActionHref)?
+    '<a class="cta hero-cta" href="'+esc(safeHref(doc.heroActionHref))+'">'+esc(doc.heroActionLabel)+'</a>':"";
   const safeMail=emailOK(doc.contact)?'<a href="mailto:'+encodeURIComponent(doc.contact)+'">'+esc(doc.contact)+'</a>':esc(doc.contact);
   return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
     '<meta name="description" content="'+esc(doc.subtitle)+'"><title>'+esc(doc.title)+'</title>'+
@@ -88,11 +95,12 @@ export function miniSiteToHTML(doc:MiniSite):string {
     '.subtitle{max-width:650px;margin:25px auto;color:#4b4b50;font-size:clamp(15px,2vw,20px)}.meta{font-size:13px;white-space:pre-wrap}.section{padding:85px 24px;border-top:1px solid #0001}.section:nth-of-type(even){background:#fff8}.section-inner{max-width:810px;margin:0 auto}'+
     'h2{font-size:clamp(31px,4vw,52px);line-height:1.16;letter-spacing:-.035em;font-weight:500;margin:13px 0 25px}.paragraph{white-space:normal;color:#434349;overflow-wrap:anywhere}'+
     'ul{list-style:none;padding:0}li{padding:12px 0;border-bottom:1px solid #0002}.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.gallery-card{display:grid;place-items:center;min-height:160px;padding:20px;text-align:center;background:#ffffff;border:1px solid #0001;border-radius:6px}'+
-    '.cta{display:inline-flex;margin-top:22px;padding:13px 21px;background:#171719;color:white;border-radius:5px;text-decoration:none}.footer{padding:50px 24px;text-align:center;border-top:1px solid #0002;font-size:12px;color:#666}'+
+    '.cta{display:inline-flex;margin-top:22px;padding:13px 21px;background:#171719;color:white;border-radius:5px;text-decoration:none}.hero-cta{font-weight:700}.nav a:focus-visible,.cta:focus-visible,.brand:focus-visible{outline:3px solid #171719;outline-offset:4px}.footer{padding:50px 24px;text-align:center;border-top:1px solid #0002;font-size:12px;color:#666}'+
+    '@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}'+
     '@media(max-width:720px){.site-header{height:auto;min-height:64px;padding:12px 18px;display:block}.nav{margin-top:10px}.hero{min-height:440px;padding:72px 18px}.section{padding:58px 20px}.gallery{grid-template-columns:1fr 1fr}.gallery-card{min-height:120px}}'+
     '</style></head><body><header class="site-header"><a class="brand" href="#top">'+esc(doc.title)+'</a><nav class="nav" aria-label="Sections">'+links+'</nav></header>'+
     '<main id="top"><div class="hero">'+hero+'<div><p class="eyebrow">'+esc(doc.eyebrow)+'</p><h1>'+esc(doc.title)+'</h1><p class="subtitle">'+esc(doc.subtitle)+'</p>'+
-    '<p class="meta">'+esc([doc.date,doc.place].filter(Boolean).join(" · "))+'</p></div></div>'+
+    '<p class="meta">'+esc([doc.date,doc.place].filter(Boolean).join(" · "))+'</p>'+heroCTA+'</div></div>'+
     sections.map(s=>sectionHTML(s,doc.contact)).join("")+'</main><footer class="footer">'+safeMail+'</footer></body></html>';
 }
 export const miniProjectFile=(doc:MiniSite)=>JSON.stringify(doc,null,2);

@@ -62,6 +62,29 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("Mini-site : plan du site, Academy, diagnostic et correction dans les vrais champs", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Mini-site"));
+    expect(container?.querySelector('[aria-label="Sélectionner l\'accueil et le hero du mini-site"]')).toBeTruthy();
+    await click(button("Ouvrir le parcours Academy du mini-site"));
+    const progress=container?.querySelector('[aria-label="Progression Academy du mini-site"]');
+    expect(progress).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Public visé par le mini-site"]')).toBeTruthy();
+    await click(button("Étape Premier écran"));
+    expect(button("Corriger Titre principal trop générique")).toBeTruthy();
+    await click(button("Corriger Titre principal trop générique"));
+    expect(container?.querySelector('[aria-label="Titre principal"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Libellé du bouton du hero"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Destination interne du bouton du hero"]')).toBeTruthy();
+    await click(button("Ouvrir le parcours Academy du mini-site"));
+    await click(button("Étape Lisibilité"));
+    expect(container?.querySelector('[aria-label="Progression Academy du mini-site"]')).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("ouvre Mon Espace et suit un Jour J fictif jusqu'au plan causal sans notifications", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
