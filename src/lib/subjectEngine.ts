@@ -1,4 +1,4 @@
-import { FLOSS, nearestFloss } from "./dmc";
+import { FLOSS, flossIndex, nearestFloss } from "./dmc";
 import { clonePattern, compositePattern, createPattern, ensurePalette, fromObject, makeId, toObject, type Pattern, type Seg } from "./pattern";
 import { clearSelection, extractSelection, pasteSelection } from "./editing";
 
@@ -354,10 +354,6 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
       if(stitch<0)continue;
       const ink=FLOSS[stitch]?.lab[0]<44?stitch:flossIndex("801");
       if(ink<0)continue;
-      const edges:Array<[number,number,number,number,number]>=[
-        [x-1,y,x,y,x,y+1],[x+1,y,x+1,y,x+1,y+1],
-        [x,y-1,x,y,x+1,y],[x,y+1,x,y+1,x+1,y+1],
-      ] as unknown as Array<[number,number,number,number,number]>;
       // Four ordered neighbor checks avoid outlining every color shift.
       for(const [dx,dy,ax,ay,bx,by] of [
         [x-1,y,x,y,x,y+1],[x+1,y,x+1,y,x+1,y+1],
@@ -367,7 +363,6 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
           accents.push({x1:ax,y1:ay,x2:bx,y2:by,c:ink});
         if(accents.length>=90)break;
       }
-      void edges;
     }
     out.back.push(...accents);
     if(accents.length)warningSet.add(accents.length+" segments de profondeur proposés aux chevauchements ; vérifier à l'aperçu.");
