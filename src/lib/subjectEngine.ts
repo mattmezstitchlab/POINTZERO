@@ -267,6 +267,7 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
       const a=at(sx,sy,sprite),b=at(x,y,out);
       for(const key of ["cross","fwd","bwd"] as const)if(sprite[key][a]>=0)out[key][b]=recolored(sprite[key][a],layer.tint,tint);
       for(let q=0;q<4;q++)if(sprite.q[q][a]>=0)out.q[q][b]=recolored(sprite.q[q][a],layer.tint,tint);
+      if(sprite.done[a])out.done[b]=1;
     }
     const node=(x:number,y:number)=>({x:layer.x+x*ratio,y:layer.y+y*ratio});
     const segments=(arr:Seg[])=>arr.map(s=>{
