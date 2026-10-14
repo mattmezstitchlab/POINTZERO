@@ -36,7 +36,7 @@ afterAll(() => {
 });
 
 let root: Root | null = null, container: HTMLElement | null = null;
-let openSpy: ReturnType<typeof vi.fn>, motifSpy: ReturnType<typeof vi.fn>, pdfSpy: ReturnType<typeof vi.fn>, projectSpy: ReturnType<typeof vi.fn>;
+let openSpy: ReturnType<typeof vi.fn>, motifSpy: ReturnType<typeof vi.fn>, pdfSpy: ReturnType<typeof vi.fn>, imageSpy: ReturnType<typeof vi.fn>, projectSpy: ReturnType<typeof vi.fn>;
 const click = async (el: Element) => {
   await act(async () => { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
 };
@@ -47,8 +47,8 @@ beforeEach(async () => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  openSpy = vi.fn(); motifSpy = vi.fn(); pdfSpy = vi.fn(); projectSpy = vi.fn(async () => null);
-  await act(async () => { root!.render(<Landing onOpen={openSpy} onMotif={motifSpy} onPdf={pdfSpy} onProjectFile={projectSpy} />); });
+  openSpy = vi.fn(); motifSpy = vi.fn(); pdfSpy = vi.fn(); imageSpy = vi.fn(); projectSpy = vi.fn(async () => null);
+  await act(async () => { root!.render(<Landing onOpen={openSpy} onMotif={motifSpy} onPdf={pdfSpy} onImage={imageSpy} onProjectFile={projectSpy} />); });
 });
 afterEach(async () => {
   await act(async () => root?.unmount());
@@ -90,6 +90,15 @@ describe("Accueil clair, une seule grille", () => {
     expect(motifSpy).toHaveBeenCalledTimes(1);
     const p = motifSpy.mock.calls[0][0] as Pattern;
     expect(p.w).toBe(44); expect(p.h).toBe(44); expect(p.palette.length).toBe(3);
+  });
+
+  it("propose un import d'image direct, sans passer par les réglages manuels", async () => {
+    const file=new File(["PNG"],"oiseau.png",{type:"image/png"});
+    const input=container!.querySelector('input[aria-label="Choisir une image PNG, JPEG ou WebP"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    Object.defineProperty(input,"files",{configurable:true,value:[file]});
+    await act(async()=>{input.dispatchEvent(new Event("change",{bubbles:true}));});
+    expect(imageSpy).toHaveBeenCalledWith(file);
   });
 
   it("importer un PDF dirige le fichier vers le vrai atelier sans montrer de puzzle sur l'accueil", async () => {
