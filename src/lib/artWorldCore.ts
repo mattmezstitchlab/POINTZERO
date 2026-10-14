@@ -42,7 +42,7 @@ export function safeArt(raw:unknown):ArtProject|null{
     typeof p.updated!=="string"||p.updated.length>30||!Array.isArray(p.marks)||p.marks.length>2000)return null;
   const used=new Set<string>();
   for(const m of p.marks){
-    if(!m||typeof m.id!=="string"||m.id.length>100||used.has(m.id)||!ART_TOOLS.some(t=>t.id===m.tool&&t.id!=="move"&&t.id!=="eraser")||
+    if(!m||typeof m.id!=="string"||m.id.length>100||used.has(m.id)||!ART_TOOLS.filter(t=>t.id!=="move"&&t.id!=="eraser").some(t=>t.id===m.tool)||
       !validHex(m.color)||!finite(m.width,1,120)||!finite(m.opacity,0,1)||!Array.isArray(m.points)||m.points.length<1||m.points.length>1500)return null;
     used.add(m.id);
     if(m.points.some(v=>!v||!finite(v.x,0,ART_W)||!finite(v.y,0,ART_H)))return null;
