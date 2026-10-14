@@ -46,6 +46,25 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 const keyOf = (b: PdfBlock, mode: Mode, colors: number) =>
   `${mode}|${colors}|${b.id}|${b.page}|${b.x0.toFixed(2)},${b.y0.toFixed(2)},${b.x1.toFixed(2)},${b.y1.toFixed(2)}|${b.cols}x${b.rows}`;
 
+/** Positions sans chevauchement, même si les blocs ont différentes dimensions. */
+export function positionsPuzzle(
+  blocks: PdfBlock[], columns: number, uniformSizes: boolean, size: { cols: number; rows: number },
+) {
+  const positions: Record<string, { x: number; y: number }> = {};
+  const n = Math.max(1, columns);
+  let x = 0, y = 0, rowHeight = 0;
+  blocks.forEach((block, index) => {
+    if (index > 0 && index % n === 0) {
+      y += rowHeight; x = 0; rowHeight = 0;
+    }
+    positions[block.id] = { x, y };
+    x += uniformSizes ? size.cols : block.cols;
+    rowHeight = Math.max(rowHeight, uniformSizes ? size.rows : block.rows);
+  });
+  return positions;
+}
+
+
 export default function PdfPrep({
   file,
   onClose,
@@ -89,7 +108,7 @@ export default function PdfPrep({
   const [centerTab, setCenterTab] = useState<"puzzle" | "preview">("puzzle");
   // Puzzle manuel : positions en coordonnées de points de grille (x, y en cases)
   const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [uniformSizes, setUniformSizes] = useState(true);
+  const [uniformSizes, setUniformSizes] = useState(false);
   const [magnet, setMagnet] = useState(true);
   const [zoom, setZoom] = useState(1);
 
@@ -192,22 +211,10 @@ export default function PdfPrep({
   const blockH = (b: PdfBlock) => (uniformSizes ? uniformDim.rows : b.rows);
 
   // Mosaïque ordonnée par défaut (pages dans l'ordre numérique, rangées régulières)
-  const defaultMosaic = useMemo(() => {
-    const map: Record<string, { x: number; y: number }> = {};
-    let col = 0;
-    let row = 0;
-    effective.forEach((b, i) => {
-      if (i > 0 && i % perRow === 0) {
-        col = 0;
-        row++;
-      }
-      const x = col * (uniformSizes ? uniformDim.cols : b.cols);
-      const y = row * (uniformSizes ? uniformDim.rows : b.rows);
-      map[b.id] = { x, y };
-      col++;
-    });
-    return map;
-  }, [effective, perRow, uniformSizes, uniformDim]);
+  const defaultMosaic = useMemo(
+    () => positionsPuzzle(effective, perRow, uniformSizes, uniformDim),
+    [effective, perRow, uniformSizes, uniformDim],
+  );
 
   // Position effective de chaque bloc sur la table de montage
   const tileLayout = useMemo(() => {
@@ -351,20 +358,19 @@ export default function PdfPrep({
 
   const arrangeMosaic = (cols: number) => {
     setPerRow(cols);
-    const map: Record<string, { x: number; y: number }> = {};
-    let c = 0;
-    let r = 0;
-    effective.forEach((b, i) => {
-      if (i > 0 && i % cols === 0) {
-        c = 0;
-        r++;
-      }
-      const x = c * (uniformSizes ? uniformDim.cols : b.cols);
-      const y = r * (uniformSizes ? uniformDim.rows : b.rows);
-      map[b.id] = { x, y };
-      c++;
+    setManualPositions(positionsPuzzle(effective, cols, uniformSizes, uniformDim));
+  };
+
+  const moveCard = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= order.length) return;
+    setOrder(previous => {
+      const next = previous.slice();
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
     });
-    setManualPositions(map);
+    // Les positions suivent le nouvel ordre.
+    setManualPositions({});
   };
 
   const resetToDefault = () => {
@@ -1039,8 +1045,11 @@ function assembleFromTileLayout(
     unresolved += p.data.unresolved;
   }
 
-  const W = Math.max(1, Math.min(maxX, 1000));
-  const H = Math.max(1, Math.min(maxY, 1000));
+  // Ne pas tronquer AVANT fitGrid : autrement les dernières pages
+  // sont repliées sur la bordure et des zones entières disparaissent.
+  const W = Math.max(1, Math.ceil(maxX));
+  const H = Math.max(1, Math.ceil(maxY));
+  if (W * H > 8_000_000) throw new Error("Grille trop grande : réduisez les blocs ou le nombre de pages.");
   const raw = new Int16Array(W * H).fill(-1);
 
   for (const p of list) {
