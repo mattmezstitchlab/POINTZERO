@@ -1,6 +1,6 @@
 import type { PdfHandle } from "./pdfimport";
 
-export interface PDFSource {id:string;name:string;handle:PdfHandle}
+export interface PDFSource {id:string;name:string;file:File;handle:PdfHandle}
 export interface PDFPage { id:string;sourceId:string;page:number;name:string;width:number;height:number;rotation:0|90|180|270;enabled:boolean;thumb:string }
 export const MAX_PDF_PAGES=80;
 export function pageRotation(page:PDFPage,step:90|-90):PDFPage {
