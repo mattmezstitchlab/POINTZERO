@@ -125,7 +125,7 @@ export const guestToRequest=(envelope:GuestEnvelope,event:MusicEvent):MusicReque
  newMusicRequest(event.id,envelope.title,envelope.artistName,envelope.guestAlias,envelope.moment);
 export function musicToICS(e:MusicEvent):string{
  if(!e.date)return "";
- const dt=e.date.replaceAll("-","");
+ const dt=e.date.replace(/-/g,"");
  const escape=(s:string)=>s.replace(/\\/g,"\\\\").replace(/\r?\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//POINTZERO//Music//FR","BEGIN:VEVENT",
   "UID:"+escape(e.id)+"@pointzero.local","DTSTART;VALUE=DATE:"+dt,"SUMMARY:"+escape(e.title),
