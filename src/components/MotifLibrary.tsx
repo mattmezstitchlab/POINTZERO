@@ -42,8 +42,9 @@ interface Props {
   onBlank: () => void;
   onOpenLibrary: () => void;
   readOnly?: boolean;
+  docked?: boolean;
 }
-export default function MotifLibrary({ onAdd, onAddSaved, onOpenProject, onBlank, onOpenLibrary, readOnly = false }: Props) {
+export default function MotifLibrary({ onAdd, onAddSaved, onOpenProject, onBlank, onOpenLibrary, readOnly = false, docked = false }: Props) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"motifs" | "projets">("motifs");
   const [category, setCategory] = useState<PresetCategory | "Tout">("Tout");
@@ -66,16 +67,16 @@ export default function MotifLibrary({ onAdd, onAddSaved, onOpenProject, onBlank
     event.dataTransfer.effectAllowed = "copy";
   };
   return <>
-    <button type="button" onClick={() => setOpen(o => !o)}
+    {!docked && <button type="button" onClick={() => setOpen(o => !o)}
       className="pz-surface fixed left-3 top-[73px] z-30 flex h-10 items-center gap-2 px-3 text-xs font-semibold text-white lg:hidden"
       aria-label={open ? "Fermer la bibliothèque de motifs" : "Ouvrir la bibliothèque de motifs"}>
       <LibraryBig size={16}/> Motifs
-    </button>
-    <aside aria-label="Bibliothèque de motifs" className={`pz-surface pz-motif-library fixed bottom-3 left-3 top-[74px] z-40 flex w-[252px] flex-col overflow-hidden text-white lg:z-20 ${open ? "is-open" : ""}`}>
+    </button>}
+    <aside aria-label="Bibliothèque de motifs" className={docked ? "pz-motif-library-docked flex min-h-0 flex-1 flex-col overflow-hidden bg-[#09090b] text-white" : `pz-surface pz-motif-library fixed bottom-3 left-3 top-[74px] z-40 flex w-[252px] flex-col overflow-hidden text-white lg:z-20 ${open ? "is-open" : ""}`}>
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-3">
         <h2 className="flex items-center gap-2 text-[13px] font-semibold"><LibraryBig size={16}/> Bibliothèque</h2>
-        <button type="button" className="grid size-8 place-items-center rounded-[5px] text-white/75 hover:bg-white/10 lg:hidden" onClick={() => setOpen(false)} aria-label="Fermer la bibliothèque"><X size={17}/></button>
-        <button type="button" className="hidden size-8 place-items-center rounded-[5px] text-white/75 hover:bg-white/10 lg:grid" aria-label="Bibliothèque de projets avancée" onClick={onOpenLibrary}><FolderOpen size={17}/></button>
+        <button type="button" className={docked ? "hidden" : "grid size-8 place-items-center rounded-[5px] text-white/75 hover:bg-white/10 lg:hidden"} onClick={() => setOpen(false)} aria-label="Fermer la bibliothèque"><X size={17}/></button>
+        <button type="button" className={docked ? "grid size-8 place-items-center rounded-[5px] text-white/75 hover:bg-white/10" : "hidden size-8 place-items-center rounded-[5px] text-white/75 hover:bg-white/10 lg:grid"} aria-label="Bibliothèque de projets avancée" onClick={onOpenLibrary}><FolderOpen size={17}/></button>
       </div>
       <div className="grid grid-cols-2 gap-1 border-b border-white/10 p-2">
         <button type="button" onClick={() => setTab("motifs")} aria-pressed={tab === "motifs"} className={`min-h-9 rounded-[5px] text-xs font-semibold ${tab === "motifs" ? "bg-white text-black" : "text-white/75 hover:bg-white/10"}`}>Motifs</button>

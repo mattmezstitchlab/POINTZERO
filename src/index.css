@@ -1882,3 +1882,73 @@
 @media (prefers-reduced-motion: reduce) {
   .pz-design-sidebar { transition: none; }
 }
+
+/* Broderie partage la géométrie de Photo : en-tête unique, trois zones et rail DMC. */
+.pz-embroidery-studio {
+  --color-label: #fff;
+  --color-label-2: #d1d1d7;
+  --color-label-3: #a9a9b4;
+}
+.pz-embroidery-studio .pz-embroidery-header,
+.pz-embroidery-studio .pz-embroidery-left,
+.pz-embroidery-studio .pz-embroidery-right,
+.pz-embroidery-studio .pz-embroidery-dmc {
+  background: #09090b;
+  color: #fff;
+}
+.pz-embroidery-studio .pz-embroidery-left,
+.pz-embroidery-studio .pz-embroidery-right {
+  scrollbar-color: rgba(255,255,255,.28) transparent;
+  scrollbar-width: thin;
+}
+.pz-embroidery-studio .pz-embroidery-categories button {
+  min-width: 0;
+  width: 100%;
+  padding-inline: 5px;
+  border: 1px solid rgba(255,255,255,.12);
+}
+.pz-embroidery-studio .pz-motif-library-docked {
+  box-shadow: none;
+  border-radius: 0;
+  min-height: 0;
+}
+.pz-embroidery-studio .pz-properties-docked {
+  position: static;
+  width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  background: #09090b;
+  transform: none;
+  opacity: 1;
+}
+.pz-embroidery-studio .pz-embroidery-dmc button:focus-visible,
+.pz-embroidery-studio .pz-embroidery-left button:focus-visible,
+.pz-embroidery-studio .pz-embroidery-right button:focus-visible,
+.pz-embroidery-studio .pz-embroidery-header button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.pz-embroidery-studio .pz-embroidery-right input,
+.pz-embroidery-studio .pz-embroidery-right select {
+  accent-color: #fff;
+}
+.pz-embroidery-studio .pz-embroidery-dmc .no-scrollbar {
+  scrollbar-width: none;
+}
+.pz-embroidery-studio .pz-embroidery-dmc .no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .pz-embroidery-studio .pz-embroidery-left {
+    width: min(85vw,290px);
+  }
+}
+@media (max-width: 1279px) {
+  .pz-embroidery-studio .pz-embroidery-right {
+    width: min(85vw,290px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pz-embroidery-studio .pz-embroidery-left,
+  .pz-embroidery-studio .pz-embroidery-right { transition: none; }
+}

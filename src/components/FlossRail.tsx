@@ -14,6 +14,7 @@ interface Props {
   onBrowse: () => void;
   stitching: boolean;
   hidden?: boolean;
+  fullWidth?: boolean;
   onSupply?: (code: string, supply: Supply) => void;
 }
 
@@ -23,7 +24,7 @@ const fmt = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 1,
  * Palette de projet compacte : chaque carré combine couleur, symbole, stock et état.
  * Les 489 DMC ne sont affichés que dans le sélecteur de recherche, sur demande.
  */
-export default function FlossRail({ pattern, active, onActive, onPattern, onBrowse, stitching, hidden, onSupply }: Props) {
+export default function FlossRail({ pattern, active, onActive, onPattern, onBrowse, stitching, hidden, fullWidth = false, onSupply }: Props) {
   // Compter les points parcourt toutes les cases du motif. Pendant un trait de
   // stylet le rail est redescendu à chaque échantillon : sur un grand motif, ce
   // recomptage prenait le pas sur le dessin. La valeur différée laisse React
@@ -35,9 +36,16 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
     const used = computeStats(counted).rows;
     return counted.palette.map((idx): ColorStat => used.find((r) => r.idx === idx) ?? { idx, code: FLOSS[idx].code, name: FLOSS[idx].name, hex: FLOSS[idx].hex, pos: assignedSymbol(counted, idx), cross: 0, half: 0, quarter: 0, back: 0, long: 0, knots: 0, cells: 0, done: 0, meters: 0, skeins: 0, owned: counted.supplies?.[FLOSS[idx].code]?.whole ?? 0, petite: 0, beads: 0 });
   }, [counted]);
+  const [filter, setFilter] = useState<"project" | "used" | "stock" | "missing">("project");
   const [detail, setDetail] = useState<number | null>(null);
   const [choosingSymbol, setChoosingSymbol] = useState(false);
   const row = detail === null ? null : stats.find((r) => r.idx === detail) ?? null;
+  const displayed = stats.filter(s => {
+    if (filter === "used") return s.cells > 0;
+    if (filter === "stock") return s.owned > 0;
+    if (filter === "missing") return s.cells > 0 && s.owned < s.skeins;
+    return true;
+  });
 
   useEffect(() => {
     const show = (e: Event) => { const idx = (e as CustomEvent<{ idx: number | null }>).detail.idx; setDetail(idx); setChoosingSymbol(false); };
@@ -56,14 +64,24 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
   return (
     <>
       <aside
-        className="pz-surface no-scrollbar fixed right-3 bottom-[max(12px,env(safe-area-inset-bottom))] left-3 z-30 flex h-[64px] items-center gap-2 overflow-x-auto p-2 lg:right-auto lg:bottom-3 lg:left-1/2 lg:max-w-[min(760px,calc(100vw-260px))] lg:-translate-x-1/2"
+        className={fullWidth ? "pz-embroidery-dmc fixed inset-x-0 bottom-0 z-30 flex h-[94px] flex-col border-t border-white/15 bg-[#09090b] pb-[env(safe-area-inset-bottom)] text-white" :
+        "pz-surface no-scrollbar fixed right-3 bottom-[max(12px,env(safe-area-inset-bottom))] left-3 z-30 flex h-[64px] items-center gap-2 overflow-x-auto p-2 lg:right-auto lg:bottom-3 lg:left-1/2 lg:max-w-[min(760px,calc(100vw-260px))] lg:-translate-x-1/2"}
         aria-label="Fils du motif"
         data-guide="floss"
       >
+        {fullWidth && <div className="flex h-[35px] shrink-0 items-center gap-3 border-b border-white/10 px-3">
+          <h2 className="shrink-0 text-[11px] font-semibold tracking-wide">Fils DMC <span className="font-normal text-white/55">{stats.length}</span></h2>
+          <div className="no-scrollbar flex min-w-0 gap-1 overflow-x-auto" role="group" aria-label="Filtres des fils DMC">
+            {([["project","Projet"],["used","Utilisés"],["stock","En stock"],["missing","Manquants"]] as const).map(([id,label])=>
+              <button key={id} type="button" aria-pressed={filter===id} onClick={()=>setFilter(id)}
+                className={`shrink-0 rounded-[4px] px-2 py-1 text-[10px] font-medium ${filter===id ? "bg-white text-black" : "text-white/65 hover:bg-white/10"}`}>{label}</button>)}
+          </div>
+        </div>}
+        <div className={fullWidth ? "no-scrollbar flex min-h-0 flex-1 items-center gap-3 overflow-x-auto px-3 py-1.5" : "contents"}>
         <button
           type="button"
           onClick={onBrowse}
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-accent text-white transition-transform active:scale-90"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-[5px] border border-white/25 bg-white/10 text-white transition-transform hover:bg-white/20 active:scale-90"
           aria-label="Ajouter ou rechercher un fil DMC"
           title="Ajouter un fil DMC"
         >
@@ -72,7 +90,7 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
 
         <span className="mx-0.5 h-6 w-px shrink-0 bg-white/12" />
 
-        {stats.map((s) => {
+        {displayed.map((s) => {
           const selected = s.idx === active;
           const enough = s.owned >= s.skeins;
           const progress = s.cells > 0 ? Math.round((s.done / s.cells) * 100) : 0;
@@ -84,15 +102,13 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
                 onActive(s.idx);
                 setDetail((v) => (v === s.idx ? null : s.idx));
               }}
-              className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-[10px] transition-all active:scale-90 ${
-                selected ? "ring-2 ring-accent ring-offset-2 ring-offset-[#1c1c1e]" : "ring-1 ring-black/25"
-              }`}
+              className={`relative grid h-9 w-12 shrink-0 place-items-center rounded-[5px] transition-all active:scale-90 ${selected ? "ring-2 ring-white ring-offset-1 ring-offset-[#09090b]" : "ring-1 ring-white/20"}`}
               style={{ background: s.hex }}
               aria-label={`DMC ${s.code}, ${s.name}, ${s.owned} sur ${s.skeins} écheveaux en stock`}
               title={`DMC ${s.code} · ${s.name}${stitching ? ` · ${s.cells - s.done} éléments restants` : ""}`}
             >
               <SymbolIcon sym={s.pos} size={15} color={contrastOn(s.hex)} />
-              <span className="absolute -bottom-2 rounded-[4px] bg-[#1c1c1e] px-1 font-mono text-[8px] text-label-2">{FLOSS[s.idx].blend ? "Mix" : s.code}</span>
+              <span className="absolute -bottom-2 rounded-[4px] bg-[#09090b] px-1 font-mono text-[9px] text-white/85">{FLOSS[s.idx].blend ? "Mix" : s.code}</span>
               <span
                 className={`absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#242426] ${enough ? "bg-ok" : "bg-warn"}`}
                 aria-hidden="true"
@@ -106,16 +122,17 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
           );
         })}
 
-        {stats.length === 0 && (
-          <button type="button" onClick={onBrowse} className="mt-1 text-label-3" aria-label="Rechercher un fil">
-            <Search className="h-4 w-4" />
+        {displayed.length === 0 && (
+          <button type="button" onClick={onBrowse} className="flex items-center gap-2 text-[11px] text-white/70" aria-label="Rechercher un fil">
+            <Search className="h-4 w-4" /> {stats.length ? "Aucun fil dans ce filtre" : "Ajouter une couleur DMC"}
           </button>
         )}
+        </div>
       </aside>
 
       {row && (
         <section
-          className="pz-surface thin-scroll fixed right-3 bottom-[160px] z-40 max-h-[calc(100dvh-250px)] w-[300px] overflow-y-auto p-4 lg:right-auto lg:bottom-[88px] lg:left-1/2 lg:max-h-[calc(100dvh-180px)] lg:-translate-x-1/2"
+          className={fullWidth ? "pz-surface thin-scroll fixed bottom-[104px] right-3 z-40 max-h-[min(55dvh,500px)] w-[min(310px,calc(100vw-24px))] overflow-y-auto p-4" : "pz-surface thin-scroll fixed right-3 bottom-[160px] z-40 max-h-[calc(100dvh-250px)] w-[300px] overflow-y-auto p-4 lg:right-auto lg:bottom-[88px] lg:left-1/2 lg:max-h-[calc(100dvh-180px)] lg:-translate-x-1/2"}
           aria-label={`Informations DMC ${row.code}`}
         >
           <button type="button" onClick={() => setDetail(null)} className="btn-icon absolute top-2 right-2 h-8 w-8 rounded-full bg-white/[0.07]" aria-label="Fermer">

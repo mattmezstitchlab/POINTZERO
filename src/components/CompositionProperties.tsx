@@ -11,14 +11,15 @@ interface Props {
   onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
   readOnly?: boolean;
+  docked?: boolean;
 }
-export default function CompositionProperties({ scene, selectedId, onSelect, onChange, onReorder, onDuplicate, onRemove, readOnly = false }: Props) {
+export default function CompositionProperties({ scene, selectedId, onSelect, onChange, onReorder, onDuplicate, onRemove, readOnly = false, docked = false }: Props) {
   const layers = scene?.layers ?? [];
   const selected = layers.find(item => item.id === selectedId);
   if (!layers.length) return null;
   const sprite = selected ? spriteForExport(selected) : null;
   const field = "w-full rounded-[5px] border border-white/20 bg-[#212124] px-2 py-2 text-[12px] text-white";
-  return <aside aria-label="Propriétés du motif" className="pz-surface pz-properties fixed right-3 top-[75px] z-20 flex max-h-[calc(100dvh-150px)] w-[210px] flex-col overflow-hidden text-white">
+  return <aside aria-label="Propriétés du motif" className={docked ? "pz-properties-docked min-h-0 border-b border-white/10 text-white" : "pz-surface pz-properties fixed right-3 top-[75px] z-20 flex max-h-[calc(100dvh-150px)] w-[210px] flex-col overflow-hidden text-white"}>
     <header className="flex items-center gap-2 border-b border-white/10 px-3 py-3 text-xs font-semibold"><Layers size={15}/> Composition <span className="ml-auto text-[10px] font-normal text-white/55">{layers.length}/16</span></header>
     <div className="thin-scroll min-h-0 overflow-y-auto p-3">
       {selected && sprite ? <>

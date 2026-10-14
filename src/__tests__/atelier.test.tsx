@@ -62,6 +62,40 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("aligne la structure de Broderie sur Photo avec la bande DMC bord à bord", async () => {
+    await mount();
+    expect(container?.querySelector('.pz-embroidery-header')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Panneau de réglages broderie"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Outils de broderie"]')).toBeTruthy();
+    const rail=container?.querySelector('[aria-label="Fils du motif"]');
+    expect(rail?.classList.contains("pz-embroidery-dmc")).toBe(true);
+    expect(rail?.classList.contains("inset-x-0")).toBe(true);
+    expect(rail?.classList.contains("bottom-0")).toBe(true);
+    expect(rail?.querySelector('[aria-label="Filtres des fils DMC"]')).toBeTruthy();
+    expect(button("Afficher la bibliothèque broderie")).toBeTruthy();
+    expect(button("Afficher les propriétés broderie")).toBeTruthy();
+  });
+  it("garde les filtres DMC et les outils de broderie accessibles", async () => {
+    await mount();
+    const rail=container?.querySelector('[aria-label="Fils du motif"]');
+    const used=[...(rail?.querySelectorAll("button")??[])].find(x=>x.textContent?.includes("Utilisés"));
+    await click(used);
+    expect(used?.getAttribute("aria-pressed")).toBe("true");
+    await click(button("Ajouter ou rechercher un fil DMC"));
+    expect(dialog("Nuancier DMC")?.classList.contains("is-open")).toBe(true);
+  });
+  it("ouvre et ferme les panneaux mobiles sans masquer la grille", async () => {
+    await mount();
+    await click(button("Afficher la bibliothèque broderie"));
+    expect(container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]')?.classList.contains("translate-x-0")).toBe(true);
+    await click(button("Afficher les propriétés broderie"));
+    expect(container?.querySelector('[aria-label="Panneau de réglages broderie"]')?.classList.contains("translate-x-0")).toBe(true);
+    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+    await click(button("Fermer les panneaux de broderie"));
+    expect(container?.querySelector('[aria-label="Panneau de réglages broderie"]')?.classList.contains("translate-x-full")).toBe(true);
+  });
+
   it("ouvre Budget, Programme et Admin depuis le même menu de studios, puis revient aux créations", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
