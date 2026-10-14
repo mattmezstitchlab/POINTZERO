@@ -356,6 +356,14 @@ export default function App() {
       <Landing
         onOpen={openEditor}
         onSlame={openSlame}
+        onPdf={(file) => {
+          // Le fichier n'est jamais rendu sur la landing. Le calage, le puzzle
+          // et la livraison dans la grille DMC appartiennent à l'atelier.
+          setPdfFile(file);
+          setWorkspace("create");
+          setView("pattern");
+          openEditor();
+        }}
         onMotif={(motif) => {
           // Charger le patron en tant que vrai projet, sans laisser
           // l'initialisation de l'exemple d'atelier l'écraser ensuite.
