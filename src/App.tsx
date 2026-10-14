@@ -15,6 +15,10 @@ import TopBar from "./components/TopBar";
 import DesignStudio from "./components/DesignStudio";
 import PhotoStudio from "./components/PhotoStudio";
 import FashionStudio from "./components/FashionStudio";
+import BudgetStudio from "./components/BudgetStudio";
+import ProgrammeStudio from "./components/ProgrammeStudio";
+import AdminStudio from "./components/AdminStudio";
+import { loadProjectOptions } from "./lib/budgetCore";
 import AtelierCreate from "./components/AtelierCreate";
 import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
 import MotifLibrary from "./components/MotifLibrary";
@@ -63,14 +67,16 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 export default function App() {
   const [boot] = useState(loadStored);
   // Existing embroidery projects resume untouched; newcomers open the multiformat studio.
-  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion">(() => {
+  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin">(() => {
     try {
       const chosen = localStorage.getItem("pointzero:workspace");
-      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" ? chosen : boot ? "embroidery" : "design";
+      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" ? chosen : boot ? "embroidery" : "design";
     } catch { return "embroidery"; }
   });
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
-  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion") => {
+  const [linkedProject,setLinkedProject] = useState<{id:string;name:string}|null>(null);
+  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin") => {
+    if(mode==="budget"||mode==="programme"||mode==="admin")setLinkedProject(loadProjectOptions()[0]??null);
     setStudioMode(mode);
     try { localStorage.setItem("pointzero:workspace", mode); } catch { /* Local storage may be restricted. */ }
   };
@@ -379,6 +385,7 @@ export default function App() {
   return studioMode === "design"
     ? <DesignStudio onEmbroidery={() => switchStudio("embroidery")}
         onPhoto={() => switchStudio("photo")} onFashion={() => switchStudio("fashion")}
+        onBudget={() => switchStudio("budget")} onProgramme={() => switchStudio("programme")} onAdmin={() => switchStudio("admin")}
         incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
     : studioMode === "photo"
     ? <PhotoStudio onBack={() => switchStudio("design")} onUse={dataUrl => {
@@ -390,6 +397,12 @@ export default function App() {
         setPhotoHandoff({id:crypto.randomUUID?.()??String(Date.now()),dataUrl});
         switchStudio("design");
       }} />
+    : studioMode === "budget"
+    ? <BudgetStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
+    : studioMode === "programme"
+    ? <ProgrammeStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
+    : studioMode === "admin"
+    ? <AdminStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
     : <div className={`pz-atelier fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}

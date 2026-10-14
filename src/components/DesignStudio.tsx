@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { ArrowLeft, Camera, ChevronDown, Copy, Download, FolderOpen, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, Files, FolderOpen, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
@@ -52,10 +52,13 @@ interface Props {
   onEmbroidery: () => void;
   onPhoto?: () => void;
   onFashion?: () => void;
+  onBudget?: () => void;
+  onProgramme?: () => void;
+  onAdmin?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -69,6 +72,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomin
   const [scale,setScale] = useState(.5);
   const [showExport,setShowExport] = useState(false);
   const [showDecline,setShowDecline] = useState(false);
+  const [showStudios,setShowStudios] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
   const artboard = useRef<HTMLDivElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
@@ -221,8 +225,24 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomin
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
-        {onPhoto&&<button onClick={onPhoto} className={action+" hidden min-[760px]:inline-flex"} aria-label="Ouvrir le studio Photo"><Camera size={15}/><span className="hidden min-[950px]:inline">Photo</span></button>}
-        {onFashion&&<button onClick={onFashion} className={action+" hidden min-[760px]:inline-flex"} aria-label="Ouvrir le studio Stylisme"><Shirt size={15}/><span className="hidden min-[950px]:inline">Stylisme</span></button>}
+        <div className="relative">
+          <button type="button" aria-label="Ouvrir le menu des studios" aria-expanded={showStudios}
+            onClick={()=>{setShowStudios(x=>!x);setShowDecline(false);setShowExport(false);}} className={action}>
+            <LayoutTemplate size={15}/><span className="hidden sm:inline">Studios</span><ChevronDown size={13}/>
+          </button>
+          {showStudios&&<div aria-label="Choix du studio" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[220px] max-h-[76dvh] overflow-y-auto p-2">
+            {([
+              {name:"Photo",icon:<Camera size={16}/>,onClick:onPhoto},
+              {name:"Stylisme",icon:<Shirt size={16}/>,onClick:onFashion},
+              {name:"Budget",icon:<Wallet size={16}/>,onClick:onBudget},
+              {name:"Programme",icon:<BookOpen size={16}/>,onClick:onProgramme},
+              {name:"Admin / Documents",icon:<Files size={16}/>,onClick:onAdmin}
+            ]).filter(i=>!!i.onClick).map(item=>
+              <button type="button" key={item.name} aria-label={"Ouvrir le studio "+item.name}
+                className="flex min-h-11 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs text-white/85 hover:bg-white/10 hover:text-white"
+                onClick={()=>{setShowStudios(false);item.onClick?.();}}>{item.icon}{item.name}</button>)}
+          </div>}
+        </div>
       </div>
       <div className="flex min-w-0 items-center gap-1">
         <button type="button" onClick={undo} disabled={!past.length} className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30" aria-label="Annuler"><Undo2 size={16}/></button>
@@ -286,10 +306,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomin
             {!drafts.length&&<p className="text-xs text-white/60">Aucun projet enregistré dans la bibliothèque.</p>}
           </>}
         </div>
-        {(onPhoto||onFashion)&&<div className="grid grid-cols-2 gap-2 border-t border-white/10 p-2 min-[760px]:hidden">
-          {onPhoto&&<button className={action} onClick={onPhoto}><Camera size={15}/> Photo</button>}
-          {onFashion&&<button className={action} onClick={onFashion}><Shirt size={15}/> Stylisme</button>}
-        </div>}
+
       </aside>
       <main ref={stage} aria-label="Canevas de création universel" className="pz-design-stage min-w-0 flex-1 overflow-auto p-4 pt-16 lg:p-5" onClick={()=>setSelected(null)}>
         <div className="mx-auto flex min-h-full w-fit flex-col items-center justify-center">
