@@ -20,11 +20,14 @@ vi.mock("../lib/dither", () => ({
   imageToDmc: vi.fn(() => {
     const cross = new Int16Array(44 * 44).fill(-1);
     for (let i = 0; i < 200; i += 1) cross[i] = 0;
-    return { cross, palette: [80] };
+    for (let i = 200; i < 300; i += 1) cross[i] = 1;
+    for (let i = 300; i < 360; i += 1) cross[i] = 2;
+    return { cross, palette: [80, 81, 82] };
   }),
 }));
 import { buildDeck, orderDeck } from "../components/CardDeck";
 import { miniDesign, VOISINES } from "../components/ToileInfinie";
+import { FLOSS } from "../lib/dmc";
 
 const saved = { matchMedia: globalThis.matchMedia, RO: globalThis.ResizeObserver };
 
@@ -172,6 +175,38 @@ describe("Les voisines brodent en direct", () => {
     ).toBe(true);
   });
 
+  it("la palette DMC du motif brodé est visible en arrivant", async () => {
+    await sleep(200);
+    const rail = container!.querySelector(".rail-dmc")!;
+    expect(rail).toBeTruthy();
+    expect(rail.querySelectorAll("li").length, "trois fils dans le motif mocké").toBe(3);
+    expect(rail.textContent).toContain(FLOSS[0].code);
+  });
+
+  it("l'outil zone serre les couleurs d'un rectangle de cases", async () => {
+    await sleep(200);
+    await click(container!.querySelector('button[aria-label^="Outil zone"]')!);
+    await act(async () => {
+      toile().dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 300, clientY: 40 }));
+    });
+    await act(async () => {
+      toile().dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 500, clientY: 140 }));
+    });
+    await act(async () => {
+      toile().dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 500, clientY: 140 }));
+    });
+    const panneau = container!.querySelector("[data-zone]");
+    expect(panneau, "le panneau de zone apparaît").toBeTruthy();
+    expect(panneau!.textContent).toContain("Aida 14");
+    const lis = () => parseInt(panneau!.querySelector("[data-couleurs]")!.getAttribute("data-couleurs")!, 10);
+    const avant = lis();
+    expect(avant, "la zone porte les trois fils du mock").toBe(3);
+    await click(panneau!.querySelector('button[aria-label="Moins de couleurs"]')!);
+    expect(lis(), "serrer regroupe vers le fil proche").toBe(avant - 1);
+    await click(panneau!.querySelector('button[aria-label="Plus de couleurs"]')!);
+    expect(lis(), "desserrer restaure les teintes d'origine").toBe(avant);
+  });
+
   it("la table magnétique du PDF et le tableau des 54 cartes sont posés sur la toile", () => {
     expect(container!.querySelector(".toile-monde .ancre-table"), "la table du PDF a sa place sur la toile").toBeTruthy();
     expect(container!.querySelector(".toile-monde [data-deck]"), "les 54 cartes forment un tableau").toBeTruthy();
@@ -234,7 +269,27 @@ describe("Le hero : sobre, sur la feuille blanche", () => {
     expect(container!.textContent).toContain("demande un réseau");
   });
 
-  it("décrit un motif : les pixels chargent, puis hop", async () => {
+  it("en arrivant, la grille est brodée : générer attend le point zéro", async () => {
+    const field = container!.querySelector("#hero-jeu input") as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, "renard endormi");
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      container!.querySelector("#hero-jeu form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await sleep(300);
+    const gm = container!.querySelector(".grille-motif canvas")!;
+    expect(gm.getAttribute("aria-label"), "l'ambiance reste : la grille n'est pas libre").not.toContain("renard endormi");
+    expect(container!.textContent).toContain("libérez-la");
+  });
+
+  it("décrit un motif : point zéro d'abord, puis les croix chargent, puis hop", async () => {
+    await click(byText(/Poser ailleurs sur la toile/)!);
+    expect(container!.querySelector(".motif-pose"), "le motif libéré reste sur la toile").toBeTruthy();
+    await click(byText(/Faire le point zéro/)!);
+    expect(container!.querySelector(".grille-motif"), "la grille du hero est nue").toBeFalsy();
+
     const field = container!.querySelector("#hero-jeu input") as HTMLInputElement;
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, "renard endormi");

@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Minus, Plus, Home, X, Users, Heart } from "lucide-react";
+import { Minus, Plus, Home, X, Users, Heart, Hand, Frame } from "lucide-react";
 import CardDeck from "./CardDeck";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { FLOSS } from "../lib/dmc";
+import { couleursZone, reglageDe, type RectZone, type ReglageZone } from "../lib/requant";
 
 /**
  * La toile infinie : le site entier est UNE grille.
@@ -288,6 +289,40 @@ function MotifSurGrille({ motif, onPret }: { motif: MotifGrille; onPret: () => v
   );
 }
 
+/* Un motif exporté hors du hero reste sur la toile, posé là. */
+export interface PoseMotif {
+  id: string;
+  motif: MotifGrille;
+  cx: number;
+  cy: number;
+}
+
+function MotifPose({ pose }: { pose: PoseMotif }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    cv.width = pose.motif.w * CELL;
+    cv.height = pose.motif.h * CELL;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (let y = 0; y < pose.motif.h; y += 1) {
+      for (let x = 0; x < pose.motif.w; x += 1) {
+        const v = pose.motif.cross[y * pose.motif.w + x];
+        if (v < 0) continue;
+        dessinerCroix(ctx, x * CELL, y * CELL, CELL, FLOSS[v]?.hex ?? "#888");
+      }
+    }
+  }, [pose]);
+  return (
+    <div className="motif-pose" style={{ left: pose.cx * CELL, top: pose.cy * CELL }}>
+      <canvas ref={ref} aria-label={`Motif « ${pose.motif.nom} » posé sur la toile`} />
+      <span className="grille-motif-tag">« {pose.motif.nom} » · posé ici</span>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  La feuille d'appropriation                                         */
 /* ------------------------------------------------------------------ */
@@ -399,12 +434,23 @@ export default function ToileInfinie({
   onOpen,
   onMotif,
   motif,
+  motifsPoses,
+  reglages,
+  onReglage,
+  nbCouleursSource,
   children,
 }: {
   onOpen: () => void;
   onMotif: (p: Pattern) => void;
   /** Le motif brodé à même la grille, derrière le champ : ambiance ou décrit. */
   motif: MotifGrille | null;
+  /** Les motifs libérés du hero, posés ailleurs sur la toile. */
+  motifsPoses: PoseMotif[];
+  /** Les réglages de zone déjà appliqués (outil zone). */
+  reglages: ReglageZone[];
+  onReglage: (rect: RectZone, n: number) => void;
+  /** Combien de fils la zone porte dans le motif source (plafond du réglage). */
+  nbCouleursSource: (rect: RectZone) => number;
   children: ReactNode;
 }) {
   const monde = useRef<HTMLDivElement>(null);
@@ -422,6 +468,9 @@ export default function ToileInfinie({
 
   const [vue, setVue] = useState<Vue>(fit);
   const [achat, setAchat] = useState<Achat | null>(null);
+  const [outil, setOutil] = useState<"deplacer" | "zone">("deplacer");
+  const [zoneTemp, setZoneTemp] = useState<{ ax: number; ay: number; bx: number; by: number } | null>(null);
+  const [zone, setZone] = useState<RectZone | null>(null);
 
   useEffect(() => setMotifPret(false), [motif]);
 
@@ -431,6 +480,20 @@ export default function ToileInfinie({
     const id = window.setInterval(() => setTick((t) => t + 1), 800);
     return () => window.clearInterval(id);
   }, []);
+
+  const compteDmc = useMemo(() => {
+    if (!motif) return [] as [number, number][];
+    const m = new Map<number, number>();
+    for (let i = 0; i < motif.cross.length; i += 1) {
+      const v = motif.cross[i];
+      if (v >= 0) m.set(v, (m.get(v) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [motif]);
+
+  const nZone =
+    zone && motif ? (reglageDe(zone, reglages)?.n ?? couleursZone(motif.cross, motif.w, motif.h, zone).length) : 0;
+  const maxZone = zone ? nbCouleursSource(zone) : 0;
 
   const designs = useMemo(() => {
     const m = new Map<string, MiniDesign[]>();
@@ -465,7 +528,17 @@ export default function ToileInfinie({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Glisser pour se déplacer, pincer pour zoomer. */
+  /* La souris en cases de la toile : pour dessiner une zone. */
+  const clientToCell = (clientX: number, clientY: number) => {
+    const r = monde.current?.getBoundingClientRect();
+    if (!r) return { cx: 0, cy: 0 };
+    return {
+      cx: (clientX - r.left - vue.x) / (CELL * vue.k),
+      cy: (clientY - r.top - vue.y) / (CELL * vue.k),
+    };
+  };
+
+  /* Glisser pour se déplacer, pincer pour zoomer, ou dessiner une zone. */
   const pts = useRef(new Map<number, { x: number; y: number }>());
   const dernier = useRef<{ x: number; y: number } | null>(null);
   const dist = useRef(0);
@@ -473,6 +546,12 @@ export default function ToileInfinie({
 
   const onDown = (e: React.PointerEvent) => {
     if ((e.target as Element).closest?.("[data-stop-toile]")) return;
+    if (outil === "zone" && motif) {
+      const c = clientToCell(e.clientX, e.clientY);
+      setZoneTemp({ ax: c.cx, ay: c.cy, bx: c.cx, by: c.cy });
+      setZone(null);
+      return;
+    }
     (e.target as Element).setPointerCapture?.(e.pointerId);
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     dernier.current = { x: e.clientX, y: e.clientY };
@@ -483,6 +562,11 @@ export default function ToileInfinie({
     }
   };
   const onMove = (e: React.PointerEvent) => {
+    if (zoneTemp) {
+      const c = clientToCell(e.clientX, e.clientY);
+      setZoneTemp({ ...zoneTemp, bx: c.cx, by: c.cy });
+      return;
+    }
     if (!pts.current.has(e.pointerId)) return;
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pts.current.size >= 2) {
@@ -502,6 +586,26 @@ export default function ToileInfinie({
     dernier.current = { x: e.clientX, y: e.clientY };
   };
   const onUp = (e: React.PointerEvent) => {
+    if (zoneTemp && motif) {
+      const ox = HERO.w / 2 - motif.w / 2; // origine du motif, en cases monde
+      const oy = HERO.h / 2 - motif.h / 2;
+      const x0 = Math.min(zoneTemp.ax, zoneTemp.bx) - ox;
+      const y0 = Math.min(zoneTemp.ay, zoneTemp.by) - oy;
+      const x1 = Math.max(zoneTemp.ax, zoneTemp.bx) - ox;
+      const y1 = Math.max(zoneTemp.ay, zoneTemp.by) - oy;
+      const rect: RectZone = {
+        x: clamp(Math.round(x0), 0, motif.w - 2),
+        y: clamp(Math.round(y0), 0, motif.h - 2),
+        w: clamp(Math.round(x1 - x0), 2, motif.w),
+        h: clamp(Math.round(y1 - y0), 2, motif.h),
+      };
+      setZoneTemp(null);
+      setZone(rect);
+      if (!reglageDe(rect, reglages)) {
+        onReglage(rect, couleursZone(motif.cross, motif.w, motif.h, rect).length);
+      }
+      return;
+    }
     pts.current.delete(e.pointerId);
     dernier.current = null;
   };
@@ -527,7 +631,7 @@ export default function ToileInfinie({
     <AncresCtx.Provider value={{ table, k: vue.k, motifPret }}>
       <div
         ref={monde}
-        className="toile"
+        className={`toile${outil === "zone" ? " outil-zone" : ""}`}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
@@ -567,6 +671,35 @@ export default function ToileInfinie({
             <span className="sheet-marque br" aria-hidden="true" />
             <div className="hero-contenu">{children}</div>
           </div>
+
+          {motif && zone && (
+            <div
+              className="zone-rect"
+              style={{
+                left: (HERO.w / 2 - motif.w / 2 + zone.x) * CELL,
+                top: (HERO.h / 2 - motif.h / 2 + zone.y) * CELL,
+                width: zone.w * CELL,
+                height: zone.h * CELL,
+              }}
+              aria-hidden="true"
+            />
+          )}
+          {motif && zoneTemp && (
+            <div
+              className="zone-rect temp"
+              style={{
+                left: Math.min(zoneTemp.ax, zoneTemp.bx) * CELL,
+                top: Math.min(zoneTemp.ay, zoneTemp.by) * CELL,
+                width: Math.abs(zoneTemp.bx - zoneTemp.ax) * CELL,
+                height: Math.abs(zoneTemp.by - zoneTemp.ay) * CELL,
+              }}
+              aria-hidden="true"
+            />
+          )}
+
+          {motifsPoses.map((po) => (
+            <MotifPose key={po.id} pose={po} />
+          ))}
 
           {VOISINES.map((v) => {
             const liste = designs.get(v.id) ?? [miniDesign(v.seed)];
@@ -616,6 +749,69 @@ export default function ToileInfinie({
             Ouvrir l’atelier
           </button>
         </header>
+
+        <div className="outil-palette" role="group" aria-label="Palette d'outils">
+          <button
+            type="button"
+            aria-label="Outil déplacer"
+            aria-pressed={outil === "deplacer"}
+            onClick={() => {
+              setOutil("deplacer");
+              setZoneTemp(null);
+            }}
+          >
+            <Hand size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label="Outil zone : sélectionner un rectangle de cases"
+            aria-pressed={outil === "zone"}
+            onClick={() => setOutil(outil === "zone" ? "deplacer" : "zone")}
+          >
+            <Frame size={16} />
+          </button>
+        </div>
+
+        <aside className="rail-dmc" aria-label="Palette DMC du motif brodé sur la grille">
+          <p className="rail-titre">Palette DMC</p>
+          {compteDmc.length === 0 ? (
+            <p className="rail-vide">aucun motif sur la grille</p>
+          ) : (
+            <ul>
+              {compteDmc.map(([idx, c]) => (
+                <li key={idx} title={`${FLOSS[idx].code} · ${FLOSS[idx].name}`}>
+                  <span className="rail-pastille" style={{ background: FLOSS[idx].hex }} aria-hidden="true" />
+                  <span className="rail-code">{FLOSS[idx].code}</span>
+                  <span className="rail-nb">{c}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+
+        {zone && motif && (
+          <div className="zone-panneau" data-zone role="group" aria-label="Réglage de la zone sélectionnée">
+            <p className="zone-titre">
+              Zone {zone.w} × {zone.h} cases · ≈ {((zone.w * 2.54) / 14).toFixed(1).replace(".", ",")} ×{" "}
+              {((zone.h * 2.54) / 14).toFixed(1).replace(".", ",")} cm en Aida 14
+            </p>
+            <div className="zone-ligne">
+              <button type="button" aria-label="Moins de couleurs" disabled={nZone <= 2} onClick={() => onReglage(zone, nZone - 1)}>
+                <Minus size={14} />
+              </button>
+              <span className="zone-n" data-couleurs={nZone}>
+                {nZone} fils
+              </span>
+              <button type="button" aria-label="Plus de couleurs" disabled={nZone >= maxZone} onClick={() => onReglage(zone, nZone + 1)}>
+                <Plus size={14} />
+              </button>
+              <button type="button" className="zone-oubli" onClick={() => setZone(null)}>
+                oublier la zone
+              </button>
+            </div>
+            <p className="zone-aide">Moins de fils = moins à acheter : réglez selon votre toile.</p>
+          </div>
+        )}
 
         <div className="toile-zoom" role="group" aria-label="Zoom de la toile">
           <button type="button" aria-label="Zoomer" onClick={() => zoomAt(window.innerWidth / 2, window.innerHeight / 2, 1.18)}>

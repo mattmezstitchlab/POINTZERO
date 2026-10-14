@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import PdfPrep from "./PdfPrep";
-import { Wand2, FileUp, ArrowRight, RotateCw, Eraser } from "lucide-react";
+import { Wand2, FileUp, ArrowRight, RotateCw, Eraser, PackageOpen, MapPin, CircleDot } from "lucide-react";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { genererMotif } from "../lib/generation";
 import { useAncreToile, type MotifGrille } from "./ToileInfinie";
@@ -31,12 +31,22 @@ type Phase =
 export default function HeroPlayground({
   onMotif,
   onGrille,
+  etatZone,
+  onExporter,
+  onPoser,
+  onPointZero,
   prompt,
   setPrompt,
 }: {
   onMotif: (p: Pattern) => void;
   /** Pose (ou retire, avec null) le motif sur la grille de la toile. */
   onGrille: (m: MotifGrille | null) => void;
+  /** occupee : un motif est brodé derrière le champ ; libre : grille nue,
+      point zéro possible ; prete : point zéro fait, on peut générer. */
+  etatZone: "occupee" | "libre" | "prete";
+  onExporter: () => void;
+  onPoser: () => void;
+  onPointZero: () => void;
   prompt: string;
   setPrompt: (v: string) => void;
 }) {
@@ -47,6 +57,7 @@ export default function HeroPlayground({
   const generate = async (graine: number) => {
     const text = prompt.trim();
     if (!text) return;
+    if (etatZone !== "prete") return; // la grille du hero doit être nue
     setPhase({ kind: "image" });
     try {
       setPhase({ kind: "grille" });
@@ -93,7 +104,11 @@ export default function HeroPlayground({
           placeholder="Décrivez un motif : « renard endormi dans les fougères »…"
           aria-label="Décrire un motif à générer"
         />
-        <button type="submit" className="btn-primary min-h-12 shrink-0 px-5" disabled={!prompt.trim() || phase.kind === "image" || phase.kind === "grille"}>
+        <button
+          type="submit"
+          className="btn-primary min-h-12 shrink-0 px-5"
+          disabled={etatZone !== "prete" || !prompt.trim() || phase.kind === "image" || phase.kind === "grille"}
+        >
           <Wand2 size={16} /> Voir le motif
         </button>
         <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-5">
@@ -101,6 +116,29 @@ export default function HeroPlayground({
           <input type="file" accept="application/pdf" className="sr-only" onChange={onPdf} />
         </label>
       </form>
+
+      {etatZone === "occupee" && (
+        <div className="hero-chips mt-4 flex flex-wrap items-center justify-center gap-3">
+          <p className="hero-etat text-[13px] text-black/70">
+            La grille du hero est déjà brodée : libérez-la, puis faites le point zéro.
+          </p>
+          <button type="button" className="btn-quiet min-h-11 px-4" onClick={onExporter}>
+            <PackageOpen size={15} /> Exporter à l'atelier
+          </button>
+          <button type="button" className="btn-quiet min-h-11 px-4" onClick={onPoser}>
+            <MapPin size={15} /> Poser ailleurs sur la toile
+          </button>
+        </div>
+      )}
+
+      {etatZone === "libre" && (
+        <div className="hero-chips mt-4 flex flex-wrap items-center justify-center gap-3">
+          <button type="button" className="btn-primary min-h-11 px-5 hero-hop" onClick={onPointZero}>
+            <CircleDot size={16} /> Faire le point zéro
+          </button>
+          <p className="hero-etat text-[13px] text-black/70">une grille nue, dans le format paysage du hero</p>
+        </div>
+      )}
 
       {(phase.kind === "image" || phase.kind === "grille") && (
         <div className="mt-4 flex flex-col items-center gap-3" role="status">
@@ -167,7 +205,7 @@ export default function HeroPlayground({
         </div>
       )}
 
-      <p className="mt-3 text-center text-[11.5px] leading-relaxed text-black/55">
+      <p className="hero-etat hero-note mx-auto mt-3 block w-fit max-w-[560px] text-center text-[11.5px] leading-relaxed text-black/60">
         La génération appelle un service tiers d'images : elle demande un réseau. Le PDF, lui, se
         reconstitue entièrement chez vous — et tout l'atelier fonctionne hors ligne.
       </p>
