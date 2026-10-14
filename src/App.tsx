@@ -3,7 +3,7 @@ import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
 import { blankPattern, initState, loadStored, reducer, saveStored } from "./lib/store";
 import { buildTemplate } from "./lib/convert";
 import { clonePattern, compositePattern, computeStats, createPattern, ensurePalette, type Pattern, type Supply } from "./lib/pattern";
-import { readProjectFile, saveProjectFile } from "./lib/io";
+import { readProjectFile, readTextFile, saveProjectFile } from "./lib/io";
 import { fromOxs } from "./lib/oxs";
 import { readInventory, saveLibrary, writeInventory } from "./lib/library";
 import { clearSelection, extractSelection, pasteSelection, transformPart, type Selection } from "./lib/editing";
@@ -236,7 +236,7 @@ export default function App() {
     try {
       if (!/\.(json|oxs)$/i.test(f.name)) throw new Error("Choisissez un fichier .pointzero.json, .json ou .oxs.");
       if (f.size > 25 * 1024 * 1024) throw new Error("Ce projet dépasse 25 Mo.");
-      const p = /\.oxs$/i.test(f.name) ? fromOxs(await f.text()) : await readProjectFile(f);
+      const p = /\.oxs$/i.test(f.name) ? fromOxs(await readTextFile(f)) : await readProjectFile(f);
       if (!p) throw new Error("Projet invalide ou format JSON incompatible. Le fichier original reste intact.");
       await loadPattern(p);
       setWorkspace("create");
