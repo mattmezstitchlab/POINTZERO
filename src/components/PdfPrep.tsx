@@ -46,6 +46,25 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 const keyOf = (b: PdfBlock, mode: Mode, colors: number) =>
   `${mode}|${colors}|${b.id}|${b.page}|${b.x0.toFixed(2)},${b.y0.toFixed(2)},${b.x1.toFixed(2)},${b.y1.toFixed(2)}|${b.cols}x${b.rows}`;
 
+/** Positions sans chevauchement, même si les blocs ont différentes dimensions. */
+export function positionsPuzzle(
+  blocks: PdfBlock[], columns: number, uniformSizes: boolean, size: { cols: number; rows: number },
+) {
+  const positions: Record<string, { x: number; y: number }> = {};
+  const n = Math.max(1, columns);
+  let x = 0, y = 0, rowHeight = 0;
+  blocks.forEach((block, index) => {
+    if (index > 0 && index % n === 0) {
+      y += rowHeight; x = 0; rowHeight = 0;
+    }
+    positions[block.id] = { x, y };
+    x += uniformSizes ? size.cols : block.cols;
+    rowHeight = Math.max(rowHeight, uniformSizes ? size.rows : block.rows);
+  });
+  return positions;
+}
+
+
 export default function PdfPrep({
   file,
   onClose,
@@ -89,9 +108,13 @@ export default function PdfPrep({
   const [centerTab, setCenterTab] = useState<"puzzle" | "preview">("puzzle");
   // Puzzle manuel : positions en coordonnées de points de grille (x, y en cases)
   const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [uniformSizes, setUniformSizes] = useState(true);
+  const [uniformSizes, setUniformSizes] = useState(false);
   const [magnet, setMagnet] = useState(true);
   const [zoom, setZoom] = useState(1);
+  const [addingZone, setAddingZone] = useState(false);
+  const [zoneDraft, setZoneDraft] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const zoneStart = useRef<{ x: number; y: number } | null>(null);
+  const draggedCard = useRef<string | null>(null);
 
   const handleRef = useRef<PdfHandle | null>(null);
   const registry = useRef(new SymbolRegistry());
@@ -168,6 +191,38 @@ export default function PdfPrep({
     };
   }, [file]);
 
+  const zonePoint = (e: RPointerEvent<HTMLElement>) => {
+    const bounds = e.currentTarget.getBoundingClientRect();
+    return {
+      x: Math.min(100, Math.max(0, (e.clientX - bounds.left) / bounds.width * 100)),
+      y: Math.min(100, Math.max(0, (e.clientY - bounds.top) / bounds.height * 100)),
+    };
+  };
+  const finishMissingZone = (e: RPointerEvent<HTMLDivElement>) => {
+    const start = zoneStart.current;
+    zoneStart.current = null;
+    if (!start) return;
+    const end = zonePoint(e);
+    const x0 = Math.min(start.x, end.x), y0 = Math.min(start.y, end.y);
+    const x1 = Math.max(start.x, end.x), y1 = Math.max(start.y, end.y);
+    setZoneDraft(null);
+    if (x1 - x0 < 3 || y1 - y0 < 3) return;
+    const nearby = blocks.find(b => b.page === pageN) ?? blocks[0];
+    const b: PdfBlock = {
+      id: "manuelle-" + Date.now() + "-" + Math.random().toString(36).slice(2, 5),
+      page: pageN, x0, y0, x1, y1,
+      cols: nearby?.cols ?? 40, rows: nearby?.rows ?? 40,
+      label: "Zone ajoutée manuellement",
+    };
+    setBlocks(previous => [...previous, b]);
+    setOrder(previous => [...previous, b.id]);
+    setMode("auto");
+    setVector(null);
+    cache.current.clear();
+    setAddingZone(false);
+    setManualPositions({});
+  };
+
   const page = analysis?.pages.find((p) => p.n === pageN);
   const pageBlocks = blocks.filter((b) => b.page === pageN);
   const byId = useMemo(() => new Map(blocks.map((b) => [b.id, b])), [blocks]);
@@ -192,22 +247,10 @@ export default function PdfPrep({
   const blockH = (b: PdfBlock) => (uniformSizes ? uniformDim.rows : b.rows);
 
   // Mosaïque ordonnée par défaut (pages dans l'ordre numérique, rangées régulières)
-  const defaultMosaic = useMemo(() => {
-    const map: Record<string, { x: number; y: number }> = {};
-    let col = 0;
-    let row = 0;
-    effective.forEach((b, i) => {
-      if (i > 0 && i % perRow === 0) {
-        col = 0;
-        row++;
-      }
-      const x = col * (uniformSizes ? uniformDim.cols : b.cols);
-      const y = row * (uniformSizes ? uniformDim.rows : b.rows);
-      map[b.id] = { x, y };
-      col++;
-    });
-    return map;
-  }, [effective, perRow, uniformSizes, uniformDim]);
+  const defaultMosaic = useMemo(
+    () => positionsPuzzle(effective, perRow, uniformSizes, uniformDim),
+    [effective, perRow, uniformSizes, uniformDim],
+  );
 
   // Position effective de chaque bloc sur la table de montage
   const tileLayout = useMemo(() => {
@@ -351,20 +394,19 @@ export default function PdfPrep({
 
   const arrangeMosaic = (cols: number) => {
     setPerRow(cols);
-    const map: Record<string, { x: number; y: number }> = {};
-    let c = 0;
-    let r = 0;
-    effective.forEach((b, i) => {
-      if (i > 0 && i % cols === 0) {
-        c = 0;
-        r++;
-      }
-      const x = c * (uniformSizes ? uniformDim.cols : b.cols);
-      const y = r * (uniformSizes ? uniformDim.rows : b.rows);
-      map[b.id] = { x, y };
-      c++;
+    setManualPositions(positionsPuzzle(effective, cols, uniformSizes, uniformDim));
+  };
+
+  const moveCard = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= order.length) return;
+    setOrder(previous => {
+      const next = previous.slice();
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
     });
-    setManualPositions(map);
+    // Les positions suivent le nouvel ordre.
+    setManualPositions({});
   };
 
   const resetToDefault = () => {
@@ -573,8 +615,24 @@ export default function PdfPrep({
                 ))}
               </div>
               <div
-                className="relative touch-none select-none overflow-hidden rounded-[14px] bg-white shadow-2xl"
+                className={"relative touch-none select-none overflow-hidden rounded-[14px] bg-white shadow-2xl" + (addingZone ? " cursor-crosshair outline outline-2 outline-[#30d158]" : "")}
                 style={{ aspectRatio: `1 / ${page.aspect}` }}
+                onPointerDown={e => {
+                  if (!addingZone) return;
+                  const point = zonePoint(e);
+                  zoneStart.current = point;
+                  setZoneDraft({ x0: point.x, y0: point.y, x1: point.x, y1: point.y });
+                  e.currentTarget.setPointerCapture?.(e.pointerId);
+                }}
+                onPointerMove={e => {
+                  const start = zoneStart.current;
+                  if (!addingZone || !start) return;
+                  const end = zonePoint(e);
+                  setZoneDraft({ x0: Math.min(start.x, end.x), y0: Math.min(start.y, end.y),
+                    x1: Math.max(start.x, end.x), y1: Math.max(start.y, end.y) });
+                }}
+                onPointerUp={e => { if (addingZone) finishMissingZone(e); }}
+                onPointerCancel={() => { zoneStart.current = null; setZoneDraft(null); }}
               >
                 <img src={page.thumb} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-fill" draggable={false} />
                 {pageBlocks.map((b) => (
@@ -591,12 +649,24 @@ export default function PdfPrep({
                     </span>
                   </div>
                 ))}
+                {addingZone && zoneDraft && (
+                  <div className="pointer-events-none absolute z-30 border-2 border-[#30d158] bg-[#30d158]/15"
+                    style={{ left: zoneDraft.x0 + "%", top: zoneDraft.y0 + "%",
+                      width: zoneDraft.x1 - zoneDraft.x0 + "%", height: zoneDraft.y1 - zoneDraft.y0 + "%" }} />
+                )}
               </div>
+              {addingZone && <p className="mt-2 text-xs text-[#30d158]">Tracez un rectangle autour de la partie oubliée du PDF.</p>}
             </div>
             <aside className="lg:w-[42%]">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-[15px] font-semibold">Blocs de la page {pageN}</h3>
               </div>
+              <button type="button" className="btn-quiet mb-3 min-h-10 w-full"
+                aria-pressed={addingZone}
+                onClick={() => { setAddingZone(!addingZone); setZoneDraft(null); zoneStart.current = null; }}>
+                {addingZone ? "Annuler le tracé" : "+ Récupérer une zone manquante"}
+              </button>
+              <p className="mb-3 text-xs text-label-3">Si une partie du dessin est oubliée, dessinez-la sur l'image à gauche, puis corrigez ses dimensions en cases ci-dessous. Une zone ajoutée utilise la lecture par image et conserve les autres blocs.</p>
               <div className="space-y-2">
                 {pageBlocks.map((b, i) => (
                   <div key={b.id} className="flex items-center gap-2 rounded-[12px] bg-white/5 px-3 py-2">
@@ -866,6 +936,35 @@ export default function PdfPrep({
               </section>
 
               <section className="rounded-[14px] bg-white/5 p-3.5">
+                <h3 className="mb-2 text-[13px] font-semibold">Ordre des cartes du puzzle</h3>
+                <p className="mb-2 text-[11px] text-label-3">Glissez les cartes pour les réordonner (ou utilisez les flèches). Ajustez ensuite les positions sur le tableau magnétique.</p>
+                <div className="max-h-48 space-y-1 overflow-y-auto">
+                  {effective.map((b, i) => (
+                    <div key={b.id} draggable
+                      onDragStart={e => { draggedCard.current = b.id; e.dataTransfer.effectAllowed = "move"; }}
+                      onDragOver={e => { if (draggedCard.current) e.preventDefault(); }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        const from = effective.findIndex(x => x.id === draggedCard.current);
+                        if (from >= 0) moveCard(from, i - from);
+                        draggedCard.current = null;
+                      }}
+                      onDragEnd={() => { draggedCard.current = null; }}
+                      className="flex cursor-grab items-center gap-2 rounded-md border border-white/10 bg-black/15 p-2 active:cursor-grabbing">
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-white/10 text-[11px]">{i + 1}</span>
+                      {analysis?.pages.find(p => p.n === b.page)?.thumb && (
+                        <img src={analysis.pages.find(p => p.n === b.page)!.thumb}
+                          className="h-10 w-8 shrink-0 rounded-sm bg-white object-cover" alt={`Aperçu page ${b.page}`} draggable={false} />
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-xs">Page {b.page} · {b.cols} × {b.rows}</span>
+                      <button type="button" disabled={i === 0} className="px-2 py-1 text-xs disabled:opacity-20" aria-label={`Monter la carte ${i + 1}`} onClick={() => moveCard(i, -1)}>↑</button>
+                      <button type="button" disabled={i === effective.length - 1} className="px-2 py-1 text-xs disabled:opacity-20" aria-label={`Descendre la carte ${i + 1}`} onClick={() => moveCard(i, 1)}>↓</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-[14px] bg-white/5 p-3.5">
                 <h3 className="mb-2 text-[13px] font-semibold">Lecture des points</h3>
                 <div className="seg mb-2">
                   {vector?.ok && (
@@ -1017,7 +1116,7 @@ function autoOrder(blocks: PdfBlock[]) {
   return [...blocks].sort((a, b) => a.page - b.page || a.y0 - b.y0 || a.x0 - b.x0);
 }
 
-function assembleFromTileLayout(
+export function assembleFromTileLayout(
   list: Placed[],
   layout: { b: PdfBlock; x: number; y: number; w: number; h: number }[],
   name: string,
@@ -1039,19 +1138,27 @@ function assembleFromTileLayout(
     unresolved += p.data.unresolved;
   }
 
-  const W = Math.max(1, Math.min(maxX, 1000));
-  const H = Math.max(1, Math.min(maxY, 1000));
+  // Ne pas tronquer AVANT fitGrid : autrement les dernières pages
+  // sont repliées sur la bordure et des zones entières disparaissent.
+  const W = Math.max(1, Math.ceil(maxX));
+  const H = Math.max(1, Math.ceil(maxY));
+  if (W * H > 8_000_000) throw new Error("Grille trop grande : réduisez les blocs ou le nombre de pages.");
   const raw = new Int16Array(W * H).fill(-1);
 
   for (const p of list) {
     const t = layout.find((item) => item.b.id === p.b.id);
     if (!t) continue;
-    for (let r = 0; r < p.b.rows; r++) {
-      for (let c = 0; c < p.b.cols; c++) {
-        const gx = Math.min(W - 1, Math.max(0, t.x + c));
-        const gy = Math.min(H - 1, Math.max(0, t.y + r));
-        const v = p.data.cells[r * p.b.cols + c];
-        if (v >= 0) raw[gy * W + gx] = v;
+    // Une carte peut être ajustée à des dimensions communes. Si c'est
+    // le cas, rééchantillonner ses cellules de façon explicite, sans trou.
+    for (let r = 0; r < t.h; r++) {
+      for (let c = 0; c < t.w; c++) {
+        const srcX = Math.min(p.b.cols - 1, Math.floor(c * p.b.cols / t.w));
+        const srcY = Math.min(p.b.rows - 1, Math.floor(r * p.b.rows / t.h));
+        const gx = t.x + c;
+        const gy = t.y + r;
+        if (gx < 0 || gy < 0 || gx >= W || gy >= H) continue;
+        const value = p.data.cells[srcY * p.b.cols + srcX];
+        if (value >= 0) raw[gy * W + gx] = value;
       }
     }
   }

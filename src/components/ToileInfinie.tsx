@@ -435,11 +435,13 @@ export default function ToileInfinie({
   onOpen,
   onMotif,
   motif,
-  motifsPoses,
+  motifsPoses = [],
   reglages,
   onReglage,
   nbCouleursSource,
   musicMode = false,
+  showShowcase = false,
+  displayMotifOnToile = false,
   musicTrail = [],
   onMusicCell,
   children,
@@ -449,7 +451,7 @@ export default function ToileInfinie({
   /** Le motif brodé à même la grille, derrière le champ : ambiance ou décrit. */
   motif: MotifGrille | null;
   /** Les motifs libérés du hero, posés ailleurs sur la toile. */
-  motifsPoses: PoseMotif[];
+  motifsPoses?: PoseMotif[];
   /** Les réglages de zone déjà appliqués (outil zone). */
   reglages: ReglageZone[];
   onReglage: (rect: RectZone, n: number) => void;
@@ -457,6 +459,10 @@ export default function ToileInfinie({
   nbCouleursSource: (rect: RectZone) => number;
   /** SLÂME selection takes place on the real homepage canvas. */
   musicMode?: boolean;
+  /** Animations et badges commerciaux historiques : masqués sur l’accueil. */
+  showShowcase?: boolean;
+  /** Préférer un aperçu dans le résultat du champ, non derrière le champ. */
+  displayMotifOnToile?: boolean;
   musicTrail?: Point[];
   onMusicCell?: (point: Point) => void;
   children: ReactNode;
@@ -486,9 +492,10 @@ export default function ToileInfinie({
   /* Les voisines avancent ensemble : un seul battement pour toute la toile. */
   const [tick, setTick] = useState(0);
   useEffect(() => {
+    if (!showShowcase) return;
     const id = window.setInterval(() => setTick((t) => t + 1), 800);
     return () => window.clearInterval(id);
-  }, []);
+  }, [showShowcase]);
 
   const nZone =
     zone && motif ? (reglageDe(zone, reglages)?.n ?? couleursZone(motif.cross, motif.w, motif.h, zone).length) : 0;
@@ -496,11 +503,11 @@ export default function ToileInfinie({
 
   const designs = useMemo(() => {
     const m = new Map<string, MiniDesign[]>();
-    for (const v of VOISINES) {
+    for (const v of showShowcase ? VOISINES : []) {
       m.set(v.id, [miniDesign(v.seed), miniDesign(v.seed + 101), miniDesign(v.seed + 202)]);
     }
     return m;
-  }, []);
+  }, [showShowcase]);
 
   const zoomAt = (cx: number, cy: number, facteur: number) => {
     setVue((v) => {
@@ -668,7 +675,7 @@ export default function ToileInfinie({
           data-k={vue.k.toFixed(3)}
           style={{ transform: `translate(${vue.x}px, ${vue.y}px) scale(${vue.k})` }}
         >
-          {motif && <MotifSurGrille motif={motif} onPret={() => setMotifPret(true)} />}
+          {displayMotifOnToile && motif && <MotifSurGrille motif={motif} onPret={() => setMotifPret(true)} />}
           {musicMode && motif && musicTrail.length > 0 && (
             <svg
               aria-hidden="true"
@@ -736,7 +743,7 @@ export default function ToileInfinie({
             <MotifPose key={po.id} pose={po} />
           ))}
 
-          {VOISINES.map((v) => {
+          {showShowcase && VOISINES.map((v) => {
             const liste = designs.get(v.id) ?? [miniDesign(v.seed)];
             const depart = (v.seed * 7) % 9;
             const cycle = liste[0].ordre.length + 6; // terminé, puis on repart
@@ -757,19 +764,19 @@ export default function ToileInfinie({
           })}
 
           {/* Le tableau des 54 cartes : une composition, pas une liste. */}
-          <div className="tableau-cartes" data-stop-toile style={{ left: 88 * CELL, top: -4 * CELL }}>
+          {showShowcase && <div className="tableau-cartes" data-stop-toile style={{ left: 88 * CELL, top: -4 * CELL }}>
             <p className="tableau-titre">Le tableau du SAL · 54 cartes</p>
             <CardDeck dense />
-          </div>
+          </div>}
 
           {/* La table magnétique du PDF se pose ici quand on dépose un fichier. */}
-          <div
+          {showShowcase && <div
             ref={setTable}
             className="ancre-table"
             data-scroll-interne
             data-stop-toile
             style={{ left: 0, top: (HERO.h + 6) * CELL, width: 46 * CELL }}
-          />
+          />}
         </div>
 
         {/* Le strict minimum d'interface, posé sur la toile. */}
@@ -785,7 +792,7 @@ export default function ToileInfinie({
           </button>
         </header>
 
-        <div className="outil-palette" role="group" aria-label="Palette d'outils">
+        {displayMotifOnToile && <div className="outil-palette" role="group" aria-label="Palette d'outils">
           <button
             type="button"
             aria-label="Outil déplacer"
@@ -805,11 +812,9 @@ export default function ToileInfinie({
           >
             <Frame size={16} />
           </button>
-        </div>
+        </div>}
 
-
-
-        {zone && motif && (
+        {displayMotifOnToile && zone && motif && (
           <div className="zone-panneau" data-zone role="group" aria-label="Réglage de la zone sélectionnée">
             <p className="zone-titre">
               Zone {zone.w} × {zone.h} cases · ≈ {((zone.w * 2.54) / 14).toFixed(1).replace(".", ",")} ×{" "}
@@ -845,14 +850,14 @@ export default function ToileInfinie({
           </button>
         </div>
 
-        <div className="toile-chips">
+        {showShowcase && <div className="toile-chips">
           <p className="toile-chip geste">Molette : zoomer doucement · Glisser : se déplacer · Dézoomez : tout est sur la grille</p>
           <p className="toile-chip honnete">
             Démo hors ligne : les voisines sont simulées en local (pas encore de serveur) et le paiement est simulé
           </p>
-        </div>
+        </div>}
 
-        {achat && <FeuilleAchat achat={achat} onFermer={() => setAchat(null)} onMotif={onMotif} />}
+        {showShowcase && achat && <FeuilleAchat achat={achat} onFermer={() => setAchat(null)} onMotif={onMotif} />}
       </div>
     </AncresCtx.Provider>
   );
