@@ -17,7 +17,7 @@ export const docKinds:{id:AdminDocKind;label:string}[]=[
   {id:"devis",label:"Devis"},{id:"facture",label:"Facture"},{id:"contrat",label:"Contrat"},
   {id:"attestation",label:"Attestation"},{id:"courrier",label:"Courrier"}
 ];
-const safeText=(s:string,max=2000)=>typeof s==="string"&&s.length<=max;
+const safeText=(s:unknown,max=2000)=>typeof s==="string"&&s.length<=max;
 export function createAdminDocument(kind:AdminDocKind,projectId=""):AdminDocument{
   const now=new Date(),date=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
   const prefix:{[K in AdminDocKind]:string}={devis:"DEV",facture:"FAC",contrat:"CTR",attestation:"ATT",courrier:"CRR"};
