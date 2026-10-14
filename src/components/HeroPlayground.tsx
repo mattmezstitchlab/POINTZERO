@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Wand2, FileUp, FileJson, ArrowRight, RotateCw, Pencil, LoaderCircle } from "lucide-react";
+import { Wand2, FileImage, FileUp, FileJson, ArrowRight, RotateCw, Pencil, LoaderCircle } from "lucide-react";
 import { FLOSS } from "../lib/dmc";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { genererMotif } from "../lib/generation";
@@ -45,10 +45,11 @@ type Phase =
   | { kind: "erreur"; msg: string };
 
 export default function HeroPlayground({
-  onMotif, onPdf, onProjectFile, onGrille, prompt, setPrompt,
+  onMotif, onPdf, onImage, onProjectFile, onGrille, prompt, setPrompt,
 }: {
   onMotif: (p: Pattern) => void;
   onPdf: (file: File) => void;
+  onImage: (file: File) => void;
   onProjectFile: (file: File) => Promise<string | null>;
   onGrille: (m: MotifGrille | null) => void;
   prompt: string;
@@ -144,6 +145,11 @@ export default function HeroPlayground({
               {phase.kind === "chargement" ? <LoaderCircle className="animate-spin" size={16}/> : <Wand2 size={16}/>}
               {phase.kind === "chargement" ? "Création…" : "Générer"}
             </button>
+            <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-4">
+              <FileImage size={16}/> Importer une image
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only"
+                aria-label="Choisir une image PNG, JPEG ou WebP" onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)onImage(selected);}} />
+            </label>
             <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-4">
               <FileUp size={16}/> Importer un PDF
               <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={onSelectPdf} aria-label="Choisir un PDF" />
