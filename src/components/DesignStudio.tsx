@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { ArrowLeft, ChevronDown, Copy, Download, FileImage, FilePlus2, FolderOpen, ImagePlus, LayoutTemplate, Pencil, Plus, Redo2, Save, Search, Shapes, Trash2, Type, Undo2, WandSparkles, X } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
+import { ArrowLeft, ChevronDown, Copy, Download, FolderOpen, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shapes, Trash2, Type, Undo2, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
