@@ -71,11 +71,14 @@ describe("POINTZERO noyau commun — objets reliés",()=>{
   const signal=newSignal(ceremony.id,host.id,"retard",30,"Trajet ralenti");
   s.signals=[signal];
   const updated=validateSignal(s,signal.id);
-  expect(updated.signals[0]).toMatchObject({status:"validé",acknowledgedRecipientIds:[invited.id]});
+  expect(updated.signals[0]).toMatchObject({status:"validé",plannedRecipientIds:[invited.id]});
   expect(updated.moments).toEqual(s.moments);
   expect(updated.people).toEqual(s.people);
   expect(s.signals[0].status).toBe("brouillon");
   expect(validateSignal(updated,signal.id)).toEqual(updated);
+  const academy=makeAcademyProject();
+  localStorage.setItem(ACADEMY_KEY,JSON.stringify(academy));
+  updated.tiles.find(t=>t.kind==="academy")!.refId=academy.id;
   const steps=journeySteps(updated);
   expect(steps.filter(v=>v.passed).length).toBe(steps.length);
  });
@@ -88,7 +91,8 @@ describe("POINTZERO noyau commun — objets reliés",()=>{
   localStorage.setItem(PROGRAMME_STORAGE,JSON.stringify({version:1,programmes:[programme]}));
   localStorage.setItem(MUSIC_LABEL_KEY,JSON.stringify(music));
   const tile=(kind:"academy"|"programme"|"musique",refId="")=>({...s.tiles[0],kind,refId});
-  expect(linkedModuleInfo(tile("academy"))?.id).toBe(academy.id);
+  expect(linkedModuleInfo(tile("academy"))).toBeNull();
+  expect(linkedModuleInfo(tile("academy",academy.id))?.id).toBe(academy.id);
   expect(linkedModuleInfo(tile("programme",programme.id))?.label).toBe(programme.title);
   expect(linkedModuleInfo(tile("musique",event.id))?.id).toBe(event.id);
   expect(linkedModuleInfo(tile("musique","missing"))).toBeNull();
