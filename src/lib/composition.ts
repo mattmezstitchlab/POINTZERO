@@ -18,6 +18,7 @@ export interface ComposeSettings {
   codes: string;
   width: number;
   height: number;
+  count?: Pattern["count"];
 }
 export interface RegionCard {
   id: string;
@@ -59,7 +60,7 @@ const distance = (a: number, b: number) =>
   a === b ? 0 : !FLOSS[a] || !FLOSS[b] ? 0 : deltaE2000(FLOSS[a].lab, FLOSS[b].lab);
 export const initialSettings = (p: Pattern): ComposeSettings => ({
   detail: "equilibree", difficulty: "intermediaire", palette: "originale", codes: "",
-  width: p.w, height: p.h,
+  width: p.w, height: p.h, count: p.count,
 });
 
 /**
@@ -220,7 +221,9 @@ function scalePattern(source: Pattern, targetW: number, targetH: number) {
   p.back = source.back.map(mapSeg); p.long=source.long.map(mapSeg);
   p.knots=source.knots.map(k=>({...k,...mapNode(k.x,k.y)}));
   p.special=source.special?.map(k=>({...k,...mapNode(k.x,k.y)}));
-  return { ...source, ...p, id:source.id, provenance:source.provenance, notes:source.notes, fabric:source.fabric, layers:[] };
+  return { ...source, ...p, id:source.id, provenance:source.provenance, notes:source.notes,
+    fabric:source.fabric, beadMap:source.beadMap, supplies:source.supplies, stock:source.stock,
+    reference:source.reference, layers:[] };
 }
 
 /**
@@ -335,6 +338,7 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
     work.special=work.special?.filter(v=>!invisible.has(midRegion(v.x,v.y)));
   }
   const target = scalePattern(work,settings.width,settings.height);
+  target.count = settings.count ?? original.count;
   const warnings:string[]=[];
   if(settings.width<original.w || settings.height<original.h)warnings.push("Réduction de grille : les petits détails peuvent fusionner. Comparez le résultat avec la source avant validation.");
   const changes=guardedConfetti(target.cross,target.w,target.h,settings.detail==="simple"?2:settings.detail==="equilibree"?1:0);
