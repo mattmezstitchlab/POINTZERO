@@ -3,11 +3,11 @@ import { ArrowDown, ArrowUp, Check, Copy, Download, Eye, EyeOff, FileJson, GitMe
 import { FLOSS, flossIndex } from "../lib/dmc";
 import { downloadBlob, saveProjectFile } from "../lib/io";
 import { buildPdf, pdfFileName } from "../lib/pdf";
-import { type Pattern } from "../lib/pattern";
+import { fromObject, type Pattern } from "../lib/pattern";
 import {
-  attachSubject, changeSubject, detectSubjects, duplicateSubject, mergeSubjects,
+  affectedBounds, attachSubject, changeSubject, detectSubjects, duplicateSubject, mergeSubjects,
   recomposeSubjects, reorderSubject, sceneFromPattern, splitSubject, spriteForExport,
-  type SubjectLayer, type SubjectScene,
+  type Bounds, type SubjectLayer, type SubjectScene,
 } from "../lib/subjectEngine";
 import { multiSubjectDemo } from "../lib/subjectDemo";
 import { deleteLibrarySubject, loadSubjectLibrary, openLibrarySubject, storeSubject } from "../lib/subjectLibrary";
@@ -49,6 +49,15 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
     for(const seg of pattern.back){
       ctx.strokeStyle=inkColor(seg.c);ctx.lineWidth=Math.max(1,scale*.22);ctx.beginPath();
       ctx.moveTo(seg.x1*scale,seg.y1*scale);ctx.lineTo(seg.x2*scale,seg.y2*scale);ctx.stroke();
+    }
+    for(const k of pattern.knots){
+      ctx.fillStyle=inkColor(k.c);ctx.beginPath();
+      ctx.arc(k.x*scale,k.y*scale,Math.max(1,scale*.2),0,Math.PI*2);ctx.fill();
+    }
+    for(const k of pattern.special??[]){
+      ctx.strokeStyle=inkColor(k.c);ctx.fillStyle=inkColor(k.c);
+      if(k.kind==="bead"){ctx.beginPath();ctx.ellipse(k.x*scale,k.y*scale,Math.max(1,scale*.17),Math.max(1,scale*.28),0,0,Math.PI*2);ctx.fill();}
+      else{const r=Math.max(1,scale*.2);ctx.beginPath();ctx.moveTo(k.x*scale-r,k.y*scale-r);ctx.lineTo(k.x*scale+r,k.y*scale+r);ctx.moveTo(k.x*scale+r,k.y*scale-r);ctx.lineTo(k.x*scale-r,k.y*scale+r);ctx.stroke();}
     }
     // Bounded regions help selection, without modifying the actual motif.
     for(const layer of scene.layers){
@@ -105,9 +114,24 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   const [showSource,setShowSource]=useState(false);
   const [confirmed,setConfirmed]=useState(false);
   const selected=scene.layers.find(l=>l.id===selectedId)??null;
+  const lastRender=useRef<{scene:SubjectScene;pattern:Pattern}|null>(null);
+  const original=useMemo(()=>{try{return fromObject(JSON.parse(scene.source));}catch{return null;}},[scene.source]);
   const result=useMemo(()=>{
-    try{return {pattern:recomposeSubjects(scene),error:""};}
-    catch(e){return {pattern:null,error:e instanceof Error?e.message:"Recomposition impossible."};}
+    try{
+      const last=lastRender.current;
+      let dirty:Bounds|undefined;
+      if(last && last.scene.source===scene.source && last.scene.backdrop===scene.backdrop &&
+          last.scene.layers.length===scene.layers.length &&
+          last.scene.layers.every((layer,i)=>layer.id===scene.layers[i].id)){
+        const diffs=scene.layers.map((next,i)=>({old:last.scene.layers[i],next})).filter(({old,next})=>
+          old.x!==next.x || old.y!==next.y || old.scale!==next.scale ||
+          old.sprite!==next.sprite || old.visible!==next.visible || old.tint!==next.tint);
+        if(diffs.length===1)dirty=affectedBounds(diffs[0].old,diffs[0].next);
+      }
+      const pattern=recomposeSubjects(scene,last?.pattern,dirty);
+      lastRender.current={scene,pattern};
+      return {pattern,error:""};
+    }catch(e){return {pattern:null,error:e instanceof Error?e.message:"Recomposition impossible."};}
   },[scene]);
   const composed=result.pattern;
   const adjust=(id:string,patch:Partial<Pick<SubjectLayer,"name"|"x"|"y"|"scale"|"visible"|"locked"|"tint">>)=>{
@@ -196,7 +220,14 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
           <button className="rounded-md border border-white/20 px-3 py-2" onClick={()=>composed&&saveProjectFile(composed)} disabled={!composed}><FileJson size={14} className="mr-1 inline"/> Exporter JSON</button>
           <button className="rounded-md border border-white/20 px-3 py-2" onClick={()=>void exportPdf()} disabled={!composed||busy}><Download size={14} className="mr-1 inline"/> Exporter PDF</button>
         </div>
-        {showSource&&<div className="rounded-md bg-[#f7f2e8] p-2 text-xs text-black">Source immuable conservée dans le projet. <span className="font-semibold">{scene.layers.length} composants indépendants</span> reposent sur cette référence. L'aperçu initial est accessible en rouvrant le fichier de projet.</div>}
+        {showSource&&original&&<section className="space-y-2 rounded-md border border-white/10 p-3 text-xs">
+          <h4 className="font-semibold">Source originale · non modifiée</h4>
+          <div className="max-w-[480px] bg-[#f7f2e8] p-2">
+            <SubjectPreview pattern={original} scene={{...scene,layers:[]}} selected={null}
+              onChoose={()=>{}} onMove={()=>{}} />
+          </div>
+          <p className="text-white/55">Le patron source est conservé indépendamment des positions actuelles des sujets.</p>
+        </section>}
         {scene.warnings.map((w,i)=><p key={i} className="rounded-md border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">{w}</p>)}
         {composed?.subjectScene?.warnings.filter(w=>!scene.warnings.includes(w)).map((w,i)=><p key={i} className="rounded-md border border-red-300/25 p-2 text-xs text-red-200">{w}</p>)}
         {(hiddenCount>0||offscreen)&&<label className="flex items-center gap-2 text-xs text-amber-200">
