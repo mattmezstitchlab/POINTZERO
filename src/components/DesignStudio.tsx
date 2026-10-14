@@ -59,12 +59,13 @@ interface Props {
   onPDF?: () => void;
   onGeneration?: () => void;
   onMusic?: () => void;
+  onMusicProduction?: () => void;
   onArtWorld?: () => void;
   onAimeLanding?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onArtWorld, onAimeLanding, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onArtWorld, onAimeLanding, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -247,6 +248,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               {name:"PDF",icon:<FileText size={16}/>,onClick:onPDF},
               {name:"Génération",icon:<WandSparkles size={16}/>,onClick:onGeneration},
               {name:"Musique inclusive",icon:<Music2 size={16}/>,onClick:onMusic},
+              {name:"Music · Radio & Label",icon:<Music2 size={16}/>,onClick:onMusicProduction},
               {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld},
               {name:"LE MONDE AIME · Présentation",icon:<HeartHandshake size={16}/>,onClick:onAimeLanding}
             ]).filter(i=>!!i.onClick).map(item=>
