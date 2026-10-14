@@ -59,7 +59,7 @@ export function safeMiniSite(value:unknown):MiniSite|null {
   }
   return d as MiniSite;
 }
-const esc=(text:string)=>text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"/&#34;").replace(/'/g,"&#39;");
+const esc=(text:string)=>text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&#34;").replace(/'/g,"&#39;");
 const plain=(text:string)=>esc(text).replace(/\n/g,"<br>");
 const emailOK=(email:string)=>/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(email)&&email.length<255;
 function sectionHTML(s:MiniSection,contact:string){
