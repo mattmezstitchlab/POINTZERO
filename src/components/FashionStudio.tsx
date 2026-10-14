@@ -84,12 +84,12 @@ export default function FashionStudio({onBack,onUse}:{onBack:()=>void;onUse?:(da
     <header className="flex h-[58px] shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#09090b] px-3">
       <div className="flex items-center gap-3">
         <button onClick={onBack} aria-label="Retour aux supports graphiques" className={button}><ArrowLeft size={16}/></button>
-        <div><h1 className="text-[14px] font-semibold">× POINTZERO <span className="font-normal text-white/65">/ Stylisme</span></h1>
-          <p className="text-[10px] text-white/55">Vêtement · composition · motif</p></div>
+        <div><h1 className="text-[14px] font-semibold"><span className="hidden sm:inline">× POINTZERO </span><span className="font-normal text-white/80">Stylisme</span></h1>
+          <p className="hidden text-[10px] text-white/55 sm:block">Vêtement · composition · motif</p></div>
       </div>
       <div className="flex gap-2">
         <button onClick={()=>{setProject(createGarment());setNotice("Nouveau concept créé.");}} className={button} title="Nouveau concept"><RotateCcw size={15}/></button>
-        {onUse&&<button type="button" disabled={busy} onClick={()=>void useInDesign()} aria-label="Utiliser la maquette dans un support" className={button}>Utiliser</button>}
+        {onUse&&<button type="button" disabled={busy} onClick={()=>void useInDesign()} aria-label="Utiliser la maquette dans un support" className={button}><span className="hidden sm:inline">Utiliser</span><span className="sm:hidden">↗</span></button>}
         <div className="relative">
           <button disabled={busy} onClick={()=>setShowOptions(o=>!o)} className="flex min-h-9 items-center gap-2 rounded-[5px] bg-white px-3 text-xs font-semibold text-black disabled:opacity-30"><Download size={15}/> Exporter</button>
           {showOptions&&<div className="pz-design-menu absolute right-0 top-[calc(100%+8px)] z-50 w-[200px] p-2">
