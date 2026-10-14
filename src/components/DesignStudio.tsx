@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { Accessibility, GraduationCap, GitBranch, Layers3, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
+import { Accessibility, GraduationCap, GitBranch, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
@@ -64,12 +64,13 @@ interface Props {
   onAcademy?: () => void;
   onSpace?: () => void;
   onCausal?: () => void;
+  onLegal?: () => void;
   onArtWorld?: () => void;
   onAimeLanding?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onArtWorld, onAimeLanding, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onLegal, onArtWorld, onAimeLanding, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -257,6 +258,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               {name:"POINTZERO Academy · UI/UX & No Code",icon:<GraduationCap size={16}/>,onClick:onAcademy},
               {name:"Mon Espace · Tous les mondes",icon:<Layers3 size={16}/>,onClick:onSpace},
               {name:"Studio Causal · RIPPLE",icon:<GitBranch size={16}/>,onClick:onCausal},
+              {name:"Juridique & RGPD",icon:<Scale size={16}/>,onClick:onLegal},
               {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld},
               {name:"LE MONDE AIME · Présentation",icon:<HeartHandshake size={16}/>,onClick:onAimeLanding}
             ]).filter(i=>!!i.onClick).map(item=>

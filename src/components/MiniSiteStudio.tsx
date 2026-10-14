@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Download, Eye, EyeOff, GitBranch, ImagePlus, Laptop, Save, Smartphone, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Download, Eye, EyeOff, GitBranch, ImagePlus, Laptop, Save, Scale, Smartphone, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import { createMiniSite, MINI_DRAFTS, MINI_KEY, MINI_KINDS, miniProjectFile, miniSection, miniSiteToHTML, safeMiniSite, type MiniKind, type MiniSection, type MiniSectionKind, type MiniSite } from "../lib/miniSiteCore";
 import { loadProjectOptions } from "../lib/budgetCore";
+import { LEGAL_ACTIVE_KEY } from "../lib/legalCore";
 import { COACH_PHASES, miniCoachProgress, readMiniCoach, writeMiniCoach, type CoachIssue, type CoachPhase, type MiniCoachProfile } from "../lib/miniSiteLearning";
 const load=():MiniSite=>{try{return safeMiniSite(JSON.parse(localStorage.getItem(MINI_KEY)??"null"))??createMiniSite();}catch{return createMiniSite();}};
 const loadDrafts=():MiniSite[]=>{try {const json=JSON.parse(localStorage.getItem(MINI_DRAFTS)??"[]") as unknown;return Array.isArray(json)?json.map(safeMiniSite).filter((x):x is MiniSite=>!!x).slice(0,12):[];}catch{return [];}};
 const slug=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-")||"mini-site";
-interface Props {onBack:()=>void;incomingDraft?:MiniSite|null}
-export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
+interface Props {onBack:()=>void;incomingDraft?:MiniSite|null;onLegal?:()=>void}
+export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   const [doc,setDoc]=useState<MiniSite>(()=>incomingDraft??load());
   const [drafts,setDrafts]=useState<MiniSite[]>(loadDrafts);
   const [selected,setSelected]=useState<string|null>(null);
@@ -74,6 +75,7 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
     setStatus("HTML exporté. "+evaluation.errors+" correction(s) prioritaires restantes selon le pré-audit local ; publication et vérifications humaines à effectuer.");};
   const preview=miniSiteToHTML(doc);
   const actions=<div className="flex gap-1">
+    {onLegal&&<button type="button" className={studioButton+" !px-2"} onClick={()=>{localStorage.setItem(LEGAL_ACTIVE_KEY,"mini-site:"+doc.id);onLegal();}} title="Vérifier les obligations juridiques" aria-label="Vérifier Juridique RGPD du mini-site"><Scale size={16}/></button>}
     <button type="button" className={studioButton+" !px-2"} onClick={store} title="Enregistrer dans Mes mini-sites" aria-label="Enregistrer le mini-site"><Save size={16}/></button>
     <button type="button" className={studioButton+" !px-2"} onClick={()=>filePicker.current?.click()} title="Importer JSON" aria-label="Importer un mini-site JSON"><Upload size={16}/></button>
     <button type="button" className={studioButton+" !px-2"} onClick={()=>saveStudioFile(slug(doc.name)+".pointzero.json",miniProjectFile(doc))} title="Exporter JSON" aria-label="Exporter le mini-site JSON"><Download size={16}/></button>

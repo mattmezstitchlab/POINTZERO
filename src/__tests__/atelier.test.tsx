@@ -62,6 +62,27 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("relie Mini-site au dossier juridique sans ressaisir le nom de son projet", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Mini-site"));
+    expect(button("Vérifier Juridique RGPD du mini-site")).toBeTruthy();
+    await click(button("Vérifier Juridique RGPD du mini-site"));
+    expect(container?.querySelector('[aria-label="Espace Juridique & RGPD"]')).toBeTruthy();
+    expect(container?.textContent).toContain("Mariage sans titre");
+    await click(button("Ouvrir Mentions légales"));
+    expect(container?.querySelector('[aria-label="Nature de l\'éditeur"]')).toBeTruthy();
+    await click(button("Ouvrir Données personnelles"));
+    expect(container?.querySelector('[aria-label="Ajouter un traitement au registre"]')).toBeTruthy();
+    await click(button("Ouvrir Cookies & sécurité"));
+    expect(container?.querySelector('[aria-label="Catégorie des traceurs"]')).toBeTruthy();
+    await click(button("Ouvrir Dossier à transmettre"));
+    expect(button("Exporter le brouillon juridique Markdown")).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("Mini-site : plan du site, Academy, diagnostic et correction dans les vrais champs", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
