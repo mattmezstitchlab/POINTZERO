@@ -66,11 +66,24 @@ export function validatedProfile(value:unknown):BrodeuseProfile {
     minutes:v.minutes===null||v.minutes===undefined?null:num(v.minutes,180,10,50000)};
 }
 export function loadBrodeuseProfile():BrodeuseProfile {
-  try{return validatedProfile(JSON.parse(localStorage.getItem(KEY)??"null"));}catch{return defaultBrodeuseProfile();}
+  try {
+    const profile=validatedProfile(JSON.parse(localStorage.getItem(KEY)??"null"));
+    const inventory=JSON.parse(localStorage.getItem("point-zero:inventory")??"null") as Record<string,{whole?:number;partialMeters?:number}>|null;
+    if(!inventory||typeof inventory!=="object")return profile;
+    return validatedProfile({...profile,stock:Object.fromEntries(Object.entries(inventory).map(([code,q])=>[code,{
+      skeins:Number(q?.whole??0),remainingMeters:Number(q?.partialMeters??0)
+    }]))});
+  } catch {return defaultBrodeuseProfile();}
 }
 export function saveBrodeuseProfile(profile:BrodeuseProfile):void {
-  try{localStorage.setItem(KEY,JSON.stringify(validatedProfile(profile)));}
-  catch{throw new Error("Profil non sauvegardé : stockage local indisponible.");}
+  try {
+    const valid=validatedProfile(profile);
+    localStorage.setItem(KEY,JSON.stringify(valid));
+    localStorage.setItem("point-zero:inventory",JSON.stringify(Object.fromEntries(Object.entries(valid.stock).map(([code,q])=>[code,{
+      whole:q.skeins,partialMeters:q.remainingMeters
+    }]))));
+    window.dispatchEvent(new Event("pointzero:inventory-changed"));
+  } catch {throw new Error("Profil non sauvegardé : stockage local indisponible.");}
 }
 const ownedMeters=(p:BrodeuseProfile,code:string)=>{
  const q=p.stock[code];return q? q.skeins*48+q.remainingMeters*6 : 0;
