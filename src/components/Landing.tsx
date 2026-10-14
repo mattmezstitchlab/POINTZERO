@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ToileInfinie, { miniDesign, type MotifGrille, type PoseMotif } from "./ToileInfinie";
 import HeroPlayground from "./HeroPlayground";
 import FlossRail from "./FlossRail";
@@ -6,6 +6,8 @@ import PaletteSheet from "./PaletteSheet";
 import { genererMotif, promptAmbiance } from "../lib/generation";
 import { appliquerZones, couleursZone, type RectZone, type ReglageZone } from "../lib/requant";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
+import { appendWaypoint, type Point } from "../lib/slame";
+import HomeSlamePanel, { type GrilleMode } from "./HomeSlamePanel";
 
 interface Props {
   onOpen: () => void;
@@ -41,6 +43,11 @@ export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
   const [railActif, setRailActif] = useState(-1);
   const [railEdits, setRailEdits] = useState<Pattern | null>(null);
   const [nuancier, setNuancier] = useState(false);
+  const [modeGrille, setModeGrille] = useState<GrilleMode>("toile");
+  const [musicTrail, setMusicTrail] = useState<Point[]>([]);
+  const addMusicPoint = useCallback((point: Point) => {
+    setMusicTrail(trail => appendWaypoint(trail, point));
+  }, []);
 
   /* Le motif affiché = le source, réglages de zone appliqués. */
   const motif = useMemo<MotifGrille | null>(() => {
@@ -120,6 +127,9 @@ export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
   return (
     <>
     <ToileInfinie
+      musicMode={modeGrille === "musique"}
+      musicTrail={musicTrail}
+      onMusicCell={addMusicPoint}
       onOpen={onOpen}
       onMotif={onMotif}
       motif={motif}
@@ -129,7 +139,7 @@ export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
       nbCouleursSource={nbCouleursSource}
     >
       <div
-        className={`hero-cadre${etatZone === "libre" ? " libre" : ""}`}
+        className={"hero-cadre" + (etatZone === "libre" ? " libre" : "") + (modeGrille !== "toile" ? " pointer-events-none opacity-0" : "")}
         data-tag={
           etatZone === "occupee"
             ? "zone de lecture — le motif se brode autour"
@@ -148,6 +158,7 @@ export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
         onMotif={onMotif}
         onGrille={(m) => {
           setSource(m);
+          setMusicTrail([]);
           setReglages([]);
           if (m) setPointZero(false);
         }}
@@ -160,7 +171,21 @@ export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
       />
       </div>
     </ToileInfinie>
-    <button type="button" onClick={onSlame} style={{position:"fixed",top:83,right:18,zIndex:70,background:"#39305c",border:"1px solid #aa90f2",borderRadius:10,padding:"12px 18px",fontSize:14,color:"#fff",fontWeight:700,boxShadow:"0 7px 30px #0005"}} aria-label="Découvrir SLÂME, composer de la musique et des paroles à partir de la grille">♫ SLÂME · Écouter la grille</button>
+    <nav className="fixed bottom-4 left-1/2 z-[75] flex max-w-[calc(100vw-24px)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border border-black/15 bg-white/95 p-1.5 text-black shadow-[0_7px_35px_#0002] backdrop-blur-xl" aria-label="Outils de la grille">
+      <button type="button" onClick={() => setModeGrille("toile")} aria-pressed={modeGrille === "toile"} className={modeGrille === "toile" ? "rounded-md bg-[#1d1d21] px-4 py-2.5 text-sm font-semibold text-white" : "rounded-md px-4 py-2.5 text-sm hover:bg-black/5"}>Créer</button>
+      <button type="button" onClick={() => setModeGrille("musique")} aria-pressed={modeGrille === "musique"} className={modeGrille === "musique" ? "rounded-md bg-[#1d1d21] px-4 py-2.5 text-sm font-semibold text-white" : "rounded-md px-4 py-2.5 text-sm hover:bg-black/5"}>♫ Musique</button>
+      <button type="button" onClick={() => setModeGrille("parole")} aria-pressed={modeGrille === "parole"} className={modeGrille === "parole" ? "rounded-md bg-[#1d1d21] px-4 py-2.5 text-sm font-semibold text-white" : "rounded-md px-4 py-2.5 text-sm hover:bg-black/5"}>Parole</button>
+      <button type="button" onClick={onOpen} className="rounded-md px-4 py-2.5 text-sm hover:bg-black/5">Broder · outils précis ↗</button>
+    </nav>
+    <HomeSlamePanel
+      mode={modeGrille}
+      pattern={patternRail}
+      trail={musicTrail}
+      onPoint={addMusicPoint}
+      onTrail={setMusicTrail}
+      onMode={setModeGrille}
+      onAdvanced={onSlame}
+    />
     {patternRail && (
       <>
         <FlossRail
