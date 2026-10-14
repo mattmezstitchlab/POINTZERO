@@ -49,6 +49,7 @@ export default function MusicStudio({onBack}:Props){
   const [soundActive,setSoundActive]=useState(true);
   const [audioOn,setAudioOn]=useState(false);
   const [dmcCode,setDmcCode]=useState<string|null>(null);
+  const [dmcSearch,setDmcSearch]=useState("");
   const [selected,setSelected]=useState<string|null>(null);
   const [intention,setIntention]=useState("");
   const [participant,setParticipant]=useState("");
@@ -107,6 +108,9 @@ export default function MusicStudio({onBack}:Props){
     setScore(s=>({...s,notes:fn(s.notes)}));
   };
   const current=score.notes.find(n=>n.id===selected)??null;
+  const dmcList=(dmcSearch.trim()?
+    BASE_FLOSS.filter(f=>f.code.toLowerCase().includes(dmcSearch.trim().toLowerCase())||f.name.toLowerCase().includes(dmcSearch.trim().toLowerCase())).slice(0,35):
+    ART_DMC_FAVORITES.map(code=>BASE_FLOSS.find(f=>f.code===code)).filter((f):f is typeof BASE_FLOSS[number]=>!!f));
   const preview=async(note:MusicNote)=>{
     if(!soundRef.current||note.gesture==="text")return;
     try{await audioRef.current?.preview(note);setAudioOn(true);}
@@ -303,15 +307,20 @@ export default function MusicStudio({onBack}:Props){
         <div className="flex items-center gap-2">
           <button onClick={()=>seek(0)} aria-label="Revenir au début" className={stepButtons}><SkipBack size={16}/></button>
           <button onClick={()=>void play()} aria-label={playing?"Mettre en pause":"Lire la partition"} className="flex min-h-10 items-center gap-2 rounded-[5px] bg-white px-4 text-sm font-semibold text-black">
-            {playing?<Pause size={16}/>:<Play size={16}/>} {playing?"Pause":"Écouter"}
+            {playing?<Pause size={16}/>:<Play size={16}/>} {playing?"Pause":"Reprendre"}
           </button>
           <span className="min-w-[72px] font-mono text-xs text-white/70">{formatMusicTime(position)} / 3:45</span>
+          <button type="button" aria-label={soundActive?"Couper le son musical":"Activer le son musical"} aria-pressed={soundActive}
+            onClick={()=>{const next=!soundActive;soundRef.current=next;setSoundActive(next);if(!next)audioRef.current?.stopVoices();else void audioRef.current?.activate().then(()=>setAudioOn(true)).catch(()=>setStatus("Audio indisponible."));}}
+            className={stepButtons+" !px-2"} title={soundActive?"Désactiver le son":"Activer le son"}>
+            {soundActive?<Volume2 size={16}/>:<VolumeX size={16}/>}
+          </button>
         </div>
       </div>
       <div className="rounded-[7px] border border-black/10 bg-white text-[#1f2030] shadow-[0_20px_55px_#0002]">
         <div className="flex items-center justify-between border-b border-black/10 px-4 py-3 text-[11px]">
           <span className="font-semibold">{score.notes.length} gestes dans la partition</span>
-          <span className="text-black/60">Grave ↓ · Aigu ↑ · Glissez un geste pour le déplacer</span>
+          <span className="text-black/60">Grave ↓ · Aigu ↑ · Posez et écoutez une note en direct</span>
         </div>
         <div className="overflow-x-auto" aria-label="Partition temporelle interactive">
           <svg ref={svgRef} viewBox="0 0 960 460" className={"block min-w-[760px] w-full touch-none select-none "+(contrast?"bg-white":"bg-[#fcfbfe]")}
@@ -339,22 +348,38 @@ export default function MusicStudio({onBack}:Props){
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] text-white/60">Sans lecture de notes ni solfège : chaque forme devient un son harmonieux dans une gamme pentatonique.</p>
-        <div className="flex items-center gap-2 text-[11px] text-white/65"><Volume2 size={14}/> Lecture locale · aucun serveur musical</div>
+        <p className="text-[11px] text-white/60">La lecture visuelle tourne en continu. Chaque nouveau geste sonne dès sa création ; l’audio s’active après votre premier clic ou toucher.</p>
+        <div className="flex items-center gap-2 text-[11px] text-white/65"><Volume2 size={14}/> {audioOn?"Son prêt":"Audio en attente du premier geste"} · synthèse locale</div>
       </div>
       {status&&<p className="mt-3 rounded-[5px] border border-white/15 bg-[#09090b] p-3 text-xs text-white" role="status">{status}</p>}
     </div>
-    <div aria-label="Palette des émotions musicales"
-      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[99px] items-center gap-3 overflow-hidden border-t border-white/15 bg-[#09090b] px-3 pb-[env(safe-area-inset-bottom)] text-white">
-      <div className="hidden w-[180px] shrink-0 border-r border-white/10 pr-3 text-xs lg:block">
-        <strong>Choisir une émotion</strong><span className="mt-1 block text-[10px] text-white/55">Elle colore votre prochain geste</span>
+    <div aria-label="Palette des émotions musicales" className="fixed inset-x-0 bottom-0 z-30 flex h-[148px] flex-col overflow-hidden border-t border-white/15 bg-[#09090b] text-white">
+      <div className="flex h-[36px] shrink-0 items-center gap-3 border-b border-white/10 px-3">
+        <strong className="text-[11px]">Émotions & DMC</strong>
+        <span className="hidden text-[10px] text-white/55 sm:inline">La couleur influence la note et sa sonorité</span>
+        <span className="ml-auto text-[10px] text-white/60">{dmcCode?"Fil "+dmcCode:"Timbres émotionnels"}</span>
       </div>
-      <div className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto" role="group" aria-label="Émotions musicales">
-        {EMOTIONS.map(e=><button type="button" key={e.id} aria-label={"Émotion "+e.id} aria-pressed={emotion===e.id}
-          onClick={()=>{setEmotion(e.id);if(current)updateNotes(notes=>notes.map(n=>n.id===current.id?{...n,emotion:e.id}:n));}}
-          className={"flex min-w-[78px] shrink-0 flex-col items-center justify-center gap-1 rounded-[5px] px-2 py-2 text-[10px] "+(emotion===e.id?"bg-white/15 ring-1 ring-white/65":"hover:bg-white/10")+(large?" !min-w-[98px] !text-xs":"")}>
-          <span className="size-7 rounded-full border-2 border-white/25" style={{backgroundColor:e.hex}}/><span>{e.id}</span>
+      <div className="no-scrollbar flex h-[54px] shrink-0 items-center gap-1 overflow-x-auto px-2" role="group" aria-label="Émotions musicales">
+        {EMOTIONS.map(e=><button type="button" key={e.id} aria-label={"Émotion "+e.id} aria-pressed={emotion===e.id&&!dmcCode}
+          onClick={()=>{setEmotion(e.id);setDmcCode(null);if(current)updateNotes(notes=>notes.map(n=>n.id===current.id?{...n,emotion:e.id,dmcCode:undefined}:n));}}
+          className={"flex min-w-[76px] shrink-0 items-center gap-1.5 rounded-[5px] px-2 py-2 text-[10px] "+(emotion===e.id&&!dmcCode?"bg-white/15 ring-1 ring-white/60":"hover:bg-white/10")}>
+          <span className="size-5 shrink-0 rounded-full border border-white/30" style={{backgroundColor:e.hex}}/><span>{e.id}</span>
         </button>)}
+      </div>
+      <div className="flex min-h-0 flex-1 items-center gap-2 border-t border-white/10 px-2">
+        <label className="relative w-[108px] shrink-0 sm:w-[170px]">
+          <span className="sr-only">Rechercher un fil DMC musical</span>
+          <input type="search" aria-label="Rechercher un fil DMC musical" value={dmcSearch} onChange={e=>setDmcSearch(e.target.value)}
+            placeholder="DMC · code ou nom" className="h-8 w-full rounded-[5px] border border-white/20 bg-white/10 px-2 text-[10px] text-white outline-none placeholder:text-white/50"/>
+        </label>
+        <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto" role="group" aria-label="Nuancier sonore DMC">
+          {dmcList.map(f=><button type="button" key={f.code} aria-label={"Jouer et choisir DMC "+f.code} aria-pressed={dmcCode===f.code}
+            onClick={()=>void chooseDMC(f.code)} title={"DMC "+f.code+" · "+f.name}
+            className={"flex min-w-[56px] shrink-0 flex-col items-center gap-1 rounded-[5px] px-1 py-1 text-[10px] "+(dmcCode===f.code?"bg-white/15 ring-1 ring-white/65":"hover:bg-white/10")}>
+            <span className="h-5 w-9 rounded-[4px] border border-white/20" style={{backgroundColor:f.hex}}/><span className="font-mono">{f.code}</span>
+          </button>)}
+          {dmcList.length===0&&<p className="text-[11px] text-white/60">Aucun fil trouvé.</p>}
+        </div>
       </div>
     </div>
     <input ref={jsonInput} type="file" accept=".json,application/json" aria-label="Choisir une partition JSON" className="sr-only" onChange={e=>void importJson(e)}/>
