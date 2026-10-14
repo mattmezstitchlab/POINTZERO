@@ -19,11 +19,6 @@ function mount(component:React.ReactNode){
   act(()=>root!.render(component));
   return host;
 }
-function click(selector: string) {
-  const button=host?.querySelector<HTMLButtonElement>(selector);
-  expect(button,selector).toBeTruthy();
-  act(()=>button?.dispatchEvent(new MouseEvent("click",{bubbles:true})));
-}
 function clickText(text:string){
   const button=Array.from(host?.querySelectorAll<HTMLButtonElement>("button")??[]).find(b=>b.textContent?.includes(text));
   expect(button,text).toBeTruthy();
