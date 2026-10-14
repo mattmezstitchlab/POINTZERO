@@ -31,6 +31,7 @@ import { TRACKS, answerQuery, entryById, loadCoach, resolveStep, saveCoach, step
 
 type Panel = "palette" | "project" | "library" | "share" | "export" | null;
 type Workspace = "create" | "stitch";
+const screenFromHash = (): "landing" | "editor" | "slame" => window.location.hash === "#atelier" ? "editor" : window.location.hash === "#slame" ? "slame" : "landing";
 const STITCH_TOOLS = new Set<Tool>(["hand", "pick", "mark", "details", "block", "row", "park", "unpick", "note"]);
 /**
  * Raccourcis d'outils.
@@ -54,7 +55,7 @@ function initialPreferences(): Preferences {
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 export default function App() {
-  const [screen, setScreen] = useState<"landing" | "editor" | "slame">(() => window.location.hash === "#atelier" ? "editor" : window.location.hash === "#slame" ? "slame" : "landing");
+  const [screen, setScreen] = useState<"landing" | "editor" | "slame">(screenFromHash);
   const [boot] = useState(loadStored);
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
@@ -138,7 +139,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const sync = () => setScreen(window.location.hash === "#atelier" ? "editor" : window.location.hash === "#slame" ? "slame" : "landing");
+    const sync = () => setScreen(screenFromHash());
     window.addEventListener("hashchange", sync); window.addEventListener("popstate", sync);
     return () => { window.removeEventListener("hashchange", sync); window.removeEventListener("popstate", sync); };
   }, []);
@@ -344,23 +345,23 @@ export default function App() {
   }, [coachOpen, coachStep, ask, color, strokes, panel, coachNext]);
 
   const openEditor = () => { window.location.hash = "atelier"; setScreen("editor"); };
-  const openSlame = () => { window.location.hash = "slame"; setScreen("slame"); };
+  const openSlame = () => { window.location.hash = "slame"; closePanel(); setScreen("slame"); };
   const openLanding = () => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); closePanel(); history.pushState(null, "", window.location.pathname + window.location.search); setScreen("landing"); window.scrollTo(0, 0); };
   const onRemote = useCallback((p: Pattern | null) => { setRemote(p); if (p) { setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); } }, []);
 
-  if (screen === "slame")
-    return <SlameStudio pattern={P} onHome={openLanding} onEditor={openEditor} />;
-
+  if (screen === "slame") return <SlameStudio pattern={P} onBack={openEditor} />;
   if (screen === "landing")
     return (
-      <Landing
-        onOpen={openEditor}
-        onSlame={openSlame}
-        onMotif={(motif) => {
-          setPattern(motif);
-          openEditor();
-        }}
-      />
+      <>
+        <Landing
+          onOpen={openEditor}
+          onMotif={(motif) => {
+            setPattern(motif);
+            openEditor();
+          }}
+        />
+        <button type="button" onClick={openSlame} style={{ position: "fixed", zIndex: 80, right: 18, bottom: 24, padding: "13px 17px", borderRadius: 9, fontSize: 13, fontWeight: 700, color: "#15171d", background: "#f2d5a2", boxShadow: "0 8px 30px #0004" }}>♫ SLÂME · La grille musicale</button>
+      </>
     );
   return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-black ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <Canvas pattern={P} tool={remote ? "hand" : tool} color={color} view={view} symbols={symbols} highlightActive={workspace === "stitch"} insets={insets} fitKey={fitKey} onlyActive={prefs.onlyActive} highContrast={prefs.highContrast} pencilOnly={prefs.pencilOnly} symmetry={prefs.symmetry} annotation={prefs.annotation} readOnly={!!remote} selection={selection} halfDirection={prefs.halfDirection}
@@ -368,8 +369,8 @@ export default function App() {
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
       onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); if (changed) setStrokes((n) => n + 1); }}
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }} />
-    <button type="button" onClick={openSlame} className="fixed right-4 top-[78px] z-40 rounded-xl border border-[#baa5ff] bg-[#473677] px-4 py-2 text-sm font-semibold text-white shadow-lg" aria-label="Ouvrir SLÂME : broder la musique et parler">♫ SLÂME</button>
     <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
+    <button type="button" onClick={openSlame} className="fixed right-4 top-[88px] z-[29] rounded-[9px] border border-amber-300/50 bg-[#e9cf9e] px-3 py-2 text-[12px] font-semibold text-[#11131a] shadow-lg">♫ SLÂME · Écouter / Parler</button>
     <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} coachTool={coachOpen ? coachTool : null} />
     {selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
     <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || !!file} />
