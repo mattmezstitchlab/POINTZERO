@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, RotateCcw, Save, Shirt, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Download, RotateCcw, Shirt, X } from "lucide-react";
 import { GARMENTS, GARMENT_COLORS, createGarment, fashionTechSheet, fashionToSVG, validGarment, type GarmentProject, type GarmentSide } from "../lib/fashionStudio";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
@@ -64,7 +64,6 @@ export default function FashionStudio({onBack}:{onBack:()=>void}){
     }catch(err){setNotice(err instanceof Error?err.message:"Export impossible.");}
     finally{setBusy(false);}
   };
-  const sizes=["XS","S","M","L","XL","XXL"];
   return <div className="pz-fashion fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#151517] text-white">
     <header className="flex h-[58px] shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#09090b] px-3">
       <div className="flex items-center gap-3">
