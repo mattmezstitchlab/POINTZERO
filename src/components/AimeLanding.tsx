@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Brush, ChevronDown, Frame, Heart, Music2, Palette, Sparkles, Users, Volume2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Brush, Frame, Heart, Music2, Palette, Sparkles, Users } from "lucide-react";
 import { artToSVG, GALLERY_KEY, safeGallery } from "../lib/artWorldCore";
 
 interface Props {onBack:()=>void;onCreate:()=>void;onMusic:()=>void;onGallery:()=>void}
