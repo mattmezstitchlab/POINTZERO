@@ -21,6 +21,7 @@ interface Props {
   onFit: () => void;
   saving: string;
   onDrawing?: () => void;
+  onAdvanced?: () => void;
   drawing?: boolean;
 }
 const views: ViewMode[] = ["real", "flat", "pattern"];
@@ -42,6 +43,7 @@ export default function TopBar(p: Props) {
       <button type="button" className={iconButton} aria-label="Réglages et aide" title="Réglages" onClick={p.onSettings}><Settings2 size={17}/></button>
       <button type="button" className={iconButton} aria-label="Plus d'options" aria-expanded={more} onClick={() => setMore(v => !v)}><Ellipsis size={19}/></button>
       {more && <div className="pz-surface absolute right-0 top-[calc(100%+8px)] grid w-[205px] gap-1 p-2 text-sm text-white" aria-label="Options d'affichage">
+        {p.onAdvanced && <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onAdvanced?.(); setMore(false); }}><Layers size={16}/> Options de composition</button>}
         {p.onDrawing && <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onDrawing?.(); setMore(false); }} aria-pressed={!!p.drawing}><Pencil size={16}/> {p.drawing ? "Masquer les outils" : "Outils de dessin"}</button>}
         <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { cycle(); setMore(false); }}><Layers size={16}/> Affichage · {p.view}</button>
         <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onSymbols(); setMore(false); }} aria-pressed={p.symbols}><Type size={16}/> Symboles</button>
