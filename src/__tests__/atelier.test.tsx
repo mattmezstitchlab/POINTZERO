@@ -83,7 +83,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await click(used);
     expect(used?.getAttribute("aria-pressed")).toBe("true");
     await click(button("Ajouter ou rechercher un fil DMC"));
-    expect(dialog("Palette DMC")).toBeTruthy();
+    expect(dialog("Nuancier DMC")?.classList.contains("is-open")).toBe(true);
   });
   it("ouvre et ferme les panneaux mobiles sans masquer la grille", async () => {
     await mount();
