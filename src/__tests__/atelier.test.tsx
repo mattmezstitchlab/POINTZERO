@@ -66,10 +66,12 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
     expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+    await click(button("Ouvrir le menu des studios"));
     await click(button("Ouvrir le studio Photo"));
     expect(container?.querySelector('[aria-label="Prévisualisation photo"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Réglages de retouche"]')).toBeTruthy();
     await click(button("Retour aux supports graphiques"));
+    await click(button("Ouvrir le menu des studios"));
     await click(button("Ouvrir le studio Stylisme"));
     expect(container?.querySelector('[aria-label="Maquette de vêtement"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Propriétés du vêtement"]')).toBeTruthy();
