@@ -81,6 +81,12 @@ export interface CompositionMetadata {
 }
 
 export interface Pattern {
+  /** Optional auditable DMC adaptation recipe. Original sprite scene unaffected. */
+  adaptation?: {
+    version:1;mode: import("./brodeuseProfile").AdaptationMode;
+    substitutions:{from:string;to:string;deltaE:number}[];
+    warnings:string[];profileBrand:string;
+  };
   /** Autonomous reusable subject layers; optional in legacy projects. */
   subjectScene?: import("./subjectEngine").SubjectScene;
   /** Optional recipe; legacy projects remain compatible and unchanged. */
@@ -168,6 +174,7 @@ export function clonePattern(p: Pattern): Pattern {
     ...p,
     composition: p.composition ? { ...p.composition, settings: { ...p.composition.settings }, cards: p.composition.cards.map(c => ({ ...c })) } : undefined,
     subjectScene: p.subjectScene ? { ...p.subjectScene, layers: p.subjectScene.layers.map(l=>({...l})), warnings:[...p.subjectScene.warnings] } : undefined,
+    adaptation:p.adaptation ? { ...p.adaptation, substitutions:p.adaptation.substitutions.map(s=>({...s})), warnings:p.adaptation.warnings.slice()} : undefined,
     cross: p.cross.slice(),
     fwd: p.fwd.slice(),
     bwd: p.bwd.slice(),
@@ -511,6 +518,7 @@ export function toObject(p: Pattern) {
     v: 3,
     composition: p.composition,
     subjectScene: p.subjectScene,
+    adaptation:p.adaptation,
     id: p.id, folder: p.folder, fabric: p.fabric, provenance: p.provenance,
     backStrands: p.backStrands, waste: p.waste,
     ornamentDone: p.ornamentDone,
@@ -627,6 +635,18 @@ export function fromObject(input: unknown): Pattern | null {
           (l.tint!==undefined && (typeof l.tint!=="string" || l.tint.length>30))
         ))return undefined;
       return scene;
+    })(),
+    adaptation: (() => {
+      const x=o.adaptation;
+      if(!x||typeof x!=="object")return undefined;
+      const a=x as NonNullable<Pattern["adaptation"]>;
+      if(a.version!==1||!["original","stock","debutant","expert","petit","reduite"].includes(a.mode)||
+        typeof a.profileBrand!=="string"||a.profileBrand.length>40||!Array.isArray(a.warnings)||
+        a.warnings.length>30||a.warnings.some(v=>typeof v!=="string"||v.length>500)||
+        !Array.isArray(a.substitutions)||a.substitutions.length>100||
+        a.substitutions.some(t=>!t||typeof t.from!=="string"||typeof t.to!=="string"||
+          flossIndex(t.from)<0||flossIndex(t.to)<0||!Number.isFinite(t.deltaE)))return undefined;
+      return a;
     })(),
     provenance: o.provenance as Provenance | undefined,
     symbolMap: o.symbolMap as Record<string, number> | undefined,
