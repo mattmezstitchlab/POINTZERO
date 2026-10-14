@@ -9,7 +9,7 @@ import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 
 interface Props {
   onOpen: () => void;
-  onSlame: () => void;
+  onSlame?: () => void;
   onMotif: (p: Pattern) => void;
 }
 
@@ -32,7 +32,7 @@ const SLOTS_POSE = [
  * palette DMC vivent sur la toile, et l'outil zone serre ou desserre les
  * couleurs d'un rectangle de cases, selon la toile qu'on a chez soi.
  */
-export default function Landing({ onOpen, onMotif, onSlame }: Props) {
+export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
   const [promptText, setPromptText] = useState("");
   const [source, setSource] = useState<MotifGrille | null>(null);
   const [reglages, setReglages] = useState<ReglageZone[]>([]);

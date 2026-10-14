@@ -221,7 +221,6 @@ export default function SlameStudio({pattern,onHome,onEditor}:Props) {
   },[]);
   const cursorStitch=stitchAt(p,cursor);
   const paletteColor=cursorStitch?FLOSS[cursorStitch.idx]:null;
-  const within=points.filter(pt=>pt.x>=left&&pt.x<left+w&&pt.y>=top&&pt.y<top+h);
   return <main className="fixed inset-0 z-[70] overflow-auto bg-[#090c13] text-white">
     <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-white/15 bg-[#090c13] px-4 py-3">
       <div><strong className="text-xl tracking-tight">SLÂME <span className="text-[#d69eff]">✳</span></strong><div className="text-xs text-[#b8bed1]">POINTZERO × AIME Music · Les mots de l'âme</div></div>
