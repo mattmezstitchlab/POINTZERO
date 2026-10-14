@@ -61,12 +61,13 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
-  it("entre immédiatement sur la véritable grille, avec le champ de création central", async () => {
+  it("ouvre directement la grille et la bibliothèque de motifs, sans écran d'accueil", async () => {
     const view = await mount();
-    expect(view.querySelector("canvas")).toBeTruthy();
-    expect(view.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
+    expect(view.querySelector('canvas[role="application"]')).toBeTruthy();
+    expect(view.querySelector('[aria-label="Bibliothèque de motifs"]')).toBeTruthy();
+    expect(view.querySelector('button[aria-label="Ajouter Fleur rose"]')).toBeTruthy();
     expect(nav()?.querySelectorAll("button")).toHaveLength(4);
-    expect(view.textContent).toContain("Que voulez-vous broder ?");
+    expect(view.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeNull();
   });
   it("ne montre ni guide, ni démarrage automatique, même si l'ancien état subsiste", async () => {
     localStorage.setItem("point-zero:coach", JSON.stringify({ seen: false, dismissed: false }));
@@ -75,12 +76,19 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(button("Guide de l'atelier")).toBeNull();
     expect(container?.querySelector('[data-coach="on"]')).toBeNull();
   });
-  it("ouvre les outils Composer dans un unique panneau contextuel", async () => {
+  it("Dessiner conserve la grille centrale sans ouvrir le grand panneau de réglages", async () => {
     await mount();
     await click(category("Dessiner"));
-    expect(dialog("Composer")?.classList.contains("is-open")).toBe(true);
-    expect(dialog("Composer")?.textContent).toContain("Lettrage compté");
-    expect(dialog("Composer")?.textContent).toContain("Composition intelligente");
+    expect(dialog("Composer")?.classList.contains("is-open")).toBeFalsy();
+    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+  });
+  it("ajoute un motif DMC par clic et ouvre ses propriétés minimales", async () => {
+    await mount();
+    await click(container?.querySelector('button[aria-label="Ajouter Fleur rose"]'));
+    expect(container?.querySelector('[aria-label="Propriétés du motif"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Taille du motif"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Calques de composition"]')).toBeTruthy();
+    expect(button("Annuler")?.hasAttribute("disabled")).toBe(false);
   });
   it("réunit fils, toile et profil dans le même panneau", async () => {
     await mount();
