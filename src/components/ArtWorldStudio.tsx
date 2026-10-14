@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ChangeEvent } from "react";
-import { ArrowLeftRight, Check, Download, Eraser, FolderOpen, Frame, Image, Music2, Pause, PenLine, Plus, Redo2, Save, Search, Sparkles, Undo2, Volume2, VolumeX, WandSparkles } from "lucide-react";
+import { ArrowLeftRight, Download, FolderOpen, Frame, Image, PenLine, Plus, Redo2, Save, Search, Sparkles, Undo2, Volume2, VolumeX, WandSparkles } from "lucide-react";
 import { StudioFrame, saveStudioFile, studioButton, studioInput } from "./StudioFrame";
 import { BASE_FLOSS, flossIndex } from "../lib/dmc";
 import { imageToDmc } from "../lib/dither";
@@ -41,7 +41,6 @@ const tone=(ctx:AudioContext,code:string,hex:string)=>{
   osc.onended=()=>{osc.disconnect();gain.disconnect();};
 };
 interface Props {onBack:()=>void;onPattern:(p:Pattern)=>void;onDesign:(dataURL:string)=>void}
-const isDraw=(tool:ArtTool)=>tool!=="eraser"&&tool!=="move";
 const lineDist=(p:ArtPoint,a:ArtPoint,b:ArtPoint)=>{
   const vx=b.x-a.x,vy=b.y-a.y,d=vx*vx+vy*vy||1;
   const t=Math.max(0,Math.min(1,((p.x-a.x)*vx+(p.y-a.y)*vy)/d));
