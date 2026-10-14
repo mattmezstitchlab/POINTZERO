@@ -174,7 +174,7 @@ export default function PDFStudio({onBack,onConvertToPattern,onUsePattern}:Props
       {mode==="pages"&&<div className="mt-5 space-y-2 border-t border-white/15 pt-4">
         <button disabled={!summary.kept||!!busy} onClick={()=>void exportRaster()} className={studioButton+" w-full"}><Download size={15}/> Assembler et exporter PDF</button>
         <button disabled={!summary.kept||!!busy} onClick={()=>void extractText()} className={studioButton+" w-full"}><Scissors size={15}/> Extraire le texte .txt</button>
-      </div>
+      </div>}
       {mode==="pages"&&<p className="mt-4 text-[11px] leading-relaxed text-white/60"><strong className="text-white">Limite importante :</strong> l'export PDF reconstruit les pages comme images. Il conserve l'apparence, mais pas les textes vectoriels, champs, signatures ni liens interactifs du PDF original.</p>
       {mode==="pages"&&<p className="mt-2 text-[11px] text-white/55">Aucune modification des fichiers originaux. Pas de signature, de suppression définitive de contenu ou d'OCR.</p>
     </>}
