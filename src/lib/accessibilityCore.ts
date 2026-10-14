@@ -44,6 +44,7 @@ export function applyPrefs(p:Preferences):void{
  root.dataset.pzMotion=p.reduceMotion||systemReduced?"reduce":"standard";
  root.dataset.pzFocus=p.enhancedFocus?"strong":"standard";
  root.dataset.pzDiscretion=p.privacyBlur?"on":"off";
+ root.dataset.pzTextScale=p.fontScale!==1||p.lineHeight!==1.5||p.spacing!==0?"custom":"standard";
  root.style.setProperty("--pz-accent",p.accent);
  root.style.setProperty("--pz-user-font-scale",String(p.fontScale));
  root.style.setProperty("--pz-user-line-height",String(p.lineHeight));
