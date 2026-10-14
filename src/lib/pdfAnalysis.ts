@@ -1,6 +1,7 @@
 import { flossIndex, labOf, nearestFloss } from "./dmc";
 import { rectify, type Corners } from "./chartRecognition";
 import { openPdf, type PdfHandle } from "./pdfimport";
+import { codeOfText } from "./pdfVector";
 import { quantizePixels } from "./quantize";
 
 /**
@@ -291,14 +292,7 @@ function coloredModelAspect(canvas: HTMLCanvasElement): number | null {
 
 /* ------------------------------ Texte ------------------------------ */
 
-const codeOf = (str: string): string => {
-  const s = str.trim().toUpperCase();
-  const m = /^DMC\s*([A-Z0-9]+)/.exec(s);
-  if (m) return m[1];
-  if (/^\d{1,4}$/.test(s)) return s;
-  if (/^(BLANC|ECRU|B5200)$/.test(s)) return s;
-  return "";
-};
+const codeOf = (str: string): string => codeOfText(str);
 
 const isFlossCode = (code: string) => code !== "" && flossIndex(code) >= 0;
 

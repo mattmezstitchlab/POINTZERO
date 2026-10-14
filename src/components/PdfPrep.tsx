@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { ArrowLeft, Check, Grid3x3, Magnet, Undo2, ZoomIn, ZoomOut } from "lucide-react";
-import { FLOSS } from "../lib/dmc";
+import { FLOSS, flossIndex } from "../lib/dmc";
+import { closestDmcAlternatives, patternFromVector, remapImportedPalette } from "../lib/pdfColorImport";
 import {
   analyzePdf,
   convertBlockAuto,
@@ -80,6 +81,7 @@ export default function PdfPrep({
   const [mode, setMode] = useState<Mode>("auto");
   const [colors, setColors] = useState(24);
   const [assembled, setAssembled] = useState<Assembled | null>(null);
+  const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [author, setAuthor] = useState("");
   const [authorized, setAuthorized] = useState(false);
 
@@ -114,6 +116,9 @@ export default function PdfPrep({
   useEffect(() => {
     let live = true;
     setBusy("Analyse du PDF…");
+    registry.current = new SymbolRegistry();
+    cache.current.clear();
+    setCorrections({});
     analyzePdf(file, (m) => {
       if (live) setBusy(m);
     })
@@ -382,6 +387,28 @@ export default function PdfPrep({
           return;
         }
         setError("");
+        // Priorité aux codes DMC réellement présents dans le tableau PDF :
+        // l'ancien mode "vecteur" était bien détecté mais jamais utilisé.
+        if (mode === "vecteur") {
+          if (!vector?.ok) {
+            setAssembled(null);
+            setError("Correspondance vectorielle indisponible : choisissez Automatique pour lire les couleurs visibles.");
+            return;
+          }
+          const p = patternFromVector(vector, analysis.title);
+          if (!p) {
+            setAssembled(null);
+            setError("Codes DMC vectoriels illisibles : choisissez Automatique.");
+            return;
+          }
+          const miss = Object.values(vector.unmapped).reduce((sum, n) => sum + n, 0);
+          setAssembled({
+            pattern: p, rawW: p.w, rawH: p.h, fitW: p.w, fitH: p.h,
+            scaled: false, blocks: effective.length, byColor: 0,
+            byLegend: vector.cells.size, unresolved: miss, source: "vecteur",
+          });
+          return;
+        }
         for (let i = 0; i < effective.length; i++) {
           const b = effective[i];
           const key = keyOf(b, mode, colors);
@@ -416,13 +443,26 @@ export default function PdfPrep({
     return () => {
       dead = true;
     };
-  }, [stage, handle, analysis, sig, layoutSig, mode, colors]);
+  }, [stage, handle, analysis, sig, layoutSig, mode, colors, vector]);
 
-  const preview = useMemo(() => (assembled ? renderPreview(assembled.pattern) : ""), [assembled]);
+  // Les substitutions sont un calque NON DESTRUCTIF. Modifier une estimation
+  // ne modifie jamais les données extraites du PDF ; annuler restaure l'original.
+  const correctedPattern = useMemo(
+    () => assembled ? remapImportedPalette(assembled.pattern, corrections) : null,
+    [assembled, corrections],
+  );
+  const preview = useMemo(() => (correctedPattern ? renderPreview(correctedPattern) : ""), [correctedPattern]);
+  const detectedColors = useMemo(() => {
+    if (!assembled) return [];
+    const counts = new Map<number, number>();
+    for (const idx of assembled.pattern.cross) if (idx >= 0) counts.set(idx, (counts.get(idx) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [assembled]);
 
   const commit = () => {
     if (!assembled) return;
-    const p = assembled.pattern;
+    const p = correctedPattern;
+    if (!p) return;
     p.provenance = {
       kind: "pdf",
       source: file.name,
@@ -430,7 +470,7 @@ export default function PdfPrep({
       license: authorized ? "Droits de redistribution déclarés" : "Usage personnel uniquement",
       personalOnly: !authorized,
     };
-    p.notes = `PDF reconstitué : ${assembled.blocks} blocs assemblés en mosaïque magnétique (${assembled.fitW} × ${assembled.fitH} pts).`;
+    p.notes = `PDF reconstitué : ${assembled.blocks} blocs (${assembled.fitW} × ${assembled.fitH} pts). Codes DMC ${assembled.source === "vecteur" ? "lus dans la légende vectorielle" : "lus dans l'image / estimés par couleur"} : ${assembled.byLegend} associés, ${assembled.byColor} déduits par couleur, ${assembled.unresolved} symboles non résolus. Vérifier les estimations sur la légende originale. Substitutions manuelles : ${Object.entries(corrections).filter(([from, to]) => from !== to && flossIndex(to) >= 0).map(([from, to]) => from + "→" + to).join(", ") || "aucune"}.\nDocument original : ${file.name}`;
     onImport(p);
   };
 
@@ -483,7 +523,12 @@ export default function PdfPrep({
             <h3 className="text-[15px] font-semibold">Pages analysées</h3>
             <p className="mt-1 text-[13px] text-label-2">
               {analysis.pages.filter((p) => p.kind === "chart").length} page(s) de grille · {blocks.length} bloc(s) détecté(s) · modèle couleur au format {analysis.modelAspect.toFixed(2)}
-              {vector?.ok ? " · texte vectoriel disponible" : ""}.
+              {vector?.ok ? " · codes DMC et symboles vectoriels reconnus" : ""}.
+            </p>
+            <p className="mt-2 text-[12px] text-label-2" role="status">
+              {vector?.ok
+                ? `Lecture vectorielle de ${vector.cells.size} cases avec codes DMC du PDF, à vérifier dans l’aperçu.`
+                : `Légende image : ${analysis.legend.length} correspondance(s) détectée(s). Les codes absents ne peuvent pas être devinés depuis des symboles noirs et blancs.`}
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {analysis.pages.map((p) => (
@@ -582,7 +627,7 @@ export default function PdfPrep({
                 <button className="btn-quiet flex-1" onClick={() => setStage(0)}>
                   Retour
                 </button>
-                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => setStage(2)}>
+                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => { setCenterTab(mode === "vecteur" ? "preview" : "puzzle"); setStage(2); }}>
                   Monter le puzzle →
                 </button>
               </div>
@@ -823,6 +868,11 @@ export default function PdfPrep({
               <section className="rounded-[14px] bg-white/5 p-3.5">
                 <h3 className="mb-2 text-[13px] font-semibold">Lecture des points</h3>
                 <div className="seg mb-2">
+                  {vector?.ok && (
+                    <button type="button" aria-pressed={mode === "vecteur"} onClick={() => { setMode("vecteur"); setCenterTab("preview"); }}>
+                      DMC exacts
+                    </button>
+                  )}
                   <button type="button" aria-pressed={mode === "auto"} onClick={() => setMode("auto")}>
                     Automatique
                   </button>
@@ -831,7 +881,11 @@ export default function PdfPrep({
                   </button>
                 </div>
                 <p className="text-[11.5px] leading-relaxed text-label-3">
-                  Lit chaque case d'après sa vraie couleur de fil DMC. Les symboles noirs/blancs sont reliés à la légende.
+                  {mode === "vecteur"
+                    ? "Codes DMC de la légende associés aux symboles vectoriels. L’assemblage suit les axes du PDF (pas le déplacement manuel des tuiles). Les symboles inconnus restent vides."
+                    : mode === "auto"
+                      ? "Associe les symboles lisibles à la légende DMC ; pour les cases visiblement colorées, propose le fil le plus proche."
+                      : "Photographie couleur : estimation des références DMC à partir des pixels imprimés. À vérifier avant de broder."}
                 </p>
                 {mode === "photo" && (
                   <div className="mt-2.5">
@@ -849,6 +903,60 @@ export default function PdfPrep({
                   </div>
                 )}
               </section>
+
+              {assembled && correctedPattern && (
+                <section className="rounded-[14px] bg-white/5 p-3.5" aria-label="Couleurs DMC reconnues">
+                  <h3 className="mb-2 text-[13px] font-semibold">Couleurs et codes DMC</h3>
+                  <p className="text-[11px] leading-relaxed text-label-3">
+                    {assembled.byLegend} points liés à la légende · {assembled.byColor} points estimés par couleur.
+                    {assembled.unresolved > 0 && ` ${assembled.unresolved} symbole(s) sans code reconnu, laissés vides.`}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-label-3">
+                    {assembled.source === "vecteur"
+                      ? "Codes extraits du PDF. Vous pouvez toujours remplacer une teinte manuellement."
+                      : "Couleurs d'image approximatives : vérifiez la légende du PDF avant d'accepter."}
+                  </p>
+                  <div className="mt-3 max-h-[260px] space-y-3 overflow-y-auto pr-1">
+                    {detectedColors.map(([idx, count]) => {
+                      const floss = FLOSS[idx];
+                      if (!floss) return null;
+                      const suggestion = closestDmcAlternatives(idx, 3);
+                      const selected = corrections[floss.code] ?? floss.code;
+                      const valid = flossIndex(selected.toUpperCase().trim()) >= 0;
+                      return (
+                        <div key={floss.code} className="rounded-md border border-white/10 bg-white/5 p-2.5">
+                          <div className="mb-2 flex items-center gap-2 text-[12px]">
+                            <span className="h-5 w-5 shrink-0 rounded-sm border border-white/20" style={{ backgroundColor: FLOSS[flossIndex(valid ? selected.toUpperCase().trim() : floss.code)]?.hex ?? floss.hex }} />
+                            <span className="min-w-0 flex-1 truncate">DMC {floss.code} · {floss.name}</span>
+                            <span className="text-[11px] text-label-3">{count} pts</span>
+                          </div>
+                          <label className="block text-[11px] text-label-3">
+                            Remplacer par code DMC
+                            <input
+                              value={selected}
+                              onChange={e => setCorrections(previous => ({ ...previous, [floss.code]: e.target.value.toUpperCase().trim() }))}
+                              className={`field mt-1 min-h-9 w-full text-[12px] ${valid ? "" : "border-[#ff9f0a]"}`}
+                              aria-label={`Code DMC de remplacement pour ${floss.code}`}
+                            />
+                          </label>
+                          {!valid && <p className="mt-1 text-[11px] text-[#ffbd70]">Code non reconnu, couleur originale conservée.</p>}
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {suggestion.map(s => (
+                              <button key={s.idx} type="button" className="flex items-center gap-1 rounded border border-white/15 px-1.5 py-1 text-[11px] text-label-2"
+                                title={`Couleur proche de DMC ${floss.code}, écart CIEDE2000 ${s.deltaE.toFixed(1)}`}
+                                onClick={() => setCorrections(previous => ({ ...previous, [floss.code]: FLOSS[s.idx].code }))}>
+                                <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: FLOSS[s.idx].hex }} />
+                                {FLOSS[s.idx].code}
+                              </button>
+                            ))}
+                            {selected !== floss.code && <button type="button" className="px-1 text-[11px] text-accent-2" onClick={() => setCorrections(previous => ({ ...previous, [floss.code]: floss.code }))}>Rétablir</button>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
               <section className="rounded-[14px] bg-white/5 p-3.5">
                 <h3 className="mb-2 text-[13px] font-semibold">Auteur et droits</h3>
