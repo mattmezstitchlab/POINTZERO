@@ -68,7 +68,14 @@ export default function MusicProductionStudio({onBack,linkedProject}:Props){
    setNotice(result.reason);
  };
  const setRequestStatus=(id:string,status:"proposed"|"approved"|"rejected")=>
-   update(s=>({...s,requests:s.requests.map(r=>r.id===id?{...r,status}:r)}));
+   update(s=>{
+     const request=s.requests.find(r=>r.id===id);
+     if(!request||status!=="approved")return {...s,requests:s.requests.map(r=>r.id===id?{...r,status}:r)};
+     const found=matchTrack(s,request.title,request.artistName);
+     const created=found??newTrack(request.title,request.artistName);
+     const tracks=found?s.tracks:[...s.tracks,created];
+     return {...s,tracks,requests:s.requests.map(r=>r.id===id?{...r,status,trackId:created.id}:r)};
+   });
  const importGuestFile=async(e:ChangeEvent<HTMLInputElement>)=>{
    const file=e.target.files?.[0];e.target.value="";if(!file||!active)return;
    if(file.size>30000)return setNotice("Proposition trop volumineuse.");
@@ -87,16 +94,18 @@ export default function MusicProductionStudio({onBack,linkedProject}:Props){
  };
  const importAudios=(audios:File[])=>{
    let count=0,added=0;
+   const fresh:MusicLabelStore={...data,tracks:[...data.tracks]};
    for(const file of audios){
      if(file.size>80_000_000||(!file.type.startsWith("audio/")&&!/\.(wav|mp3|flac|m4a|ogg)$/i.test(file.name)))continue;
      const parts=file.name.replace(/\.[^.]+$/,"").split(" - ");
      const artist=parts.length>1?parts.shift()!.trim():"Artiste à renseigner";
      const title=parts.join(" - ").trim();
-     let matching=matchTrack(data,title,artist);
-     if(!matching){matching=newTrack(title,artist);const newValue=matching;update(s=>({...s,tracks:s.tracks.some(t=>t.id===newValue.id)?s.tracks:[...s.tracks,newValue]}));added++;}
+     let matching=matchTrack(fresh,title,artist);
+     if(!matching){matching=newTrack(title,artist);fresh.tracks.push(matching);added++;}
      const previous=files.current.get(matching.id);if(previous)URL.revokeObjectURL(previous);
      files.current.set(matching.id,URL.createObjectURL(file));count++;
    }
+   setData(fresh);
    setAssetsVersion(v=>v+1);
    setNotice(count+" fichiers locaux chargés ; "+added+" nouvelles fiches. L'audio n'est pas conservé à la fermeture.");
  };
