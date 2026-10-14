@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { Album, CalendarDays, Check, ChevronRight, Download, FileText, Plus, Radio, Upload, Users, WandSparkles } from "lucide-react";
+import { Album, Check, ChevronRight, Download, FileText, Plus, Radio, Upload, Users, WandSparkles } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import MusicRadioPanel from "./MusicRadioPanel";
 import MusicMasterPanel from "./MusicMasterPanel";
