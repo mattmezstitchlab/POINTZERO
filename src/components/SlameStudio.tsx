@@ -4,7 +4,7 @@ import type { Pattern } from "../lib/pattern";
 import { slameToMidi } from "../lib/slameMidi";
 import { appendWaypoint, makeMusicDemo, motifTrail, stepsForTrail, stitchAt, type ExpressionMood, type Point, type ScaleName, type MusicStep } from "../lib/slame";
 
-type Props = { pattern: Pattern; onHome: () => void; onEditor: () => void };
+type Props = { pattern: Pattern; active: boolean; onEditor: () => void };
 const SIZE = 16;
 const moods: {id: ExpressionMood; name: string; color: string}[] = [
   {id:"tender",name:"Tendre",color:"#eb87ad"}, {id:"joy",name:"Joyeux",color:"#eeb354"},
@@ -16,7 +16,7 @@ const card = "rounded-xl border border-white/15 bg-[#161b28] p-4";
 const clamp = (n:number,a:number,b:number)=>Math.max(a,Math.min(n,b));
 const timestamp = ()=>new Date().toISOString();
 
-export default function SlameStudio({pattern,onHome,onEditor}:Props) {
+export default function SlameStudio({pattern,active,onEditor}:Props) {
   const demo = useMemo(makeMusicDemo,[]);
   const real = useMemo(()=>motifTrail(pattern,1).length>0,[pattern]);
   const p = real ? pattern : demo;
@@ -45,7 +45,7 @@ export default function SlameStudio({pattern,onHome,onEditor}:Props) {
   const events=useMemo(()=>stepsForTrail(p,points,scale,mood),[p,points,scale,mood]);
   const wave=events.slice(-90);
   useEffect(()=>{currentCursor.current=cursor},[cursor]);
-  useEffect(()=>{setPoints([]);setCursor({x:0,y:0});setOx(0);setOy(0)},[p]);
+  useEffect(()=>{setPoints([]);setCursor({x:0,y:0});setOx(0);setOy(0)},[p.id]);
 
   const pick=useCallback((pt:Point)=>{
     if(pt.x<0||pt.y<0||pt.x>=p.w||pt.y>=p.h)return;
@@ -221,6 +221,8 @@ export default function SlameStudio({pattern,onHome,onEditor}:Props) {
       },130);
     }catch(err){stopMic();setStatus("Micro refusé ou absent : "+String(err))}
   };
+  // Conserver la session musicale à travers les catégories, sans conserver les capteurs actifs.
+  useEffect(()=>{if(!active){stop();stopCamera();stopMic();}},[active]);
   useEffect(()=>()=>{if(audioTimer.current!==null)clearInterval(audioTimer.current);
     if(cameraTimer.current!==null)clearInterval(cameraTimer.current);
     if(breathTimer.current!==null)clearInterval(breathTimer.current);
@@ -233,11 +235,10 @@ export default function SlameStudio({pattern,onHome,onEditor}:Props) {
   const paletteColor=cursorStitch?FLOSS[cursorStitch.idx]:null;
   return <main className="fixed inset-0 z-[70] overflow-auto bg-[#090c13] text-white">
     <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-white/15 bg-[#090c13] px-4 py-3">
-      <div><strong className="text-xl tracking-tight">SLÂME <span className="text-[#d69eff]">✳</span></strong><div className="text-xs text-[#b8bed1]">POINTZERO × AIME Music · Les mots de l'âme</div></div>
+      <div><strong className="text-xl tracking-tight">Musique & parole <span className="text-[#d69eff]">✳</span></strong><div className="text-xs text-[#b8bed1]">POINTZERO · Expression, musique et accessibilité</div></div>
       <nav className="flex flex-wrap gap-2" aria-label="Navigation SLÂME">
         <button className={button} onClick={()=>setHelp(!help)} aria-expanded={help}>Mode d'emploi {help?"−":"+"}</button>
-        <button className={button} onClick={onEditor}>Atelier de broderie</button>
-        <button className={button} onClick={onHome}>Accueil</button>
+        <button className={button} onClick={onEditor}>Retour à la grille</button>
       </nav>
     </header>
     {help&&<section className={card+" mx-auto my-3 max-w-5xl space-y-2"} aria-label="Mode d'emploi SLÂME">
