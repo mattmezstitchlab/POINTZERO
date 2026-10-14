@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
 import { blankPattern, initState, loadStored, reducer, saveStored } from "./lib/store";
-import { clonePattern, compositePattern, computeStats, createPattern, ensurePalette, type Pattern, type Supply } from "./lib/pattern";
+import { clonePattern, compositePattern, computeStats, createPattern, ensurePalette, toObject, fromObject, type Pattern, type Supply } from "./lib/pattern";
 import { readProjectFile, readTextFile, saveProjectFile } from "./lib/io";
 import { fromOxs } from "./lib/oxs";
 import { readInventory, saveLibrary, writeInventory } from "./lib/library";
@@ -14,6 +14,10 @@ import Dock from "./components/Dock";
 import TopBar from "./components/TopBar";
 import AtelierCreate from "./components/AtelierCreate";
 import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
+import MotifLibrary from "./components/MotifLibrary";
+import CompositionProperties from "./components/CompositionProperties";
+import { getMotifPreset } from "./lib/motifPresets";
+import { attachSubject, changeSubject, duplicateSubject, recomposeSubjects, removeSubject, reorderSubject, sceneFromPattern, type SubjectScene, type SubjectLayer } from "./lib/subjectEngine";
 import Sheet from "./components/Sheet";
 import PaletteSheet from "./components/PaletteSheet";
 import FlossRail from "./components/FlossRail";
@@ -57,10 +61,13 @@ export default function App() {
   const [boot] = useState(loadStored);
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
-  const [activeCategory, setActiveCategory] = useState<AtelierCategory>("create");
+  const [activeCategory, setActiveCategory] = useState<AtelierCategory>("compose");
   const [categoryPanel, setCategoryPanel] = useState<AtelierCategory | null>(null);
-  const [showWelcome, setShowWelcome] = useState(() => !boot || (boot.cross.every((c) => c < 0) && boot.back.length === 0 && boot.long.length === 0));
+  const [showWelcome, setShowWelcome] = useState(false);
   const [promptText, setPromptText] = useState("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  const subjectMove = useRef<{ scene: SubjectScene; base: Pattern; id: string; x: number; y: number } | null>(null);
+  const [showDrawingTools, setShowDrawingTools] = useState(false);
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
   const [autoImage, setAutoImage] = useState<File | null>(null);
   const P = remote ?? store.present;
@@ -122,7 +129,7 @@ export default function App() {
     if (!remote) { try { await saveLibrary(store.present, true); } catch { /* The explicit file backup remains available. */ } }
     const next = { ...p, supplies: { ...p.supplies, ...inventory } };
     setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
-    setSelection(null); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setCategoryPanel(null); setShowWelcome(false);
+    setSelection(null); setSelectedSubjectId(null); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setCategoryPanel(null); setShowWelcome(false);
   };
 
   useEffect(() => {
@@ -260,11 +267,86 @@ export default function App() {
     else { notify("Format non reconnu : image, PDF, JSON ou OXS."); return; }
     setShowWelcome(false); setCategoryPanel(null);
   };
+  // Snapshots are native POINTZERO projects, never flat decorative images.
+  const sceneOf = (p: Pattern): SubjectScene => {
+    const saved = sceneFromPattern(p);
+    if (saved) return saved;
+    const base = compositePattern({ ...p, subjectScene: undefined });
+    const snapshot = JSON.stringify(toObject({ ...base, subjectScene: undefined, composition: undefined, layers: [], activeLayer: undefined }));
+    return { version: 1, source: snapshot, backdrop: snapshot, layers: [], warnings: [] };
+  };
+  const addStitchedPattern = (sprite: Pattern, position?: { x: number; y: number }) => {
+    if (remote) { notify("Le projet partagé est en lecture seule."); return; }
+    try {
+      const scene = sceneOf(P);
+      const offset = Math.min(6, scene.layers.length) * 3;
+      const x = position ? Math.round(position.x - sprite.w / 2) : Math.round((P.w - sprite.w) / 2) + offset;
+      const y = position ? Math.round(position.y - sprite.h / 2) : Math.round((P.h - sprite.h) / 2) + offset;
+      const next = attachSubject(scene, sprite,
+        Math.max(0, Math.min(P.w - 1, x)), Math.max(0, Math.min(P.h - 1, y)));
+      setPattern(recomposeSubjects(next));
+      setSelectedSubjectId(next.layers[next.layers.length - 1]?.id ?? null);
+      setTool("hand"); setWorkspace("create"); setView("flat");
+      setActiveCategory("compose"); setShowWelcome(false); setCategoryPanel(null); closePanel();
+    } catch (error) { notify(error instanceof Error ? error.message : "Impossible d’ajouter ce motif."); }
+  };
+  const updateScene = (change: (scene: SubjectScene) => SubjectScene) => {
+    if (remote) return;
+    try { setPattern(recomposeSubjects(change(sceneOf(P)))); }
+    catch (error) { notify(error instanceof Error ? error.message : "Recomposition impossible."); }
+  };
+  const subjectStart = (x: number, y: number): boolean => {
+    if (remote || activeCategory !== "compose") return false;
+    const scene = sceneFromPattern(P);
+    if (!scene?.layers.length) return false;
+    const hit = [...scene.layers].reverse().find(layer => {
+      if (!layer.visible) return false;
+      const sprite = fromObject(JSON.parse(layer.sprite));
+      return sprite && x >= layer.x && y >= layer.y &&
+        x < layer.x + sprite.w * layer.scale && y < layer.y + sprite.h * layer.scale;
+    });
+    if (!hit) { setSelectedSubjectId(null); return false; }
+    setSelectedSubjectId(hit.id);
+    if (!hit.locked) {
+      subjectMove.current = { scene, base: P, id: hit.id, x: hit.x, y: hit.y };
+      dispatch({ type: "begin" });
+    }
+    return true;
+  };
+  const subjectMoveTo = (dx: number, dy: number) => {
+    const drag = subjectMove.current;
+    if (!drag || remote) return;
+    try {
+      const scene = changeSubject(drag.scene, drag.id, { x: drag.x + dx, y: drag.y + dy });
+      dispatch({ type: "live", pattern: recomposeSubjects(scene) });
+    } catch (error) { notify(error instanceof Error ? error.message : "Déplacement impossible."); }
+  };
+  const subjectEnd = (changed: boolean) => {
+    if (!subjectMove.current) return;
+    const drag = subjectMove.current;
+    subjectMove.current = null;
+    if (!changed) dispatch({ type: "live", pattern: drag.base });
+    dispatch({ type: "end", changed });
+  };
+  const changeSelectedSubject = (id: string, patch: Partial<Pick<SubjectLayer, "x" | "y" | "scale" | "visible" | "tint">>) =>
+    updateScene(scene => changeSubject(scene, id, patch));
+  const duplicateSelectedSubject = (id: string) => updateScene(scene => {
+    const next = duplicateSubject(scene, id);
+    const added = next.layers.find(layer => !scene.layers.some(old => old.id === layer.id));
+    if (added) setSelectedSubjectId(added.id);
+    return next;
+  });
+  const removeSelectedSubject = (id: string) => updateScene(scene => {
+    const next = removeSubject(scene, id);
+    setSelectedSubjectId(next.layers[next.layers.length - 1]?.id ?? null);
+    return next;
+  });
   const openCategory = (next: AtelierCategory) => {
     setActiveCategory(next);
     setPanel(null);
     if (next === "stitch") chooseWorkspace("stitch");
     else if (next === "compose" || next === "threads") chooseWorkspace("create");
+    if (next === "compose") { setTool("hand"); setCategoryPanel(null); setShowWelcome(false); return; }
     if (next === "create" && showWelcome) { setCategoryPanel(null); return; }
     setShowWelcome(false);
     setCategoryPanel((v) => v === next ? null : next);
@@ -273,7 +355,7 @@ export default function App() {
     prompt: promptText, onPrompt: setPromptText,
     onGenerate: () => setPromptOpen(true),
     onImport: importAnyFile,
-    onBlank: () => { panelActions.new(80, 80); setActiveCategory("compose"); },
+    onBlank: () => { panelActions.new(80, 80); setActiveCategory("compose"); setShowDrawingTools(false); },
     onLibrary: () => { setShowWelcome(false); setCategoryPanel(null); setPanel("library"); },
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
