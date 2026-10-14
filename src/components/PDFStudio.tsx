@@ -80,7 +80,7 @@ export default function PDFStudio({onBack,onConvertToPattern}:Props){
     setSources(old=>old.filter(s=>s.id!==id));
     sourcesRef.current=sourcesRef.current.filter(s=>s.id!==id);
     setPages(old=>old.filter(p=>p.sourceId!==id));
-    setSelected(old=>pages.find(p=>p.sourceId!==id)?.id??null);
+    setSelected(pages.find(p=>p.sourceId!==id)?.id??null);
     target?.handle.destroy();
   };
   const exportRaster=async()=>{
