@@ -13,7 +13,7 @@
 3. Autre possibilité : cliquer A, puis B, puis C, D... sur la grille. Les cases intermédiaires sont parcourues avec un algorithme de rasterisation. Les retours sur une même case restent dans la partition.
 4. Choisir la gamme, l'humeur musicale déclarée et le tempo. Cliquer Jouer ou activer une boucle.
 5. Choisir une expression (« Je t'aime », « Pardon », « Non », « J'ai besoin d'aide »...) ou écrire un message, puis cliquer Prononcer.
-6. Exporter le JSON du trajet, de la partition et du journal explicite. Ce fichier est local.
+6. Exporter le JSON du trajet, de la partition et du journal explicite, ou exporter un fichier MIDI standard contenant notes, durées, silences et tempo. Ces fichiers sont locaux.
 
 Les 489 couleurs DMC **ne sont pas 489 fréquences naturelles** : SLÂME applique une règle documentée couleur→degré de gamme/octave.
 Les 504 symboles de l'atelier ne sont pas une traduction en mots : une association pictogramme/intention définie par l'utilisateur sera une évolution distincte.
@@ -43,10 +43,11 @@ Le partage existant de POINTZERO est principalement de la lecture entre pairs. *
 ## Structure de code
 - src/lib/slame.ts : algorithme pur (rasterLine, appendWaypoint, stitchAt, dmcToMidi, motifTrail, stepsForTrail)
 - src/components/SlameStudio.tsx : vue d'exploration, Web Audio minimal, voix navigateur et commandes expérimentales
+- src/lib/slameMidi.ts : export musical Standard MIDI File format 0 (sans paroles)
 - src/__tests__/slame.test.ts : parcours, couleur, silence et symboles
 - src/App.tsx et src/components/Landing.tsx : route #slame et navigation
 
-La première V1 joue une synthèse Web Audio légère autonome. **Elle n'intègre pas encore l'InstrumentEngine/Mixer de la dernière archive AIME Music Lab**, et ne prétend pas disposer de son export MIDI/WAV ; c'est la prochaine intégration. Le socle du calcul musical est séparé pour rendre ce raccordement explicite.
+La première V1 joue une synthèse Web Audio légère autonome. **Elle n'intègre pas encore l'InstrumentEngine/Mixer de la dernière archive AIME Music Lab**, et ne prétend pas disposer de son export audio WAV (un export MIDI simple a été ajouté ici) ; c'est la prochaine intégration. Le socle du calcul musical est séparé pour rendre ce raccordement explicite.
 
 ## Vérification
 Lancer npm ci puis npm run verify. Tester à l'oreille et sur appareils réels avant toute mise à disposition destinée aux personnes utilisant une aide technique.
