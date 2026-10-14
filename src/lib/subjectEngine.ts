@@ -151,6 +151,13 @@ export function reorderSubject(scene:SubjectScene,id:string,delta:number):Subjec
   const layers=scene.layers.slice();[layers[i],layers[j]]=[layers[j],layers[i]];
   return {...scene,layers};
 }
+/** Remove only an editable sprite; original source snapshot is untouched. */
+export function removeSubject(scene:SubjectScene,id:string):SubjectScene {
+  const target=scene.layers.find(l=>l.id===id);
+  if(!target)return scene;
+  if(target.locked)throw new Error("Déverrouillez le sujet avant de le retirer.");
+  return {...scene,layers:scene.layers.filter(l=>l.id!==id)};
+}
 export function duplicateSubject(scene:SubjectScene,id:string):SubjectScene {
   const i=scene.layers.findIndex(l=>l.id===id);
   if(i<0||scene.layers.length>=MAX_SUBJECTS)return scene;
