@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { ArrowDown, ArrowUp, Download, Eye, EyeOff, ImagePlus, Laptop, Save, Smartphone, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Download, Eye, EyeOff, GitBranch, ImagePlus, Laptop, Save, Smartphone, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import { createMiniSite, MINI_DRAFTS, MINI_KEY, MINI_KINDS, miniProjectFile, miniSection, miniSiteToHTML, safeMiniSite, type MiniKind, type MiniSection, type MiniSectionKind, type MiniSite } from "../lib/miniSiteCore";
 import { loadProjectOptions } from "../lib/budgetCore";
+import { COACH_PHASES, miniCoachProgress, readMiniCoach, writeMiniCoach, type CoachIssue, type CoachPhase, type MiniCoachProfile } from "../lib/miniSiteLearning";
 const load=():MiniSite=>{try{return safeMiniSite(JSON.parse(localStorage.getItem(MINI_KEY)??"null"))??createMiniSite();}catch{return createMiniSite();}};
 const loadDrafts=():MiniSite[]=>{try {const json=JSON.parse(localStorage.getItem(MINI_DRAFTS)??"[]") as unknown;return Array.isArray(json)?json.map(safeMiniSite).filter((x):x is MiniSite=>!!x).slice(0,12):[];}catch{return [];}};
 const slug=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-")||"mini-site";
@@ -13,13 +14,25 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
   const [selected,setSelected]=useState<string|null>(null);
   const [viewport,setViewport]=useState<"phone"|"desktop">("desktop");
   const [status,setStatus]=useState("");
+  const [leftMode,setLeftMode]=useState<"plan"|"academy">("plan");
+  const [coachPhase,setCoachPhase]=useState<CoachPhase>("intention");
+  const [coach,setCoach]=useState<MiniCoachProfile>(()=>readMiniCoach((incomingDraft??load()).id));
   const filePicker=useRef<HTMLInputElement>(null);
   const imagePicker=useRef<HTMLInputElement>(null);
   const section=doc.sections.find(s=>s.id===selected)??null;
+  const evaluation=useMemo(()=>miniCoachProgress(doc,coach.siteId===doc.id?coach:readMiniCoach(doc.id)),[doc,coach]);
   const projects=useMemo(loadProjectOptions,[]);
   const update=(patch:Partial<MiniSite>)=>setDoc(d=>({...d,...patch}));
   const updateSection=(id:string,patch:Partial<MiniSection>)=>setDoc(d=>({...d,sections:d.sections.map(s=>s.id===id?{...s,...patch}:s)}));
   useEffect(()=>{try{localStorage.setItem(MINI_KEY,JSON.stringify(doc));}catch{setStatus("Stockage saturé : exportez ce mini-site en HTML ou JSON.");}},[doc]);
+  useEffect(()=>{setCoach(readMiniCoach(doc.id));},[doc.id]);
+  useEffect(()=>{try{writeMiniCoach(coach);}catch{setStatus("Le parcours pédagogique ne peut pas être conservé dans ce navigateur.");}},[coach]);
+  const editCoach=(patch:Partial<MiniCoachProfile>)=>setCoach(c=>({...c,...patch}));
+  const fixIssue=(issue:CoachIssue)=>{
+    setSelected(issue.sectionId??null);
+    setLeftMode("plan");
+    setStatus(issue.action);
+  };
   const newSite=(kind:MiniKind)=>{
     if(!window.confirm("Créer un mini-site vierge ? L'actuel reste accessible uniquement si vous l'avez enregistré dans Mes mini-sites."))return;
     const next=createMiniSite(kind);setDoc(next);setSelected(null);
@@ -57,7 +70,8 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
     };
     reader.readAsDataURL(file);
   };
-  const exportHTML=()=>{saveStudioFile(slug(doc.name)+".html",miniSiteToHTML(doc),"text/html;charset=utf-8");setStatus("Fichier HTML exporté. Sa publication et son hébergement restent à effectuer.");};
+  const exportHTML=()=>{saveStudioFile(slug(doc.name)+".html",miniSiteToHTML(doc),"text/html;charset=utf-8");
+    setStatus("HTML exporté. "+evaluation.errors+" correction(s) prioritaires restantes selon le pré-audit local ; publication et vérifications humaines à effectuer.");};
   const preview=miniSiteToHTML(doc);
   const actions=<div className="flex gap-1">
     <button type="button" className={studioButton+" !px-2"} onClick={store} title="Enregistrer dans Mes mini-sites" aria-label="Enregistrer le mini-site"><Save size={16}/></button>
@@ -68,6 +82,51 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
   return <StudioFrame title="Mini-site" subtitle="Une seule page · responsive · export HTML statique" onBack={onBack}
     leftLabel="Bibliothèque de mini-sites" rightLabel="Contenu du mini-site" actions={actions}
     left={<>
+      <div className="mb-4 grid grid-cols-2 gap-1 rounded-[5px] border border-white/15 p-1">
+        <button aria-label="Voir le plan du mini-site" aria-pressed={leftMode==="plan"} className={"rounded-[4px] px-2 py-2 text-xs "+(leftMode==="plan"?"bg-white font-semibold text-black":"text-white/80")} onClick={()=>setLeftMode("plan")}><GitBranch size={14} className="mr-1 inline"/>Plan</button>
+        <button aria-label="Ouvrir le parcours Academy du mini-site" aria-pressed={leftMode==="academy"} className={"rounded-[4px] px-2 py-2 text-xs "+(leftMode==="academy"?"bg-white font-semibold text-black":"text-white/80")} onClick={()=>setLeftMode("academy")}><BookOpen size={14} className="mr-1 inline"/>Apprendre</button>
+      </div>
+      {leftMode==="academy"?<div className="space-y-4 pb-24">
+        <div><p className="text-xs font-semibold">Construire dans le bon ordre.</p>
+          <p className="mt-2 text-[11px] leading-relaxed text-white/60">Chaque vérification indique ce qui manque et dans quel champ intervenir. Ce parcours ne délivre pas de certification.</p>
+          <div aria-label="Progression Academy du mini-site" role="progressbar" aria-valuemin={0} aria-valuemax={evaluation.total} aria-valuenow={evaluation.passed} className="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
+            <div className="h-full rounded-full bg-[#9bd6c3]" style={{width:(evaluation.passed/evaluation.total*100)+"%"}}/>
+          </div>
+          <p className="mt-2 text-[11px] text-white/65">{evaluation.passed}/{evaluation.total} étapes vérifiées · {evaluation.errors} points à corriger</p>
+        </div>
+        <label className="block text-xs text-white/75">À qui s'adresse le site ?
+          <textarea aria-label="Public visé par le mini-site" className={studioInput+" mt-1 min-h-20 resize-y"} maxLength={220}
+            value={coach.siteId===doc.id?coach.audience:""} onChange={e=>editCoach({audience:e.target.value})} placeholder="Invités, futurs clients, bénévoles…"/>
+        </label>
+        <label className="block text-xs text-white/75">Que doit faire ou comprendre le visiteur ?
+          <textarea aria-label="Objectif principal du mini-site" className={studioInput+" mt-1 min-h-20 resize-y"} maxLength={350}
+            value={coach.siteId===doc.id?coach.purpose:""} onChange={e=>editCoach({purpose:e.target.value})} placeholder="Trouver le lieu, découvrir une prestation, contacter…"/>
+        </label>
+        <div className="space-y-1.5">
+          {COACH_PHASES.map((phase,i)=><button key={phase.id} aria-label={"Étape "+phase.name} aria-pressed={coachPhase===phase.id} onClick={()=>setCoachPhase(phase.id)}
+            className={"flex min-h-10 w-full items-center gap-2 rounded-[5px] border px-2 text-left text-[11px] "+(coachPhase===phase.id?"border-white/80 bg-white/10":"border-white/15 hover:bg-white/5")}>
+            <span className={"grid size-6 shrink-0 place-items-center rounded-full "+(evaluation.ready.includes(phase.id)?"bg-[#265b49]":"bg-white/10")}>{evaluation.ready.includes(phase.id)?<Check size={13}/>:i+1}</span>
+            <span className="min-w-0 flex-1">{phase.name}</span>
+            <span className="text-white/50">{evaluation.issues.filter(v=>v.phase===phase.id).length}</span>
+          </button>)}
+        </div>
+        <div className="space-y-2 rounded-[6px] border border-white/15 p-3">
+          <h3 className="text-xs font-semibold">{COACH_PHASES.find(p=>p.id===coachPhase)?.name}</h3>
+          <p className="text-[11px] text-white/60">{COACH_PHASES.find(p=>p.id===coachPhase)?.description}</p>
+          {evaluation.issues.filter(issue=>issue.phase===coachPhase).map(issue=><div key={issue.id} className="rounded-[5px] border border-white/15 bg-white/5 p-2">
+            <strong className="text-[11px]">{issue.severity==="a-corriger"?"À corriger : ":"À vérifier : "}{issue.title}</strong>
+            <p className="mt-1 text-[11px] leading-relaxed text-white/65">{issue.why}</p>
+            {issue.id!=="manual"&&<button aria-label={"Corriger "+issue.title} className={studioButton+" mt-2 w-full"} onClick={()=>fixIssue(issue)}>Accéder à la correction <ChevronRight size={13}/></button>}
+          </div>)}
+          {evaluation.issues.every(issue=>issue.phase!==coachPhase)&&<p className="text-[11px] text-[#b8e7d2]">Points automatiques satisfaits pour cette étape.</p>}
+        </div>
+        <label className="flex items-start gap-2 rounded-[5px] border border-white/15 p-3 text-[11px] text-white/75">
+          <input aria-label="Confirmer la relecture manuelle du mini-site" type="checkbox" checked={coach.siteId===doc.id&&coach.reviewed}
+            onChange={e=>editCoach({reviewed:e.target.checked})} className="mt-0.5 accent-white"/>
+          J'ai vérifié la navigation au clavier, le rendu mobile et la compréhension auprès d'une autre personne.
+        </label>
+        <p className="text-[11px] leading-relaxed text-white/55">Le contrôle des contrastes est partiel. Une relecture cochée ne prouve ni conformité RGAA/WCAG, ni positionnement Google.</p>
+      </div>:<>
       <h2 className="mb-3 text-sm font-semibold">Mes mini-sites</h2>
       <div className="space-y-2">{drafts.map(site=><button type="button" key={site.id} onClick={()=>{setDoc(site);setSelected(null);}} aria-pressed={doc.id===site.id}
         className={"w-full rounded-[5px] border p-3 text-left text-xs "+(doc.id===site.id?"border-white/70 bg-white/15":"border-white/15 hover:bg-white/10")}>
@@ -78,7 +137,9 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
         <div className="grid grid-cols-2 gap-2">{MINI_KINDS.map(k=><button key={k.id} onClick={()=>newSite(k.id)} className={studioButton+" px-2"}>{k.name}</button>)}</div>
       </div>
       <div className="mt-5 border-t border-white/15 pt-4">
-        <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-semibold">Sections</h3><span className="text-[10px] text-white/50">{doc.sections.length}/16</span></div>
+        <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-semibold">Arborescence · page unique</h3><span className="text-[10px] text-white/50">{doc.sections.length}/16</span></div>
+        <button aria-label="Sélectionner l'accueil et le hero du mini-site" aria-pressed={selected===null} onClick={()=>setSelected(null)} className={"mb-2 flex w-full items-center gap-2 rounded-[5px] border p-3 text-left text-xs "+(selected===null?"border-white/70 bg-white/15":"border-white/15")}>
+          <GitBranch size={15}/> Accueil <span className="ml-auto text-[10px] text-white/60">H1 · hero</span></button>
         {doc.sections.map((s,i)=><div key={s.id} className={"mb-2 flex items-center gap-1 rounded-[5px] border p-1 "+(selected===s.id?"border-white/70 bg-white/15":"border-white/10")}>
           <button className="min-w-0 flex-1 px-2 py-2 text-left text-xs" onClick={()=>setSelected(s.id)}><span className="block truncate font-medium">{s.title}</span>
             <span className="block text-[10px] text-white/55">{s.kind}</span></button>
@@ -98,7 +159,9 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
             <option value="texte">Texte</option><option value="programme">Programme</option><option value="informations">Informations</option><option value="galerie">Galerie</option><option value="contact">Contact</option>
           </select>
         </label>
+        <p className="mt-3 border-t border-white/10 pt-3 text-[11px] leading-relaxed text-white/55">Ces éléments sont des ancres dans une seule page HTML. De véritables pages séparées nécessiteront une architecture multipage.</p>
       </div>
+      </>}
     </>}
     right={<>
       <h2 className="mb-4 text-sm font-semibold">{section?"Éditer la section":"Personnaliser le site"}</h2>
@@ -113,6 +176,15 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
         <label className="block text-xs text-white/75">Titre principal<input aria-label="Titre principal" className={studioInput+" mt-1"} value={doc.title} maxLength={300} onChange={e=>update({title:e.target.value})}/></label>
         <label className="block text-xs text-white/75">Accroche<input aria-label="Accroche" className={studioInput+" mt-1"} value={doc.eyebrow} maxLength={200} onChange={e=>update({eyebrow:e.target.value})}/></label>
         <label className="block text-xs text-white/75">Sous-titre<textarea aria-label="Sous-titre" className={studioInput+" mt-1"} rows={3} value={doc.subtitle} maxLength={500} onChange={e=>update({subtitle:e.target.value})}/></label>
+        <div className="space-y-2 rounded-[6px] border border-white/15 p-3">
+          <h3 className="text-xs font-semibold">Action du premier écran</h3>
+          <p className="text-[11px] leading-relaxed text-white/55">Le visiteur doit pouvoir atteindre l'information attendue sans chercher dans le menu.</p>
+          <input aria-label="Libellé du bouton du hero" className={studioInput} maxLength={80} placeholder="Voir le programme" value={doc.heroActionLabel??""} onChange={e=>update({heroActionLabel:e.target.value})}/>
+          <select aria-label="Destination interne du bouton du hero" className={studioInput} value={doc.heroActionHref?.startsWith("#s-")?doc.heroActionHref:""} onChange={e=>{if(e.target.value)update({heroActionHref:e.target.value});}}>
+            <option value="">Destination dans la page…</option>{doc.sections.filter(s=>s.visible).map(s=><option key={s.id} value={"#s-"+s.id}>{s.title}</option>)}
+          </select>
+          <input aria-label="Lien du bouton du hero" className={studioInput} maxLength={300} placeholder="#s-… ou https://… ou mailto:…" value={doc.heroActionHref??""} onChange={e=>update({heroActionHref:e.target.value})}/>
+        </div>
         <label className="block text-xs text-white/75">Date<input className={studioInput+" mt-1"} value={doc.date} maxLength={150} onChange={e=>update({date:e.target.value})}/></label>
         <label className="block text-xs text-white/75">Lieu<input className={studioInput+" mt-1"} value={doc.place} maxLength={300} onChange={e=>update({place:e.target.value})}/></label>
         <label className="block text-xs text-white/75">Email de contact<input type="email" className={studioInput+" mt-1"} value={doc.contact} maxLength={254} onChange={e=>update({contact:e.target.value})}/></label>
@@ -121,6 +193,9 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
           <label className="text-[11px] text-white/75">Fond<input aria-label="Couleur de fond" type="color" className="mt-1 block size-9" value={doc.background} onChange={e=>update({background:e.target.value})}/></label>
         </div>
         <button onClick={()=>imagePicker.current?.click()} className={studioButton+" w-full"}><ImagePlus size={16}/> Importer une photo de couverture</button>
+        {doc.heroImage&&<label className="block text-xs text-white/75">Description de la couverture si informative
+          <input aria-label="Alternative textuelle de la couverture" className={studioInput+" mt-1"} maxLength={300} value={doc.heroAlt??""} onChange={e=>update({heroAlt:e.target.value})} placeholder="Vide si la photo est décorative"/>
+        </label>}
         {doc.heroImage&&<button onClick={()=>update({heroImage:""})} className={studioButton+" w-full"}>Retirer la photo</button>}
         <label className="block text-xs text-white/75">Projet graphique associé
           <select className={studioInput+" mt-1"} value={doc.projectId} onChange={e=>update({projectId:e.target.value})}>
@@ -133,7 +208,9 @@ export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
   >
     <div className="mx-auto max-w-[1100px]">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div><p className="text-[11px] font-semibold uppercase tracking-widest text-white/60">Aperçu en direct</p><h2 className="mt-1 text-lg font-semibold">{doc.name}</h2></div>
+        <div><p className="text-[11px] font-semibold uppercase tracking-widest text-white/60">Aperçu en direct</p><h2 className="mt-1 text-lg font-semibold">{doc.name}</h2>
+          <button aria-label="Voir les vérifications pédagogiques" onClick={()=>setLeftMode("academy")} className="mt-2 inline-flex items-center gap-2 text-[11px] text-[#cae9db] underline underline-offset-2">
+            <BookOpen size={13}/> {evaluation.passed}/{evaluation.total} étapes pédagogiques · {evaluation.errors} corrections prioritaires</button></div>
         <div className="flex gap-1 rounded-[5px] border border-white/20 bg-[#09090b] p-1">
           <button onClick={()=>setViewport("desktop")} aria-pressed={viewport==="desktop"} aria-label="Aperçu ordinateur" className={(viewport==="desktop"?"bg-white text-black":"text-white")+" rounded-[4px] px-3 py-2"}><Laptop size={16}/></button>
           <button onClick={()=>setViewport("phone")} aria-pressed={viewport==="phone"} aria-label="Aperçu téléphone" className={(viewport==="phone"?"bg-white text-black":"text-white")+" rounded-[4px] px-3 py-2"}><Smartphone size={16}/></button>
