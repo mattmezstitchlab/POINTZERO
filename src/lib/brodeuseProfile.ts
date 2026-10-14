@@ -79,8 +79,9 @@ export function saveBrodeuseProfile(profile:BrodeuseProfile):void {
   try {
     const valid=validatedProfile(profile);
     localStorage.setItem(KEY,JSON.stringify(valid));
+    const old=JSON.parse(localStorage.getItem("point-zero:inventory")??"{}") as Record<string,{lot?:string}>;
     localStorage.setItem("point-zero:inventory",JSON.stringify(Object.fromEntries(Object.entries(valid.stock).map(([code,q])=>[code,{
-      whole:q.skeins,partialMeters:q.remainingMeters
+      whole:q.skeins,partialMeters:q.remainingMeters,lot:old[code]?.lot??""
     }]))));
     window.dispatchEvent(new Event("pointzero:inventory-changed"));
   } catch {throw new Error("Profil non sauvegardé : stockage local indisponible.");}
