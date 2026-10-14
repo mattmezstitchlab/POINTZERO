@@ -239,7 +239,7 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
                 <input className="mt-1 w-full rounded border border-white/20 bg-[#28282e] px-2 py-1 text-xs" value={c.overrideCode??""} placeholder={FLOSS[c.color]?.code??"Code"} onChange={e=>patchCard(c.id,{overrideCode:e.target.value.trim().toUpperCase()})}/>
               </label>
               <button type="button" className="self-end rounded-md border border-white/15 p-1.5 disabled:opacity-20" disabled={i===0} aria-label={"Monter la carte "+(i+1)} onClick={()=>moveCard(i,i-1)}><ArrowUp size={15}/></button>
-              <button type="button" className="self-end rounded-md border border-white/15 p-1.5 disabled={i===cards.length-1} aria-label={"Descendre la carte "+(i+1)} onClick={()=>moveCard(i,i+1)}><ArrowDown size={15}/></button>
+              <button type="button" className="self-end rounded-md border border-white/15 p-1.5" disabled={i===cards.length-1} aria-label={"Descendre la carte "+(i+1)} onClick={()=>moveCard(i,i+1)}><ArrowDown size={15}/></button>
             </div>
             {!!c.overrideCode&&flossIndex(c.overrideCode)<0&&<p className="text-[11px] text-amber-200">Code DMC non reconnu : teinte source conservée.</p>}
           </div>)}
