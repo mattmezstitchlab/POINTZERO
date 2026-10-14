@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent as RDragEvent, type PointerEvent as RPointerEvent } from "react";
 import { FLOSS, contrastOn } from "../lib/dmc";
 import { drawSymbol } from "../lib/symbols";
 import { assignedSymbol, clonePattern, compositePattern, ornamentKey, type Pattern } from "../lib/pattern";
@@ -51,6 +51,11 @@ interface Props {
   onLive: (p: Pattern) => void;
   onEnd: (changed: boolean) => void;
   onPick: (idx: number) => void;
+  /** Native subject editing uses the exact Canvas zoom/pan transform. */
+  onSubjectStart?: (x: number, y: number) => boolean;
+  onSubjectMove?: (dx: number, dy: number) => void;
+  onSubjectEnd?: (changed: boolean) => void;
+  onMotifDrop?: (id: string, x: number, y: number) => void;
 }
 
 interface Stroke {
@@ -121,6 +126,7 @@ export default function Canvas(props: Props) {
   const hoverPt = useRef<Pt | null>(null);
   const ptrs = useRef(new Map<number, { x: number; y: number }>());
   const pan = useRef<{ x: number; y: number } | null>(null);
+  const subjectDrag = useRef<{ id: number; x: number; y: number; dx: number; dy: number; moved: boolean } | null>(null);
   const pinch = useRef<{ d0: number; s0: number; mx: number; my: number; ox: number; oy: number } | null>(null);
   const idle = useRef(false);
   const stroke = useRef<Stroke | null>(null);
@@ -796,6 +802,10 @@ export default function Canvas(props: Props) {
     const p = local(e);
     ptrs.current.set(e.pointerId, p);
     if (ptrs.current.size >= 2) {
+      if (subjectDrag.current) {
+        latest.current.onSubjectEnd?.(subjectDrag.current.moved);
+        subjectDrag.current = null;
+      }
       cancelStroke();
       pan.current = null;
       const [a, b] = [...ptrs.current.values()];
@@ -815,6 +825,13 @@ export default function Canvas(props: Props) {
     }
     idle.current = false;
     const t = latest.current.tool;
+    if (e.button === 0 && t === "hand" && latest.current.onSubjectStart) {
+      const world = toWorld(p);
+      if (latest.current.onSubjectStart(world.x, world.y)) {
+        subjectDrag.current = { id: e.pointerId, x: world.x, y: world.y, dx: 0, dy: 0, moved: false };
+        return;
+      }
+    }
     if (t === "hand" || e.button === 1 || e.button === 2 || (latest.current.pencilOnly && e.pointerType === "touch")) {
       pan.current = p;
       return;
@@ -847,6 +864,15 @@ export default function Canvas(props: Props) {
       return;
     }
     if (idle.current) return;
+    if (subjectDrag.current?.id === e.pointerId && ptrs.current.size === 1) {
+      const drag = subjectDrag.current, w = toWorld(p);
+      const dx = Math.round(w.x - drag.x), dy = Math.round(w.y - drag.y);
+      if (drag.dx !== dx || drag.dy !== dy) {
+        drag.dx = dx; drag.dy = dy; drag.moved ||= dx !== 0 || dy !== 0;
+        latest.current.onSubjectMove?.(dx, dy);
+      }
+      return;
+    }
     if (pan.current && ptrs.current.size === 1) {
       v.ox += p.x - pan.current.x;
       v.oy += p.y - pan.current.y;
@@ -859,6 +885,10 @@ export default function Canvas(props: Props) {
   };
 
   const onUp = (e: RPointerEvent<HTMLCanvasElement>) => {
+    if (subjectDrag.current?.id === e.pointerId) {
+      latest.current.onSubjectEnd?.(subjectDrag.current.moved);
+      subjectDrag.current = null;
+    }
     ptrs.current.delete(e.pointerId);
     if (pinch.current && ptrs.current.size < 2) pinch.current = null;
     if (ptrs.current.size === 0) {
@@ -868,6 +898,13 @@ export default function Canvas(props: Props) {
     }
   };
 
+  const onDropMotif = (e: RDragEvent<HTMLCanvasElement>) => {
+    const id = e.dataTransfer.getData("application/x-pointzero-motif");
+    if (!id || !latest.current.onMotifDrop) return;
+    e.preventDefault();
+    const point = toWorld(local(e));
+    latest.current.onMotifDrop(id, point.x, point.y);
+  };
   const onLeave = () => {
     if (ptrs.current.size === 0) {
       hoverPt.current = null;
@@ -965,6 +1002,13 @@ export default function Canvas(props: Props) {
         className="block h-full w-full touch-none select-none"
         style={{ cursor }}
         onPointerDown={onDown}
+        onDragOver={(event) => {
+          if (Array.from(event.dataTransfer.types).includes("application/x-pointzero-motif") && latest.current.onMotifDrop) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+          }
+        }}
+        onDrop={onDropMotif}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={(e) => { ptrs.current.delete(e.pointerId); cancelStroke(); }}

@@ -1752,3 +1752,48 @@
 @media (prefers-reduced-motion: reduce) {
   .pz-atelier .pz-panel.sheet { transition: none; }
 }
+
+/* Composition POINTZERO : bibliothèque Framer à gauche, toile libre au centre. */
+.pz-atelier .pz-motif-library {
+  background: #09090b;
+  border-radius: 7px;
+  color: #fff;
+  transform: translateX(calc(-100% - 20px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .22s ease, opacity .18s ease;
+}
+.pz-atelier .pz-motif-library.is-open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.pz-atelier .pz-properties {
+  background: #09090b;
+  border-radius: 7px;
+  color: #fff;
+}
+.pz-atelier .pz-motif-library button:focus-visible,
+.pz-atelier .pz-properties button:focus-visible,
+.pz-atelier .pz-properties input:focus-visible,
+.pz-atelier .pz-properties select:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+@media (min-width: 1024px) {
+  .pz-atelier .pz-motif-library {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+@media (max-width: 1023px) {
+  .pz-atelier .pz-properties {
+    top: 124px;
+    width: 164px;
+    max-height: min(44dvh, 390px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pz-atelier .pz-motif-library { transition: none; }
+}
