@@ -242,7 +242,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
                 className="flex min-h-11 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs text-white/85 hover:bg-white/10 hover:text-white"
                 onClick={()=>{setShowStudios(false);item.onClick?.();}}>{item.icon}{item.name}</button>)}
           </div>}
-        </div>}
+        </div>
       </div>
       <div className="flex min-w-0 items-center gap-1">
         <button type="button" onClick={undo} disabled={!past.length} className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30" aria-label="Annuler"><Undo2 size={16}/></button>
