@@ -35,10 +35,11 @@ export async function saveLibrary(p: Pattern, checkpoint = false): Promise<void>
 export function readInventory(): Record<string, Supply> {
   try {
     const saved = JSON.parse(localStorage.getItem("point-zero:inventory") ?? "null") as Record<string, Supply> | null;
-    if (saved && typeof saved === "object") return saved;
+    if (saved && typeof saved === "object") return Object.fromEntries(Object.entries(saved).map(([code, q]) =>
+      [code, { whole: Number(q?.whole ?? 0), partialMeters: Number(q?.partialMeters ?? 0), lot: q?.lot ?? "" }]));
     const profile = loadBrodeuseProfile();
     return Object.fromEntries(Object.entries(profile.stock).map(([code, q]) =>
-      [code, { whole: q.skeins, partialMeters: q.remainingMeters }]));
+      [code, { whole: q.skeins, partialMeters: q.remainingMeters, lot: "" }]));
   } catch { return {}; }
 }
 /** Stock canonique commun au rail, à la liste d'achats et à l'adaptation du profil. */
