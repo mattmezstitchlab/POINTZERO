@@ -357,8 +357,11 @@ export default function App() {
         onOpen={openEditor}
         onSlame={openSlame}
         onMotif={(motif) => {
-          setPattern(motif);
-          openEditor();
+          // Charger le patron en tant que vrai projet, sans laisser
+          // l'initialisation de l'exemple d'atelier l'écraser ensuite.
+          void loadPattern(motif).then(openEditor).catch(() => {
+            notify("Impossible d’ouvrir ce patron. Vérifiez la bibliothèque locale.");
+          });
         }}
       />
     );
