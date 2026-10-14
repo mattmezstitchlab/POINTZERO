@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { ArrowDownToLine, Ellipsis, FolderOpen, Layers, Maximize, Pencil, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
+import { ArrowDownToLine, Ellipsis, FolderOpen, LayoutTemplate, Layers, Maximize, Pencil, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
 import type { Pattern } from "../lib/pattern";
 import type { ViewMode } from "./Canvas";
 
 interface Props {
   pattern: Pattern;
   onCreate: () => void;
+  onDesign?: () => void;
   onLibrary: () => void;
   onExport: () => void;
   onSettings: () => void;
@@ -35,6 +36,9 @@ export default function TopBar(p: Props) {
       aria-label="POINTZERO : créer un motif">
       <span className="text-xl font-light text-white">×</span><span className="hidden min-[360px]:inline">POINTZERO</span>
     </button>
+    {p.onDesign && <button type="button" onClick={p.onDesign} aria-label="Créer des supports graphiques" className="pointer-events-auto absolute left-[132px] top-0 flex min-h-11 items-center gap-2 rounded-[5px] border border-white/15 bg-[#09090b] px-3 text-xs font-semibold text-white hover:bg-[#232326] max-[600px]:left-[47px]">
+      <LayoutTemplate size={16}/><span className="hidden min-[700px]:inline">Supports</span>
+    </button>}
     <div className="pointer-events-auto relative flex min-w-0 items-center gap-0.5 rounded-md border border-white/15 bg-[#09090b]/95 p-0.5 text-white shadow-lg backdrop-blur-xl">
       <button type="button" className={iconButton} aria-label="Annuler" title="Annuler" disabled={!p.canUndo} onClick={p.onUndo}><Undo2 size={17}/></button>
       <button type="button" className={iconButton+" hidden sm:grid"} aria-label="Rétablir" title="Rétablir" disabled={!p.canRedo} onClick={p.onRedo}><Redo2 size={17}/></button>

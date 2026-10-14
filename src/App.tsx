@@ -12,6 +12,7 @@ import { runChecks } from "./lib/checks";
 import Canvas, { type Insets, type ViewMode } from "./components/Canvas";
 import Dock from "./components/Dock";
 import TopBar from "./components/TopBar";
+import DesignStudio from "./components/DesignStudio";
 import AtelierCreate from "./components/AtelierCreate";
 import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
 import MotifLibrary from "./components/MotifLibrary";
@@ -59,6 +60,17 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 export default function App() {
   const [boot] = useState(loadStored);
+  // Existing embroidery projects resume untouched; newcomers open the multiformat studio.
+  const [studioMode, setStudioMode] = useState<"design" | "embroidery">(() => {
+    try {
+      const chosen = localStorage.getItem("pointzero:workspace");
+      return chosen === "design" ? "design" : chosen === "embroidery" ? "embroidery" : boot ? "embroidery" : "design";
+    } catch { return "embroidery"; }
+  });
+  const switchStudio = (mode: "design" | "embroidery") => {
+    setStudioMode(mode);
+    try { localStorage.setItem("pointzero:workspace", mode); } catch { /* Local storage may be restricted. */ }
+  };
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
   const [activeCategory, setActiveCategory] = useState<AtelierCategory>("compose");
@@ -361,7 +373,9 @@ export default function App() {
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     panel === "project" ? "settings" : categoryPanel === "compose" ? "edit" :
     categoryPanel === "threads" ? "prepare" : categoryPanel === "stitch" ? "follow" : "settings";
-  return <div className={`pz-atelier fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+  return studioMode === "design"
+    ? <DesignStudio onEmbroidery={() => switchStudio("embroidery")} />
+    : <div className={`pz-atelier fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
       type="file"
@@ -389,7 +403,7 @@ export default function App() {
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
       onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
       onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
-    <TopBar pattern={P} onCreate={() => { setPanel(null); setActiveCategory("create"); setCategoryPanel("create"); setShowWelcome(false); }}
+    <TopBar pattern={P} onDesign={() => switchStudio("design")} onCreate={() => { setPanel(null); setActiveCategory("create"); setCategoryPanel("create"); setShowWelcome(false); }}
       canUndo={!remote && store.past.length > 0 && !store.pending}
       canRedo={!remote && store.future.length > 0 && !store.pending}
       onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })}

@@ -1841,3 +1841,44 @@
 .pz-decomposition .pz-decomposition-primary:hover:not(:disabled) {
   background: #ededf1;
 }
+
+/* POINTZERO Studio universel : une seule grammaire noire, canevas libre. */
+.pz-design {
+  --color-label: #fff;
+  --color-label-2: #d1d1d7;
+  --color-label-3: #b3b3ba;
+  font-family: var(--font-sans);
+}
+.pz-design-menu {
+  background: #09090b;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.19);
+  border-radius: 7px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.34);
+}
+.pz-design-stage {
+  background-color: #252527;
+  background-image: radial-gradient(rgba(255,255,255,.16) .7px,transparent .7px);
+  background-size: 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #6c6c76 transparent;
+}
+.pz-design-sidebar {
+  transition: transform .18s ease;
+  box-shadow: 3px 0 20px rgba(0,0,0,.12);
+}
+.pz-design :is(input,textarea,select,button):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.pz-design input[type=color] { cursor: pointer; }
+.pz-design-sidebar,.pz-design-properties {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.25) transparent;
+}
+@media (max-width: 639px) {
+  .pz-design > header { padding-inline: 8px; gap: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pz-design-sidebar { transition: none; }
+}
