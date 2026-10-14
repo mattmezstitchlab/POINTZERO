@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as Rea
 import { Accessibility, Download, Mic, Music2, Pause, Play, Plus, RotateCcw, Save, SkipBack, Sparkles, Trash2, Upload, Users, Volume2, VolumeX } from "lucide-react";
 import { StudioFrame, saveStudioFile, studioButton, studioInput } from "./StudioFrame";
 import { MusicAudio } from "../lib/musicStudioAudio";
-import { BASE_FLOSS, flossIndex } from "../lib/dmc";
+import { BASE_FLOSS } from "../lib/dmc";
 import { ART_DMC_FAVORITES } from "../lib/artWorldCore";
 import {
   colorFor, emptyMusicScore, EMOTIONS, formatMusicTime, GESTURES, intentionGesture, makeMusicNote,
