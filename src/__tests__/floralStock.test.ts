@@ -42,6 +42,14 @@ describe("Bouquet indépendant, profondeur brodable et stock",()=>{
     expect(out.fwd[cell]).toBe(-1);
     expect(out.back.some(seg=>seg.c===a && (seg.x1+seg.x2)/2>=9 && (seg.x1+seg.x2)/2<13)).toBe(false);
   });
+  it("le mode profondeur renforcée ne dessine que sur les superpositions et reste désactivable",()=>{
+    const scene=floralDemo();
+    const back=recomposeSubjects(scene);
+    const enhanced=recomposeSubjects({...scene,depth:"renforcee"});
+    expect(enhanced.cross).toEqual(back.cross);
+    expect(enhanced.back.length).toBeGreaterThan(back.back.length);
+    expect(recomposeSubjects({...scene,depth:"naturelle"}).back).toEqual(back.back);
+  });
   it("un déplacement focal remplit exactement le même résultat que la recomposition complète",()=>{
     const scene=floralDemo();
     const first=recomposeSubjects(scene);
