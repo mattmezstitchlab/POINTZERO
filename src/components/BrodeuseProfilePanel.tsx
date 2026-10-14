@@ -16,7 +16,7 @@ export default function BrodeuseProfilePanel({profile,onChange}:{profile:Brodeus
  const add=()=>{
    const c=code.trim().toUpperCase();
    if(flossIndex(c)<0){setMessage("Référence DMC inconnue.");return;}
-   const i=Math.max(0,Math.floor(Number(skeins)||0)),m=Math.max(0,Math.min(48,Number(remaining)||0));
+   const i=Math.max(0,Math.floor(Number(skeins)||0)),m=Math.max(0,Math.min(8,Number(remaining)||0));
    update("stock",{...profile.stock,[c]:{skeins:i,remainingMeters:m}});
    setCode("");setMessage("");
  };
@@ -58,7 +58,7 @@ export default function BrodeuseProfilePanel({profile,onChange}:{profile:Brodeus
      <div className="mt-2 grid grid-cols-3 gap-1">
        <label>Code<input list="floss-stock" value={code} onChange={e=>setCode(e.target.value)} placeholder="310" className="mt-1 w-full rounded border border-white/20 bg-[#27272c] p-1.5"/></label>
        <label>Écheveaux<input type="number" min={0} value={skeins} onChange={e=>setSkeins(+e.target.value||0)} className="mt-1 w-full rounded border border-white/20 bg-[#27272c] p-1.5"/></label>
-       <label>Reste (m à 6 brins)<input type="number" min={0} max={48} step=".5" value={remaining} onChange={e=>setRemaining(+e.target.value||0)} className="mt-1 w-full rounded border border-white/20 bg-[#27272c] p-1.5"/></label>
+       <label>Reste (m à 6 brins)<input type="number" min={0} max={8} step=".5" value={remaining} onChange={e=>setRemaining(+e.target.value||0)} className="mt-1 w-full rounded border border-white/20 bg-[#27272c] p-1.5"/></label>
      </div>
      <datalist id="floss-stock">{FLOSS.slice(0,489).map(f=><option value={f.code} key={f.code}/>)}</datalist>
      <button type="button" className="mt-2 w-full rounded border border-white/25 px-2 py-2" onClick={add}>Ajouter ou actualiser ce fil</button>
