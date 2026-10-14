@@ -55,7 +55,6 @@ function initialPreferences(): Preferences {
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 export default function App() {
-  const [screen, setScreen] = useState<"editor" | "slame">("editor");
   const [boot] = useState(loadStored);
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
@@ -84,11 +83,11 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (screen !== "editor" || checked.current) return;
+    if (checked.current) return;
     checked.current = true;
     const failures = runChecks().filter((v) => !v.ok);
     if (failures.length) notify(`Vérification du moteur : ${failures.length} anomalie(s). Consultez Réglages avant de travailler.`);
-  }, [screen, notify]);
+  }, [notify]);
 
   const setPattern = useCallback((p: Pattern, quiet = false) => {
     if (snapshot.current.remote) notify("Lecture partagée : seul l’hôte modifie ce projet.");
@@ -160,7 +159,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (workspace !== "stitch" || screen !== "editor" || remote) return;
+    if (workspace !== "stitch" || remote) return;
     let start = performance.now(), lastDone = computeStats(snapshot.current.P).totals.doneCells;
     const accrue = () => {
       if (document.hidden) { start = performance.now(); return; }
@@ -175,14 +174,14 @@ export default function App() {
     const timer = setInterval(accrue, 30000); const visible = () => { if (!document.hidden) start = performance.now(); };
     document.addEventListener("visibilitychange", visible);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
-  }, [workspace, screen, !!remote]);
+  }, [workspace, !!remote]);
   useEffect(() => {
-    if (workspace !== "stitch" || screen !== "editor" || !prefs.keepAwake || !navigator.wakeLock) return;
+    if (workspace !== "stitch" || !prefs.keepAwake || !navigator.wakeLock) return;
     let lock: WakeLockSentinel | null = null, stopped = false;
     const request = async () => { if (document.hidden) return; try { const result = await navigator.wakeLock.request("screen"); if (stopped) void result.release(); else lock = result; } catch { /* Power-saving policies can deny the request. */ } };
     void request(); document.addEventListener("visibilitychange", request);
     return () => { stopped = true; void lock?.release(); document.removeEventListener("visibilitychange", request); };
-  }, [workspace, screen, prefs.keepAwake]);
+  }, [workspace, prefs.keepAwake]);
 
   const selectionAction = (action: string) => {
     if (!selection) return;
@@ -199,7 +198,6 @@ export default function App() {
   };
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
-      if (screen !== "editor") return;
       // Rien ne doit passer pendant qu'on écrit : un raccourci déclenché dans un
       // champ mange des lettres. La cible peut ne pas être un Element.
       const cible = e.target;
@@ -214,10 +212,10 @@ export default function App() {
       else if (key === "escape") { closePanel(); setSelection(null); setCategoryPanel(null); }
     };
     window.addEventListener("keydown", keys); return () => window.removeEventListener("keydown", keys);
-  }, [screen, chooseTool, remote, workspace, closePanel]);
+  }, [chooseTool, remote, workspace, closePanel]);
 
-  /** Même décodeur, quel que soit le point d'entrée : accueil, atelier, panneau Projet. */
-  const openProjectFromFile = async (f: File, navigateToEditor = false): Promise<string | null> => {
+  /** Même décodeur pour tous les fichiers de projet, depuis le même atelier. */
+  const openProjectFromFile = async (f: File): Promise<string | null> => {
     try {
       if (!/\.(json|oxs)$/i.test(f.name)) throw new Error("Choisissez un fichier .pointzero.json, .json ou .oxs.");
       if (f.size > 25 * 1024 * 1024) throw new Error("Ce projet dépasse 25 Mo.");
@@ -227,7 +225,6 @@ export default function App() {
       setWorkspace("create");
       setView("pattern");
       setTool("cross");
-      if (navigateToEditor) { window.location.hash = "atelier"; setScreen("editor"); }
       notify(`« ${p.name} » ouvert · ${p.w} × ${p.h} points · ${p.palette.length} couleurs DMC`);
       return null;
     } catch (e) {
@@ -352,8 +349,8 @@ export default function App() {
             setPdfFile(null);
             setWorkspace("create");
             setView("pattern");
-            setCompositionInput(p);
-            notify("Patron PDF reconstitué. Les couleurs source sont conservées et la composition reste facultative.");
+            void loadPattern(p);
+            notify("Patron PDF ouvert directement dans la grille. La composition reste facultative.");
           }}
         />
       </ErrorBoundary>
@@ -379,7 +376,7 @@ export default function App() {
     )}
     {panel === "export" && <ExportStudio pattern={P} onClose={closePanel} />}
     <PeerShare open={panel === "share"} onClose={closePanel} pattern={store.present} onView={onRemote} />
-    {musicMounted && <div className={activeCategory === "music" ? "" : "hidden"}><SlameStudio pattern={P} active={activeCategory === "music"} onEditor={() => { setActiveCategory("create"); setCategoryPanel(null); }} /></div>}
+    {musicMounted && <div className={activeCategory === "music" ? "" : "hidden"}><SlameStudio pattern={P} active={activeCategory === "music"} onEditor={() => { chooseWorkspace("create"); setActiveCategory("create"); setCategoryPanel(null); }} /></div>}
     {remote && <button onClick={() => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); }} className="glass fixed left-1/2 top-[78px] z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12px] text-accent-2">Lecture partagée · revenir à mon projet</button>}
     {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: desktop ? 92 : 164 }}>{toast}</div>}
     <span className="sr-only">Direction B. {BASE_FLOSS.length} références DMC documentées. {FLOSS[color]?.name}.</span>
