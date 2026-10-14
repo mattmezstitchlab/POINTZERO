@@ -266,6 +266,11 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
   // foreground sprite at this stitch cell.
   const topOwner=new Int16Array(base.w*base.h).fill(-1);
   const overlaps=new Int16Array(base.w*base.h).fill(-1);
+  const occupiedBefore=new Uint8Array(base.w*base.h);
+  for(let i=0;i<occupiedBefore.length;i++){
+    if(base.cross[i]>=0||base.fwd[i]>=0||base.bwd[i]>=0||base.q.some(q=>q[i]>=0))
+      occupiedBefore[i]=1;
+  }
   const backOwners=new Array<number>(out.back.length).fill(-1);
   const longOwners=new Array<number>(out.long.length).fill(-1);
   const knotOwners=new Array<number>(out.knots.length).fill(-1);
@@ -282,10 +287,8 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
       const a=at(sx,sy,sprite),b=at(x,y,out);
       const painted=sprite.cross[a]>=0||sprite.fwd[a]>=0||sprite.bwd[a]>=0||sprite.q.some(q=>q[a]>=0);
       if(!painted)continue;
-      if(!partial || (x>=dirty!.x&&y>=dirty!.y&&x<dirty!.x+dirty!.w&&y<dirty!.y+dirty!.h)){
-        if(out.cross[b]>=0 || out.fwd[b]>=0 || out.bwd[b]>=0 || out.q.some(q=>q[b]>=0))
-          overlaps[b]=layerIndex;
-      }
+      if(occupiedBefore[b])overlaps[b]=layerIndex;
+      occupiedBefore[b]=1;
       topOwner[b]=layerIndex;
       if(partial && (x<dirty!.x || y<dirty!.y || x>=dirty!.x+dirty!.w || y>=dirty!.y+dirty!.h))continue;
       // An opaque embroidery stitch covers ALL channels from a lower object.
