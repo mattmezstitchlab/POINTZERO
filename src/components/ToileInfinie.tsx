@@ -1,26 +1,29 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Minus, Plus, Home, X, Users, Heart } from "lucide-react";
+import CardDeck from "./CardDeck";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { FLOSS } from "../lib/dmc";
 
 /**
- * La toile infinie : il n'y a plus de page d'accueil, il y a un tissu.
+ * La toile infinie : le site entier est UNE grille.
  *
- * Le hero est un format paysage posé sur la grille — comme une feuille de
- * patron sur la toile. On dézoome (molette, pincement, boutons) et on
- * s'aperçoit que tout le site est une grille de point de croix : autour du
- * hero, des voisines brodent en direct. Leurs motifs avancent case par case,
- * on regarde, on choisit, on paie (démo) et le motif est à nous : il s'ouvre
- * directement dans l'atelier, sans fichier ni dossier à gérer.
+ * Pas un fond décoratif : la vraie grille, celle de l'atelier et de la table
+ * magnétique — des cases où les croix se posent. Le hero est un format
+ * paysage posé dessus, sans fond : le motif (d'ambiance, ou celui qu'on
+ * décrit) se brode case par case derrière le champ, à même la toile. Autour,
+ * des voisines brodent en direct, la table magnétique du PDF se pose sur la
+ * toile avec ses blocs qu'on déplace, et les 54 cartes du SAL forment un
+ * tableau — comme les Noces de Cana : des dizaines de scènes, une seule
+ * composition. On dézoome lentement et l'on comprend : on est dans la grille.
  *
  * Honnêteté : pas de serveur pour l'instant — les voisines sont simulées en
  * local et le paiement est une démo. C'est écrit sur la toile, en petit.
  */
 
-const CELL = 26; // une case de la toile, en pixels monde, à zoom 1
+export const CELL = 26; // une case de la toile, en pixels monde, à zoom 1
 const BLOC = 10; // un repère épais tous les dix points, comme sur un patron
-const SHEET = { w: 1280, h: 780 }; // le format paysage du hero
-const K_MIN = 0.08;
+const HERO = { w: 50, h: 30 }; // le format paysage du hero, en cases
+const K_MIN = 0.05;
 const K_MAX = 1.8;
 
 interface Vue {
@@ -100,8 +103,8 @@ function livrer(d: MiniDesign, titre: string, voisine: Voisine): Pattern {
     for (let x = 0; x < d.w; x += 1) {
       const v = d.cross[y * d.w + x];
       if (v < 0) continue;
-      p.cross[(y * 2) * w + x * 2] = v;
-      p.cross[(y * 2) * w + x * 2 + 1] = v;
+      p.cross[y * 2 * w + x * 2] = v;
+      p.cross[y * 2 * w + x * 2 + 1] = v;
       p.cross[(y * 2 + 1) * w + x * 2] = v;
       p.cross[(y * 2 + 1) * w + x * 2 + 1] = v;
     }
@@ -121,7 +124,7 @@ function livrer(d: MiniDesign, titre: string, voisine: Voisine): Pattern {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Les voisines                                                       */
+/*  Les voisines, en cases de la toile                                 */
 /* ------------------------------------------------------------------ */
 
 export interface Voisine {
@@ -131,40 +134,36 @@ export interface Voisine {
   prix: number;
   sal: boolean;
   brodeuses?: number;
-  x: number;
-  y: number;
+  cx: number; // colonne de cases
+  cy: number; // rangée de cases
   seed: number;
 }
 
 export const VOISINES: Voisine[] = [
-  { id: "renard", titre: "Renard des bois", brodeuse: "Camille", prix: 4.9, sal: false, x: -780, y: -140, seed: 7 },
-  { id: "bleets", titre: "Bleuets de juin", brodeuse: "Inès", prix: 3.5, sal: false, x: 1580, y: -220, seed: 21 },
-  { id: "maison", titre: "Maison sous la neige", brodeuse: "Margot", prix: 6, sal: true, brodeuses: 12, x: -860, y: 780, seed: 35 },
-  { id: "rosace", titre: "Rosace de grand-mère", brodeuse: "Léonie", prix: 5.2, sal: false, x: 1640, y: 860, seed: 49 },
-  { id: "baleine", titre: "Baleine douce", brodeuse: "Alma", prix: 6, sal: true, brodeuses: 8, x: 430, y: -640, seed: 63 },
-  { id: "citron", titre: "Citronnade", brodeuse: "Thaïs", prix: 2.9, sal: false, x: 340, y: 1140, seed: 77 },
+  { id: "renard", titre: "Renard des bois", brodeuse: "Camille", prix: 4.9, sal: false, cx: -30, cy: -2, seed: 7 },
+  { id: "bleets", titre: "Bleuets de juin", brodeuse: "Inès", prix: 3.5, sal: false, cx: 58, cy: -6, seed: 21 },
+  { id: "maison", titre: "Maison sous la neige", brodeuse: "Margot", prix: 6, sal: true, brodeuses: 12, cx: -32, cy: 24, seed: 35 },
+  { id: "rosace", titre: "Rosace de grand-mère", brodeuse: "Léonie", prix: 5.2, sal: false, cx: 60, cy: 26, seed: 49 },
+  { id: "baleine", titre: "Baleine douce", brodeuse: "Alma", prix: 6, sal: true, brodeuses: 8, cx: 16, cy: -28, seed: 63 },
+  { id: "citron", titre: "Citronnade", brodeuse: "Thaïs", prix: 2.9, sal: false, cx: 14, cy: 36, seed: 77 },
 ];
 
-const CARD = { w: 380, h: 470 };
 const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 
-/* ------------------------------------------------------------------ */
-/*  Une carte vivante : la voisine brode, case par case                */
-/* ------------------------------------------------------------------ */
-
-function dessinerCroix(ctx: CanvasRenderingContext2D, cx: number, cy: number, c: number, hex: string) {
+export function dessinerCroix(ctx: CanvasRenderingContext2D, px: number, py: number, c: number, hex: string) {
   ctx.strokeStyle = hex;
-  ctx.lineWidth = Math.max(1.4, c * 0.24);
+  ctx.lineWidth = Math.max(1.4, c * 0.22);
   ctx.lineCap = "round";
-  const p = c * 0.16;
+  const p = c * 0.18;
   ctx.beginPath();
-  ctx.moveTo(cx + p, cy + p);
-  ctx.lineTo(cx + c - p, cy + c - p);
-  ctx.moveTo(cx + c - p, cy + p);
-  ctx.lineTo(cx + p, cy + c - p);
+  ctx.moveTo(px + p, py + p);
+  ctx.lineTo(px + c - p, py + c - p);
+  ctx.moveTo(px + c - p, py + p);
+  ctx.lineTo(px + p, py + c - p);
   ctx.stroke();
 }
 
+/* Une voisine : ses croix à même la grille, son étiquette dessous. */
 function Vivante({
   voisine,
   design,
@@ -179,7 +178,6 @@ function Vivante({
   onChoisir: () => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const cell = 8;
   const fini = fait >= total;
   const pct = Math.round((fait / total) * 100);
 
@@ -188,73 +186,115 @@ function Vivante({
     if (!cv) return;
     const ctx = cv.getContext("2d");
     if (!ctx) return;
-    cv.width = design.w * cell;
-    cv.height = design.h * cell;
+    cv.width = design.w * CELL;
+    cv.height = design.h * CELL;
     ctx.clearRect(0, 0, cv.width, cv.height);
-    // La toile nue, puis les croix déjà posées.
-    ctx.strokeStyle = "rgba(17,17,20,0.14)";
-    ctx.lineWidth = 1;
-    for (let i = 1; i < design.w; i += 1) {
-      ctx.beginPath();
-      ctx.moveTo(i * cell, 0);
-      ctx.lineTo(i * cell, cv.height);
-      ctx.stroke();
-    }
-    for (let j = 1; j < design.h; j += 1) {
-      ctx.beginPath();
-      ctx.moveTo(0, j * cell);
-      ctx.lineTo(cv.width, j * cell);
-      ctx.stroke();
-    }
     for (let n = 0; n < fait; n += 1) {
       const i = design.ordre[n];
       const v = design.cross[i];
       if (v < 0) continue;
       const x = i % design.w;
       const y = Math.floor(i / design.w);
-      dessinerCroix(ctx, x * cell, y * cell, cell, FLOSS[v]?.hex ?? "#888");
+      dessinerCroix(ctx, x * CELL, y * CELL, CELL, FLOSS[v]?.hex ?? "#888");
     }
   }, [design, fait]);
 
   return (
     <article
       className="motif-vivant"
-      style={{ left: voisine.x, top: voisine.y, width: CARD.w }}
+      style={{ left: voisine.cx * CELL, top: voisine.cy * CELL, width: design.w * CELL }}
       aria-label={`${voisine.titre}, brodé en direct par ${voisine.brodeuse}`}
     >
       <div className="mv-haut">
         <canvas ref={ref} className="mv-canvas" aria-hidden="true" />
-        <span className={`mv-direct${fini ? " fini" : ""}`}>
-          {fini ? "terminé" : "en direct"}
-        </span>
+        <span className={`mv-direct${fini ? " fini" : ""}`}>{fini ? "terminé" : "en direct"}</span>
       </div>
-      <h3 className="mv-titre">{voisine.titre}</h3>
-      <p className="mv-qui">
-        {voisine.brodeuse}
-        {voisine.sal ? ` · SAL · ${voisine.brodeuses} brodeuses` : ""}
-      </p>
-      <div className="mv-bar" aria-hidden="true">
-        <span style={{ width: `${pct}%` }} />
+      <div className="mv-etiquette">
+        <div>
+          <h3 className="mv-titre">{voisine.titre}</h3>
+          <p className="mv-qui">
+            {voisine.brodeuse}
+            {voisine.sal ? ` · SAL · ${voisine.brodeuses} brodeuses` : ""}
+          </p>
+          <div className="mv-bar" aria-hidden="true">
+            <span style={{ width: `${pct}%` }} />
+          </div>
+          <p className="mv-pct" data-progres={pct}>
+            {pct} % {fini ? "· motif complet, à s'approprier" : "· brode…"}
+          </p>
+        </div>
+        <button type="button" className="mv-cta" data-cta onClick={onChoisir}>
+          {voisine.sal ? <Users size={15} aria-hidden="true" /> : <Heart size={15} aria-hidden="true" />}
+          {voisine.sal ? `Rejoindre · ${eur(voisine.prix)}` : `S'approprier · ${eur(voisine.prix)}`}
+        </button>
       </div>
-      <p className="mv-pct" data-progres={pct}>
-        {pct} % {fini ? "· motif complet, à s'approprier" : "· brode…"}
-      </p>
-      <button type="button" className="mv-cta" data-cta onClick={onChoisir}>
-        {voisine.sal ? <Users size={15} aria-hidden="true" /> : <Heart size={15} aria-hidden="true" />}
-        {voisine.sal ? `Rejoindre le SAL · ${eur(voisine.prix)}` : `S'approprier · ${eur(voisine.prix)}`}
-      </button>
     </article>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  La feuille d'appropriation : on regarde, on paie (démo), c'est à nous */
+/*  Le motif brodé sur la grille (ambiance ou décrit)                  */
+/* ------------------------------------------------------------------ */
+
+export interface MotifGrille {
+  cross: Int16Array;
+  palette: number[];
+  w: number;
+  h: number;
+  nom: string;
+}
+
+function MotifSurGrille({ motif, onPret }: { motif: MotifGrille; onPret: () => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    cv.width = motif.w * CELL;
+    cv.height = motif.h * CELL;
+    let row = 0;
+    const step = Math.max(1, Math.round(motif.h / 26));
+    const peindre = () => {
+      const last = Math.min(motif.h, row);
+      for (let y = row - step < 0 ? 0 : row - step; y < last; y += 1) {
+        for (let x = 0; x < motif.w; x += 1) {
+          const v = motif.cross[y * motif.w + x];
+          if (v < 0) continue;
+          dessinerCroix(ctx, x * CELL, y * CELL, CELL, FLOSS[v]?.hex ?? "#888");
+        }
+      }
+      row = last;
+    };
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const id = window.setInterval(() => {
+      row = Math.min(motif.h, row + step);
+      peindre();
+      if (row >= motif.h) {
+        window.clearInterval(id);
+        onPret();
+      }
+    }, 60);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [motif]);
+
+  return (
+    <div className="grille-motif" style={{ width: motif.w * CELL, height: motif.h * CELL }}>
+      <canvas ref={ref} aria-label={`Motif « ${motif.nom} » brodé sur la grille`} />
+      <span className="grille-motif-tag">« {motif.nom} » · brodé sur la grille</span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  La feuille d'appropriation                                         */
 /* ------------------------------------------------------------------ */
 
 interface Achat {
   voisine: Voisine;
   design: MiniDesign;
-  etat: "vue" | "paiement";
 }
 
 function FeuilleAchat({
@@ -307,7 +347,7 @@ function FeuilleAchat({
   };
 
   return (
-    <div className="achat-voile" role="dialog" aria-label={`${voisine.titre} — s'approprier le motif`}>
+    <div className="achat-voile" data-scroll-interne role="dialog" aria-label={`${voisine.titre} — s'approprier le motif`}>
       <div className="achat-feuille">
         <button type="button" className="achat-x" onClick={onFermer} aria-label="Fermer">
           <X size={16} />
@@ -325,15 +365,9 @@ function FeuilleAchat({
               {design.palette.length} fils DMC
             </p>
             <p className="achat-prix">{eur(voisine.prix)}</p>
-            {achat.etat === "vue" ? (
-              <button type="button" className="mv-cta achat-cta" data-confirmer onClick={confirmer}>
-                {voisine.sal ? `Rejoindre le SAL · ${eur(voisine.prix)}` : `Payer ${eur(voisine.prix)} · le motif est à moi`}
-              </button>
-            ) : (
-              <p className="achat-encours" role="status">
-                Paiement en cours…
-              </p>
-            )}
+            <button type="button" className="mv-cta achat-cta" data-confirmer onClick={confirmer}>
+              {voisine.sal ? `Rejoindre le SAL · ${eur(voisine.prix)}` : `Payer ${eur(voisine.prix)} · le motif est à moi`}
+            </button>
             <p className="achat-honnete">
               Démo : le paiement est simulé — aucun argent ne circule. Le motif, lui, est bien réel :
               il s'ouvre directement dans l'atelier, sans fichier ni dossier.
@@ -346,29 +380,50 @@ function FeuilleAchat({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Le contexte : les ancres posées sur la toile                       */
+/* ------------------------------------------------------------------ */
+
+interface Ancres {
+  table: HTMLDivElement | null;
+  k: number;
+  motifPret: boolean;
+}
+const AncresCtx = createContext<Ancres>({ table: null, k: 1, motifPret: false });
+export const useAncreToile = () => useContext(AncresCtx);
+
+/* ------------------------------------------------------------------ */
 /*  La toile                                                           */
 /* ------------------------------------------------------------------ */
 
 export default function ToileInfinie({
   onOpen,
   onMotif,
+  motif,
   children,
 }: {
   onOpen: () => void;
   onMotif: (p: Pattern) => void;
+  /** Le motif brodé à même la grille, derrière le champ : ambiance ou décrit. */
+  motif: MotifGrille | null;
   children: ReactNode;
 }) {
   const monde = useRef<HTMLDivElement>(null);
+  const [table, setTable] = useState<HTMLDivElement | null>(null);
+  const [motifPret, setMotifPret] = useState(false);
+
+  const HERO_PX = { w: HERO.w * CELL, h: HERO.h * CELL };
 
   const fit = (): Vue => {
     const vw = typeof window === "undefined" ? 1280 : window.innerWidth;
     const vh = typeof window === "undefined" ? 800 : window.innerHeight;
-    const k = clamp(Math.min(vw / (SHEET.w + 160), vh / (SHEET.h + 140)), 0.4, 1.15);
-    return { k, x: (vw - SHEET.w * k) / 2, y: (vh - SHEET.h * k) / 2 };
+    const k = clamp(Math.min(vw / (HERO_PX.w + 160), vh / (HERO_PX.h + 140)), 0.4, 1.15);
+    return { k, x: (vw - HERO_PX.w * k) / 2, y: (vh - HERO_PX.h * k) / 2 };
   };
 
   const [vue, setVue] = useState<Vue>(fit);
   const [achat, setAchat] = useState<Achat | null>(null);
+
+  useEffect(() => setMotifPret(false), [motif]);
 
   /* Les voisines avancent ensemble : un seul battement pour toute la toile. */
   const [tick, setTick] = useState(0);
@@ -394,14 +449,16 @@ export default function ToileInfinie({
     });
   };
 
-  /* Molette : non-passive, pour zoomer sans faire défiler la page. */
+  /* Molette : lente, et jamais pendant qu'on déroule une table posée là. */
   useEffect(() => {
     const el = monde.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      if ((e.target as Element).closest?.("[data-scroll-interne]")) return;
       e.preventDefault();
       const r = el.getBoundingClientRect();
-      zoomAt(e.clientX - r.left, e.clientY - r.top, e.deltaY > 0 ? 0.9 : 1.1);
+      zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0006));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -415,6 +472,7 @@ export default function ToileInfinie({
   const bouge = useRef(false);
 
   const onDown = (e: React.PointerEvent) => {
+    if ((e.target as Element).closest?.("[data-stop-toile]")) return;
     (e.target as Element).setPointerCapture?.(e.pointerId);
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     dernier.current = { x: e.clientX, y: e.clientY };
@@ -462,105 +520,124 @@ export default function ToileInfinie({
     const liste = designs.get(v.id) ?? [miniDesign(v.seed)];
     const cycle = liste[0].ordre.length + 6;
     const idx = Math.floor(((v.seed * 7 + tick) % (cycle * liste.length)) / cycle) % liste.length;
-    setAchat({ voisine: v, design: liste[idx], etat: "vue" });
+    setAchat({ voisine: v, design: liste[idx] });
   };
 
   return (
-    <div
-      ref={monde}
-      className="toile"
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-    >
-      {/* Le tissu : deux grilles superposées, fines et repères de patron. */}
+    <AncresCtx.Provider value={{ table, k: vue.k, motifPret }}>
       <div
-        className="toile-grille blocs"
-        style={{
-          backgroundSize: `${CELL * BLOC * vue.k}px ${CELL * BLOC * vue.k}px`,
-          backgroundPosition: `${vue.x}px ${vue.y}px`,
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="toile-grille fines"
-        style={{
-          backgroundSize: `${CELL * vue.k}px ${CELL * vue.k}px`,
-          backgroundPosition: `${vue.x}px ${vue.y}px`,
-          opacity: clamp((vue.k - 0.28) / 0.3, 0, 1),
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Le monde : tout ce qui est posé sur la toile, hero compris. */}
-      <div
-        className="toile-monde"
-        data-k={vue.k.toFixed(3)}
-        style={{ transform: `translate(${vue.x}px, ${vue.y}px) scale(${vue.k})` }}
+        ref={monde}
+        className="toile"
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
       >
-        <div className="hero-sheet" style={{ width: SHEET.w, height: SHEET.h }}>
-          <span className="sheet-marque tl" aria-hidden="true" />
-          <span className="sheet-marque tr" aria-hidden="true" />
-          <span className="sheet-marque bl" aria-hidden="true" />
-          <span className="sheet-marque br" aria-hidden="true" />
-          <div className="hero-contenu">{children}</div>
+        {/* Le tissu : deux grilles superposées, fines et repères de patron. */}
+        <div
+          className="toile-grille blocs"
+          style={{
+            backgroundSize: `${CELL * BLOC * vue.k}px ${CELL * BLOC * vue.k}px`,
+            backgroundPosition: `${vue.x}px ${vue.y}px`,
+          }}
+          aria-hidden="true"
+        />
+        <div
+          className="toile-grille fines"
+          style={{
+            backgroundSize: `${CELL * vue.k}px ${CELL * vue.k}px`,
+            backgroundPosition: `${vue.x}px ${vue.y}px`,
+            opacity: clamp((vue.k - 0.28) / 0.3, 0, 1),
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Le monde : tout ce qui est posé sur la toile, hero compris. */}
+        <div
+          className="toile-monde"
+          data-k={vue.k.toFixed(3)}
+          style={{ transform: `translate(${vue.x}px, ${vue.y}px) scale(${vue.k})` }}
+        >
+          {motif && <MotifSurGrille motif={motif} onPret={() => setMotifPret(true)} />}
+
+          <div className="hero-sheet" style={{ width: HERO_PX.w, height: HERO_PX.h }}>
+            <span className="sheet-marque tl" aria-hidden="true" />
+            <span className="sheet-marque tr" aria-hidden="true" />
+            <span className="sheet-marque bl" aria-hidden="true" />
+            <span className="sheet-marque br" aria-hidden="true" />
+            <div className="hero-contenu">{children}</div>
+          </div>
+
+          {VOISINES.map((v) => {
+            const liste = designs.get(v.id) ?? [miniDesign(v.seed)];
+            const depart = (v.seed * 7) % 9;
+            const cycle = liste[0].ordre.length + 6; // terminé, puis on repart
+            const brut = depart + tick;
+            const tour = Math.floor(brut / cycle) % liste.length;
+            const design = liste[tour];
+            const fait = Math.min(brut % cycle, design.ordre.length);
+            return (
+              <Vivante
+                key={v.id}
+                voisine={v}
+                design={design}
+                fait={fait}
+                total={design.ordre.length}
+                onChoisir={() => ouvrir(v)}
+              />
+            );
+          })}
+
+          {/* Le tableau des 54 cartes : une composition, pas une liste. */}
+          <div className="tableau-cartes" data-stop-toile style={{ left: 88 * CELL, top: -4 * CELL }}>
+            <p className="tableau-titre">Le tableau du SAL · 54 cartes</p>
+            <CardDeck dense />
+          </div>
+
+          {/* La table magnétique du PDF se pose ici quand on dépose un fichier. */}
+          <div
+            ref={setTable}
+            className="ancre-table"
+            data-scroll-interne
+            data-stop-toile
+            style={{ left: 0, top: (HERO.h + 6) * CELL, width: 46 * CELL }}
+          />
         </div>
 
-        {VOISINES.map((v) => {
-          const liste = designs.get(v.id) ?? [miniDesign(v.seed)];
-          const depart = (v.seed * 7) % 9;
-          const cycle = liste[0].ordre.length + 6; // terminé, puis on repart
-          const brut = depart + tick;
-          const tour = Math.floor(brut / cycle) % liste.length;
-          const design = liste[tour];
-          const fait = Math.min(brut % cycle, design.ordre.length);
-          return (
-            <Vivante
-              key={v.id}
-              voisine={v}
-              design={design}
-              fait={fait}
-              total={design.ordre.length}
-              onChoisir={() => ouvrir(v)}
-            />
-          );
-        })}
+        {/* Le strict minimum d'interface, posé sur la toile. */}
+        <header className="toile-nav">
+          <span className="toile-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="17" height="17">
+              <path d="M6 6l12 12M18 6L6 18" stroke="#ff453a" strokeWidth="2.6" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span className="toile-nom">POINT ZÉRO</span>
+          <button type="button" className="toile-atelier" onClick={onOpen}>
+            Ouvrir l’atelier
+          </button>
+        </header>
+
+        <div className="toile-zoom" role="group" aria-label="Zoom de la toile">
+          <button type="button" aria-label="Zoomer" onClick={() => zoomAt(window.innerWidth / 2, window.innerHeight / 2, 1.18)}>
+            <Plus size={16} />
+          </button>
+          <button type="button" aria-label="Dézoomer" onClick={() => zoomAt(window.innerWidth / 2, window.innerHeight / 2, 1 / 1.18)}>
+            <Minus size={16} />
+          </button>
+          <button type="button" aria-label="Revenir au hero" onClick={() => setVue(fit())}>
+            <Home size={15} />
+          </button>
+        </div>
+
+        <div className="toile-chips">
+          <p className="toile-chip geste">Molette : zoomer doucement · Glisser : se déplacer · Dézoomez : tout est sur la grille</p>
+          <p className="toile-chip honnete">
+            Démo hors ligne : les voisines sont simulées en local (pas encore de serveur) et le paiement est simulé
+          </p>
+        </div>
+
+        {achat && <FeuilleAchat achat={achat} onFermer={() => setAchat(null)} onMotif={onMotif} />}
       </div>
-
-      {/* Le strict minimum d'interface, posé sur la toile. */}
-      <header className="toile-nav">
-        <span className="toile-logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="17" height="17">
-            <path d="M6 6l12 12M18 6L6 18" stroke="#ff453a" strokeWidth="2.6" strokeLinecap="round" />
-          </svg>
-        </span>
-        <span className="toile-nom">POINT ZÉRO</span>
-        <button type="button" className="toile-atelier" onClick={onOpen}>
-          Ouvrir l’atelier
-        </button>
-      </header>
-
-      <div className="toile-zoom" role="group" aria-label="Zoom de la toile">
-        <button type="button" aria-label="Zoomer" onClick={() => zoomAt(window.innerWidth / 2, window.innerHeight / 2, 1.25)}>
-          <Plus size={16} />
-        </button>
-        <button type="button" aria-label="Dézoomer" onClick={() => zoomAt(window.innerWidth / 2, window.innerHeight / 2, 0.8)}>
-          <Minus size={16} />
-        </button>
-        <button type="button" aria-label="Revenir au hero" onClick={() => setVue(fit())}>
-          <Home size={15} />
-        </button>
-      </div>
-
-      <div className="toile-chips">
-        <p className="toile-chip geste">Molette : zoomer · Glisser : se déplacer · Dézoomez : vous êtes dans la grille</p>
-        <p className="toile-chip honnete">
-          Démo hors ligne : les voisines sont simulées en local (pas encore de serveur) et le paiement est simulé
-        </p>
-      </div>
-
-      {achat && <FeuilleAchat achat={achat} onFermer={() => setAchat(null)} onMotif={onMotif} />}
-    </div>
+    </AncresCtx.Provider>
   );
 }

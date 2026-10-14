@@ -915,48 +915,6 @@
 }
 
 /* ------------------------------------------------------------------ */
-/*  Fond du hero : dithering animé, ou point de croix CSS sans WebGL   */
-/* ------------------------------------------------------------------ */
-
-.hero-texture {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background: #ffffff;
-}
-.hero-texture canvas {
-  display: block;
-}
-.hero-texture-vignette {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(74% 60% at 50% 46%, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.5) 66%, rgba(255, 255, 255, 0.86) 100%);
-}
-.hero-texture-css {
-  position: absolute;
-  inset: -80px;
-  background:
-    repeating-linear-gradient(45deg, rgba(17, 17, 20, 0.05) 0 1px, transparent 1px 7px),
-    repeating-linear-gradient(-45deg, rgba(17, 17, 20, 0.05) 0 1px, transparent 1px 7px),
-    #ffffff;
-  animation: texture-drift 26s linear infinite;
-}
-@keyframes texture-drift {
-  from {
-    background-position: 0 0, 0 0, 0 0;
-  }
-  to {
-    background-position: 56px 56px, -56px 56px, 0 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-texture-css {
-    animation: none;
-  }
-}
-
-/* ------------------------------------------------------------------ */
 /*  La toile infinie : le site entier est une grille                   */
 /* ------------------------------------------------------------------ */
 
@@ -1002,15 +960,11 @@
   position: absolute;
   top: 0;
   left: 0;
-  overflow: hidden;
-  border: 1.5px solid rgba(17, 17, 20, 0.16);
-  border-radius: 6px;
-  background: #ffffff;
-  box-shadow: 0 24px 80px -30px rgba(17, 17, 20, 0.25);
 }
 .hero-contenu {
   position: relative;
   z-index: 1;
+  pointer-events: none;
   display: flex;
   height: 100%;
   flex-direction: column;
@@ -1019,6 +973,20 @@
   gap: 6px;
   padding: 48px 56px;
   text-align: center;
+}
+.hero-contenu .hero-form,
+.hero-contenu .hero-chips,
+.hero-contenu .hero-etat,
+.hero-contenu button,
+.hero-contenu label,
+.hero-contenu input {
+  pointer-events: auto;
+}
+.hero-titre {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 26px rgba(255, 255, 255, 0.95),
+    0 0 70px rgba(255, 255, 255, 0.9);
 }
 .sheet-marque {
   position: absolute;
@@ -1050,7 +1018,43 @@
 .sheet-marque.bl { bottom: 10px; left: 10px; }
 .sheet-marque.br { bottom: 10px; right: 10px; }
 
+/* Le motif brodé à même la grille, au centre du format paysage. */
+.grille-motif {
+  position: absolute;
+  left: 650px; /* centre du format paysage : 25 cases */
+  top: 390px; /* 15 cases */
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.grille-motif canvas {
+  display: block;
+}
+.grille-motif-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -30px;
+  transform: translateX(-50%);
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(17, 17, 20, 0.1);
+  font-size: 11px;
+  color: rgba(17, 17, 20, 0.6);
+  white-space: nowrap;
+}
+
 /* Le champ, en lumière sur la feuille blanche. */
+.hero-chips {
+  position: relative;
+  z-index: 2;
+}
+.hero-etat {
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  padding: 4px 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
 .hero-form {
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(17, 17, 20, 0.14);
@@ -1083,12 +1087,7 @@
   position: absolute;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 20px;
-  border: 1.5px solid rgba(17, 17, 20, 0.14);
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 18px 50px -26px rgba(17, 17, 20, 0.35);
+  gap: 10px;
   color: #111114;
   text-align: left;
 }
@@ -1098,9 +1097,19 @@
 }
 .mv-canvas {
   display: block;
+}
+.mv-etiquette {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(17, 17, 20, 0.12);
-  border-radius: 6px;
-  background: #fffefb;
+  box-shadow: 0 12px 34px -20px rgba(17, 17, 20, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .mv-direct {
   position: absolute;
@@ -1144,7 +1153,8 @@
   color: rgba(17, 17, 20, 0.6);
 }
 .mv-bar {
-  height: 5px;
+  width: 130px;
+  height: 4px;
   border-radius: 999px;
   background: rgba(17, 17, 20, 0.09);
   overflow: hidden;
@@ -1166,13 +1176,13 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 42px;
-  margin-top: 4px;
-  padding: 0 16px;
+  min-height: 36px;
+  padding: 0 13px;
+  white-space: nowrap;
   border-radius: 999px;
   background: #111114;
   color: #fff;
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
   transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.2s;
@@ -1183,6 +1193,32 @@
 }
 .mv-cta:active {
   transform: scale(0.97);
+}
+
+/* Le tableau des 54 cartes : une composition posée sur la toile. */
+.tableau-cartes {
+  position: absolute;
+  width: 884px;
+  padding: 20px 22px;
+  border-radius: 20px;
+  background: #101013;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 30px 90px -34px rgba(17, 17, 20, 0.55);
+  color: var(--color-label);
+}
+.tableau-titre {
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.55);
+}
+.ancre-table {
+  position: absolute;
+}
+.ancre-table:empty {
+  display: none;
 }
 
 /* Le minimum d'interface, posé sur la toile. */

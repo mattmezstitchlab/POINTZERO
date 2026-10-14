@@ -50,12 +50,15 @@ export default function PdfPrep({
   onClose,
   onImport,
   embedded = false,
+  echelleMonde = 1,
 }: {
   file: File;
   onClose: () => void;
   onImport: (p: Pattern) => void;
   /** Intégré dans la landing : s'affiche dans le flux de la page au lieu d'occuper tout l'écran. */
   embedded?: boolean;
+  /** Posé sur la toile zoomée : les deltas de souris arrivent déjà zoomés. */
+  echelleMonde?: number;
 }) {
   /* En mode intégré, le panneau a une hauteur fixe et défile : sans cela, il
      faut chercher le bouton pour continuer, ce qui ne fait pas professionnel.
@@ -261,15 +264,15 @@ export default function PdfPrep({
     const deltaClientY = e.clientY - drag.startClientY;
 
     // Déplacement en points de grille
-    const deltaGridX = Math.round(deltaClientX / tableScale);
-    const deltaGridY = Math.round(deltaClientY / tableScale);
+    const deltaGridX = Math.round(deltaClientX / (tableScale * echelleMonde));
+    const deltaGridY = Math.round(deltaClientY / (tableScale * echelleMonde));
 
     let newX = Math.max(0, drag.startTileX + deltaGridX);
     let newY = Math.max(0, drag.startTileY + deltaGridY);
 
     // Aimantage magnétique aux bords des autres blocs
     if (magnet) {
-      const snapDist = Math.max(4, Math.round(14 / tableScale)); // ~14px réels d'attraction
+      const snapDist = Math.max(4, Math.round(14 / (tableScale * echelleMonde))); // ~14px réels d'attraction
       let snappedX: number | undefined;
       let snappedY: number | undefined;
 

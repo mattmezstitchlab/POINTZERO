@@ -97,13 +97,13 @@ describe("La toile : le site entier est une grille", () => {
     expect(container!.querySelector(".toile-grille.fines"), "la grille fine case par case").toBeTruthy();
     expect(container!.querySelector(".hero-sheet"), "le hero est une feuille posée sur la toile").toBeTruthy();
     expect(container!.querySelectorAll(".motif-vivant").length).toBe(VOISINES.length);
-    expect(container!.textContent).toContain("vous êtes dans la grille");
+    expect(container!.textContent).toContain("tout est sur la grille");
     expect(container!.textContent, "honnêteté : voisines locales, paiement simulé").toContain("simulées");
   });
 
   it("dézoome à l'infini : la grille fine s'efface, les repères restent", async () => {
     const avant = kActuel();
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 16; i += 1) {
       await act(async () => {
         toile().dispatchEvent(
           new WheelEvent("wheel", { deltaY: 120, clientX: 512, clientY: 300, bubbles: true, cancelable: true }),
@@ -165,8 +165,17 @@ describe("Les voisines brodent en direct", () => {
   });
 
   it("certains motifs sont des SAL à rejoindre", () => {
-    expect(container!.textContent).toContain("Rejoindre le SAL");
     expect(container!.textContent).toMatch(/SAL · \d+ brodeuses/);
+    expect(
+      [...container!.querySelectorAll("[data-cta]")].some((b) => /Rejoindre/.test(b.textContent || "")),
+      "les SAL se rejoignent depuis la toile",
+    ).toBe(true);
+  });
+
+  it("la table magnétique du PDF et le tableau des 54 cartes sont posés sur la toile", () => {
+    expect(container!.querySelector(".toile-monde .ancre-table"), "la table du PDF a sa place sur la toile").toBeTruthy();
+    expect(container!.querySelector(".toile-monde [data-deck]"), "les 54 cartes forment un tableau").toBeTruthy();
+    expect(container!.querySelectorAll(".deck-card").length).toBe(54);
   });
 });
 
@@ -201,15 +210,18 @@ describe("Le hero : sobre, sur la feuille blanche", () => {
     }
   };
 
-  it("le titre noir seul, fond blanc animé, champ centré, sans les deux boutons", () => {
+  it("le titre noir seul, plus aucun fond derrière le champ : le motif se brode dessus", async () => {
     const hero = container!.querySelector("#hero-jeu")!;
     expect(hero.textContent).not.toContain("Se laisser guider");
     expect(hero.textContent).not.toContain("Ouvrir l'atelier");
-    expect(container!.querySelector(".hero-texture"), "le dithering blanc anime la feuille").toBeTruthy();
-    expect(container!.querySelector(".hero-texture-css"), "sans WebGL, la texture CSS prend le relais").toBeTruthy();
+    expect(container!.querySelector(".hero-texture"), "plus aucun fond derrière le champ").toBeFalsy();
+    await sleep(200);
+    expect(container!.querySelector(".grille-motif canvas"), "un motif d'ambiance se brode derrière le champ").toBeTruthy();
+    expect(container!.querySelector(".grille-motif-tag")!.textContent, "différent à chaque visite").toContain("·");
     const h1 = container!.querySelector("h1")!;
     expect(h1.textContent).toMatch(/De l.image au dernier point/);
-    expect(h1.className, "titre noir sur fond blanc").toContain("text-black");
+    expect(h1.className, "titre noir halé de blanc").toContain("text-black");
+    expect(h1.className).toContain("hero-titre");
     expect(container!.textContent).not.toContain("Point Zéro");
     expect(container!.querySelector(".loupe"), "plus de loupe : mal compris sur le curseur").toBeFalsy();
   });
@@ -231,9 +243,10 @@ describe("Le hero : sobre, sur la feuille blanche", () => {
     await act(async () => {
       container!.querySelector("#hero-jeu form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     });
-    await frames();
-    expect(container!.querySelector(".hero-stage"), "la scène de génération prend la feuille").toBeTruthy();
-    expect(container!.querySelector(".hero-stage canvas"), "le motif arrive en petits pixels").toBeTruthy();
+    await frames(40);
+    const gm = container!.querySelector(".grille-motif canvas")!;
+    expect(gm.getAttribute("aria-label"), "le motif décrit remplace l'ambiance, à même la grille").toContain("renard endormi");
+    expect(container!.querySelector(".grille-motif-tag")!.textContent).toContain("renard endormi");
     expect(container!.textContent).toContain("44 × 44 cases");
     expect(container!.textContent).toContain("prêt à broder");
     expect(byText(/Continuer dans l'atelier/), "puis hop : on continue").toBeTruthy();
