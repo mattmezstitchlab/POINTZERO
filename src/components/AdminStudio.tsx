@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Copy, Download, FileText, Plus, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
-import { ADMIN_STORAGE, createAdminDocument, docKinds, docToHTML, documentTotals, duplicateAsInvoice, safeAdminStore, type AdminDocKind, type AdminDocument, type AdminDocState, type AdminStore, type DocumentItem } from "../lib/adminCore";
+import { ADMIN_STORAGE, createAdminDocument, docKinds, docToHTML, documentArtBackground, documentArtThemes, documentTotals, duplicateAsInvoice, safeAdminStore, type AdminDocKind, type AdminDocument, type AdminDocState, type AdminStore, type DocumentArtTheme, type DocumentItem } from "../lib/adminCore";
 import { eurosToCents, euro, loadProjectOptions } from "../lib/budgetCore";
+import { ART_KEY, artToSVG, safeArt } from "../lib/artWorldCore";
 
 const load=():AdminStore=>{
   try{return safeAdminStore(JSON.parse(localStorage.getItem(ADMIN_STORAGE)??"null"))??{version:1,documents:[]};}
@@ -21,6 +22,9 @@ export default function AdminStudio({onBack,linkedProject}:Props) {
     if(linkedProject&&!p.some(x=>x.id===linkedProject.id))p.unshift(linkedProject);
     return p;
   },[linkedProject]);
+  const artBackdrop=useMemo(()=>{
+    try{return safeArt(JSON.parse(localStorage.getItem(ART_KEY)??"null"));}catch{return null;}
+  },[]);
   const doc=store.documents.find(d=>d.id===selectedId)??null;
   const money=doc&&(doc.kind==="devis"||doc.kind==="facture");
   const totals=doc?documentTotals(doc):null;
@@ -58,7 +62,7 @@ export default function AdminStudio({onBack,linkedProject}:Props) {
   const downloadDocument=(format:"html"|"json")=>{
     if(!doc)return;
     const name=doc.reference.toLowerCase().replace(/[^a-z0-9-]/g,"-")||"document";
-    if(format==="html")saveStudioFile(name+".html",docToHTML(doc),"text/html;charset=utf-8");
+    if(format==="html")saveStudioFile(name+".html",docToHTML(doc,artBackdrop),"text/html;charset=utf-8");
     else saveStudioFile(name+".pointzero.json",JSON.stringify(doc,null,2));
   };
   const importJSON=async(e:ChangeEvent<HTMLInputElement>)=>{
@@ -116,6 +120,13 @@ export default function AdminStudio({onBack,linkedProject}:Props) {
           <select aria-label="Projet lié au document" className={studioInput+" mt-1"} value={doc.projectId} onChange={e=>update({projectId:e.target.value})}>
             <option value="">Aucun projet</option>{availableProjects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+        </label>
+        <label className="block text-xs text-white/75">Fond artistique léger (A4)
+          <select aria-label="Fond artistique du document" className={studioInput+" mt-1"} value={doc.artTheme??"none"}
+            onChange={e=>update({artTheme:e.target.value as DocumentArtTheme})}>
+            {documentArtThemes.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+          <span className="mt-1 block text-[10px] text-white/55">Un décor discret derrière le texte. Pour « Ma toile », utilisez le projet local LE MONDE AIME.</span>
         </label>
         <details open className="border-t border-white/10 pt-2">
           <summary className="cursor-pointer text-xs font-semibold">Émetteur et destinataire</summary>
@@ -198,7 +209,11 @@ export default function AdminStudio({onBack,linkedProject}:Props) {
             <button className={studioButton} onClick={()=>downloadDocument("json")}><Download size={15}/> JSON</button>
           </div>
         </div>
-        <article aria-label="Aperçu A4 du document" className="mx-auto min-h-[780px] max-w-[760px] rounded-[4px] bg-white px-6 py-8 text-[#18181b] shadow-xl sm:px-10 sm:py-12">
+        <article aria-label="Aperçu A4 du document" className="relative isolate mx-auto min-h-[780px] max-w-[760px] rounded-[4px] bg-white px-6 py-8 text-[#18181b] shadow-xl sm:px-10 sm:py-12"
+          style={{backgroundImage:documentArtBackground(doc.artTheme)}}>
+          {doc.artTheme==="my-art"&&artBackdrop&&<img alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-contain opacity-[.085]"
+            src={"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(artToSVG(artBackdrop))}/>}
+          
           <header className="flex flex-wrap justify-between gap-4 border-b-2 border-black pb-5">
             <div><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-black/50">POINTZERO · Administration</p>
               <h3 className="mt-3 text-2xl font-bold">{doc.title||doc.kind}</h3>
