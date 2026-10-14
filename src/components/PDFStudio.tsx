@@ -187,7 +187,7 @@ export default function PDFStudio({onBack,onConvertToPattern,onUsePattern}:Props
       <div className="mb-4 inline-flex gap-1 rounded-[5px] border border-white/20 bg-[#09090b] p-1" role="group" aria-label="Mode du Studio PDF">
         <button type="button" aria-pressed={mode==="pages"} onClick={()=>setMode("pages")}
           className={`rounded-[4px] px-3 py-2 text-xs ${mode==="pages"?"bg-white font-semibold text-black":"text-white/75 hover:bg-white/10"}`}>Assembler les pages</button>
-        <button type="button" aria-pressed={mode==="magnetic"} disabled={!sources.length} onClick={()=>setMode("magnetic")}
+        <button type="button" aria-label="Grilles magnétiques" aria-pressed={mode==="magnetic"} disabled={!sources.length} onClick={()=>setMode("magnetic")}
           className={`rounded-[4px] px-3 py-2 text-xs disabled:opacity-30 ${mode==="magnetic"?"bg-white font-semibold text-black":"text-white/75 hover:bg-white/10"}`}>Grilles magnétiques</button>
       </div>
       {mode==="magnetic"&&magneticSource
