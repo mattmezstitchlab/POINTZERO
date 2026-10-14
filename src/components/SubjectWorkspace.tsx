@@ -87,6 +87,7 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove,zoom=1,onInspect
     style={{aspectRatio:pattern.w+"/"+pattern.h,imageRendering:"pixelated",width:zoom>1?Math.ceil(pattern.w*scale*zoom):undefined}}
     onPointerDown={e=>{
       const p=point(e);
+      onInspect?.(clampFocus(pattern,p));
       const target=[...scene.layers].reverse().find(l=>{
         const sprite=JSON.parse(l.sprite) as {w:number;h:number};
         return l.visible&&p.x>=l.x&&p.y>=l.y&&p.x<l.x+sprite.w*l.scale&&p.y<l.y+sprite.h*l.scale;
