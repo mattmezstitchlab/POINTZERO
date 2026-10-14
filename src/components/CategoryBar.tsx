@@ -1,16 +1,15 @@
-import { Flower2, Music2, Palette, PencilRuler, Scissors } from "lucide-react";
-export type AtelierCategory = "create" | "compose" | "threads" | "stitch" | "music";
+import { Flower2, Palette, PencilRuler, Scissors } from "lucide-react";
+export type AtelierCategory = "create" | "compose" | "threads" | "stitch";
 const categories = [
   { id: "create", label: "Créer", Icon: Flower2 },
-  { id: "compose", label: "Composer", Icon: PencilRuler },
-  { id: "threads", label: "Fils & toile", Icon: Palette },
+  { id: "compose", label: "Dessiner", Icon: PencilRuler },
+  { id: "threads", label: "Fils", Icon: Palette },
   { id: "stitch", label: "Broder", Icon: Scissors },
-  { id: "music", label: "Musique & parole", Icon: Music2 },
 ] as const;
 export default function CategoryBar({ active, onChoose }: { active: AtelierCategory; onChoose: (category: AtelierCategory) => void }) {
-  return <nav className="pointer-events-auto fixed left-1/2 top-[66px] z-30 flex w-max max-w-[calc(100vw-18px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-lg border border-black/15 bg-white/95 p-1 text-[#333] shadow-[0_3px_24px_#0002] backdrop-blur-xl" aria-label="Catégories de l'atelier">
+  return <nav aria-label="Catégories de l'atelier" className="pointer-events-auto fixed bottom-[84px] left-1/2 z-30 flex max-w-[calc(100vw-16px)] -translate-x-1/2 items-center gap-0.5 overflow-x-auto rounded-md border border-white/15 bg-[#0b0b0c]/95 p-1 text-white shadow-[0_12px_36px_#0005] backdrop-blur-xl sm:top-[16px] sm:bottom-auto">
     {categories.map(({ id, label, Icon }) => <button key={id} type="button" aria-pressed={active === id} onClick={() => onChoose(id)}
-      className={`flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors sm:px-4 ${active === id ? "bg-[#222] text-white" : "hover:bg-black/5"}`}>
+      className={`flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-[5px] px-3 text-xs font-semibold transition-colors sm:px-4 ${active === id ? "bg-white text-black" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>
       <Icon size={15} aria-hidden="true" /><span>{label}</span>
     </button>)}
   </nav>;
