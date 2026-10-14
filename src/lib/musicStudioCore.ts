@@ -120,5 +120,5 @@ export function musicToMidi(score:MusicScore):Uint8Array{
  let last=0;
  for(const event of events){data.push(...variable(event.tick-last),...event.bytes);last=event.tick;}
  data.push(0,255,47,0);
- return new Uint8Array([...chunk("MThd",[0,0,0,6,0,0,0,1,ppq>>8,ppq&255]),...chunk("MTrk",data)]);
+ return new Uint8Array([...chunk("MThd",[0,0,0,1,ppq>>8,ppq&255]),...chunk("MTrk",data)]);
 }
