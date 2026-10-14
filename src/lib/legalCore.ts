@@ -1,8 +1,9 @@
 /** POINTZERO Legal — educational local dossier, NOT legal advice or a compliance certificate.
  * Project source records stay in their original studio. No automatic publishing. */
-import {ACADEMY_KEY,readAcademy,validProject} from "./academyCore";
+import {ACADEMY_KEY,validProject} from "./academyCore";
 import {MINI_DRAFTS,MINI_KEY,safeMiniSite} from "./miniSiteCore";
 export const LEGAL_KEY="pointzero:legal-dossiers:v1";
+export const LEGAL_ACTIVE_KEY="pointzero:legal-active-project:v1";
 export type SiteRef={key:string;kind:"mini-site"|"academy";id:string;title:string;contact:string;source:string};
 export type EditorKind="professionnel"|"association"|"particulier"|"a-definir";
 export type CookieMode="aucun"|"necessaires"|"mesure-audience-a-verifier"|"autres-traceurs"|"inconnu";
@@ -41,7 +42,6 @@ export const BASIS:{value:LawfulBasis;label:string}[]=[
 const id=()=>globalThis.crypto?.randomUUID?.()??Math.random().toString(36).slice(2);
 const today=()=>new Date().toISOString().slice(0,10);
 const short=(x:unknown,len:number)=>typeof x==="string"&&x.length<=len;
-const k=(ref:SiteRef)=>ref.key;
 export function sourceProjects():SiteRef[]{
  const refs:SiteRef[]=[];
  try{
