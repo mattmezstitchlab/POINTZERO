@@ -3,7 +3,7 @@ import {FLOSS,flossIndex} from "../lib/dmc";
 import {adaptPatternToProfile,defaultBrodeuseProfile,loadBrodeuseProfile,saveBrodeuseProfile,previewBoutiqueVariants} from "../lib/brodeuseProfile";
 import {addSuggestedLeaves,floralDemo,suggestLeaves} from "../lib/floralComposition";
 import {affectedBounds,attachSubject,changeSubject,detectSubjects,recomposeSubjects,reorderSubject,sceneFromPattern} from "../lib/subjectEngine";
-import {computeStats,fromObject,toObject,createPattern,ensurePalette} from "../lib/pattern";
+import {fromObject,toObject,createPattern,ensurePalette} from "../lib/pattern";
 import {buildPdf} from "../lib/pdf";
 
 const filled=(p:ReturnType<typeof createPattern>)=>Array.from(p.cross).filter(v=>v>=0).length;
