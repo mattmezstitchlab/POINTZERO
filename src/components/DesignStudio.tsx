@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { ArrowLeft, ChevronDown, Copy, Download, FolderOpen, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shapes, Trash2, Type, Undo2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, Camera, ChevronDown, Copy, Download, FolderOpen, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
@@ -48,8 +48,14 @@ function motifSVG(doc: DesignDocument, layer: Extract<DesignElement,{kind:"motif
   const fragment: DesignDocument = { ...doc, width: layer.w, height: layer.h, elements: [{ ...layer, x:0,y:0 }] };
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(designToSVG(fragment,true));
 }
-interface Props { onEmbroidery: () => void }
-export default function DesignStudio({ onEmbroidery }: Props) {
+interface Props {
+  onEmbroidery: () => void;
+  onPhoto?: () => void;
+  onFashion?: () => void;
+  incomingPhoto?: {id:string;dataUrl:string}|null;
+  onPhotoConsumed?: () => void;
+}
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -68,6 +74,7 @@ export default function DesignStudio({ onEmbroidery }: Props) {
   const imagePicker = useRef<HTMLInputElement>(null);
   const projectPicker = useRef<HTMLInputElement>(null);
   const dragRef = useRef<{id:string;x:number;y:number;startX:number;startY:number}|null>(null);
+  const receivedPhoto = useRef<string|null>(null);
   const element = doc.elements.find(e => e.id===selected) ?? null;
   const [patternPreviews] = useState(() => MOTIF_PRESETS.map(p => ({...p, pattern:p.make()})));
 
@@ -82,6 +89,20 @@ export default function DesignStudio({ onEmbroidery }: Props) {
     try { localStorage.setItem(CURRENT,JSON.stringify(doc)); }
     catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
   }, [doc]);
+  useEffect(() => {
+    if(!incomingPhoto || incomingPhoto.id===receivedPhoto.current)return;
+    receivedPhoto.current=incomingPhoto.id;
+    if(!validDataImage(incomingPhoto.dataUrl)){setNotice("Photo incompatible avec le studio de création.");onPhotoConsumed?.();return;}
+    const id=globalThis.crypto?.randomUUID?.()??String(Date.now());
+    setDoc(current=>{
+      const w=current.width*.68,h=current.height*.5;
+      const next:DesignElement={id,kind:"image",x:Math.round((current.width-w)/2),y:Math.round((current.height-h)/2),w,h,dataUrl:incomingPhoto.dataUrl};
+      setPast(history=>[...history.slice(-39),current]);
+      return {...current,elements:[...current.elements,next]};
+    });
+    setFuture([]);setSelected(id);setNotice("Photo retouchée ajoutée à votre composition.");
+    onPhotoConsumed?.();
+  },[incomingPhoto,onPhotoConsumed]);
   const change = (next: DesignDocument) => {
     setPast(history => [...history.slice(-39),doc]);
     setFuture([]);
@@ -200,6 +221,8 @@ export default function DesignStudio({ onEmbroidery }: Props) {
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
+        {onPhoto&&<button onClick={onPhoto} className={action} aria-label="Ouvrir le studio Photo"><Camera size={15}/><span className="hidden min-[950px]:inline">Photo</span></button>}
+        {onFashion&&<button onClick={onFashion} className={action} aria-label="Ouvrir le studio Stylisme"><Shirt size={15}/><span className="hidden min-[950px]:inline">Stylisme</span></button> 
       </div>
       <div className="flex min-w-0 items-center gap-1">
         <button type="button" onClick={undo} disabled={!past.length} className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30" aria-label="Annuler"><Undo2 size={16}/></button>
