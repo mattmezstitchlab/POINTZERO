@@ -62,6 +62,25 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre POINTZERO Academy puis son parcours No Code en mode apprenant et formateur", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio POINTZERO Academy · UI/UX & No Code"));
+    expect(container?.querySelector('[aria-label="Espace UI/UX & Academy"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Prévisualisation du site No Code"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Progression du parcours UI UX"]')).toBeTruthy();
+    await click(button("Mode formateur Academy"));
+    expect(container?.querySelector('[aria-label="Titre de l\'exercice du formateur"]')).toBeTruthy();
+    await click(button("Mode apprenant Academy"));
+    await click(button("Aperçu Mobile"));
+    expect(button("Aperçu Mobile")?.getAttribute("aria-pressed")).toBe("true");
+    await click(button("Ajouter bloc Citation"));
+    expect(container?.querySelectorAll('[aria-label^="Modifier "]').length).toBeGreaterThan(4);
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("ouvre Studio Accessibilité et expose réglages persistants, contrastes et audit HTML", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
