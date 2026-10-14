@@ -27,9 +27,23 @@ export function saveProjectFile(p: Pattern) {
   downloadBlob(blob, `${slugify(p.name)}.pointzero.json`);
 }
 
+/** Lecture texte compatible aussi avec les navigateurs dont File.text n'est pas disponible. */
+export async function readTextFile(file: File): Promise<string> {
+  if (typeof file.text === "function") return file.text();
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string"
+      ? resolve(reader.result)
+      : reject(new Error("Lecture du fichier impossible."));
+    reader.onerror = () => reject(reader.error ?? new Error("Lecture du fichier impossible."));
+    reader.onabort = () => reject(new Error("Lecture interrompue."));
+    reader.readAsText(file);
+  });
+}
+
 export async function readProjectFile(file: File): Promise<Pattern | null> {
   try {
-    return fromObject(JSON.parse(await file.text()));
+    return fromObject(JSON.parse(await readTextFile(file)));
   } catch {
     return null;
   }
