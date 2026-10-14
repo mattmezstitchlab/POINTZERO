@@ -50,7 +50,6 @@ const count = (p:Pattern) => p.cross.reduce((n,v)=>n+Number(v>=0),0);
 const active = (p:Pattern,i:number) => p.cross[i]>=0 || p.fwd[i]>=0 || p.bwd[i]>=0 || p.q.some(a=>a[i]>=0);
 const inside = (x:number,y:number,p:Pattern) => x>=0&&y>=0&&x<p.w&&y<p.h;
 const at = (x:number,y:number,p:Pattern) => y*p.w+x;
-const touches = (a: Bounds,b: Bounds) => a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
 const boxOf=(layer:SubjectLayer):Bounds=>{
   const p=read(layer.sprite);
   return {x:layer.x,y:layer.y,w:Math.max(1,Math.ceil(p.w*layer.scale)),h:Math.max(1,Math.ceil(p.h*layer.scale))};
