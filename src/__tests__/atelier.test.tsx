@@ -62,6 +62,24 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre Studio Accessibilité et expose réglages persistants, contrastes et audit HTML", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Accessibilité & Design System"));
+    expect(container?.querySelector('[aria-label="Espace Accessibilité & Design System"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Agrandir les caractères"]')).toBeTruthy();
+    await click(button("Ouvrir Design System"));
+    expect(container?.querySelector('[aria-label="Couleurs d\'accent accessibles"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Choisir la couleur de fond"]')).toBeTruthy();
+    await click(button("Ouvrir Audit WCAG / RGAA"));
+    expect(button("Analyser les critères HTML de base")).toBeTruthy();
+    await click(button("Ouvrir Confidentialité"));
+    expect(container?.querySelector('[aria-label="Mode discret des aperçus"]')).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("ouvre Studio Music et propose invités, Radio Mix, pré-mastering et SACEM", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
