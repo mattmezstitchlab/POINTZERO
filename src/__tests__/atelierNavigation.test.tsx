@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import CategoryBar from "../components/CategoryBar";
 import AtelierCreate from "../components/AtelierCreate";
@@ -7,7 +7,7 @@ import AtelierCreate from "../components/AtelierCreate";
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root | null = null;
 let node: HTMLDivElement | null = null;
-function render(element: React.ReactNode) {
+function render(element: ReactNode) {
   node = document.createElement("div");
   document.body.appendChild(node);
   root = createRoot(node);
