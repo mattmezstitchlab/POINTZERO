@@ -12,6 +12,7 @@ import {
   type PdfBlock,
 } from "../lib/pdfAnalysis";
 import { readVectorChart, type VectorResult } from "../lib/pdfVector";
+import { readCompleteGlyphChart, type CompleteGlyphChart } from "../lib/pdfGlyphChart";
 import type { PdfHandle } from "../lib/pdfimport";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 
@@ -89,6 +90,7 @@ export default function PdfPrep({
   const [analysis, setAnalysis] = useState<PdfAnalysis | null>(null);
   const [handle, setHandle] = useState<PdfHandle | null>(null);
   const [vector, setVector] = useState<VectorResult | null>(null);
+  const [completeGlyph, setCompleteGlyph] = useState<CompleteGlyphChart | null>(null);
   const [stage, setStage] = useState(0);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -142,6 +144,7 @@ export default function PdfPrep({
     registry.current = new SymbolRegistry();
     cache.current.clear();
     setCorrections({});
+    setCompleteGlyph(null);
     analyzePdf(file, (m) => {
       if (live) setBusy(m);
     })
@@ -155,15 +158,35 @@ export default function PdfPrep({
         setAnalysis(a);
         setAuthor(a.author);
         a.legend.forEach((e) => registry.current.addKnown(e.bits, e.code));
+        // Priorité à la vraie matrice de glyphes lorsqu'elle est complète.
+        // BeeL.pdf, par exemple, porte même ses cases vides dans le texte PDF :
+        // 12 grilles = 193 × 200 cases ; le raster perd des zones.
+        setBusy("Lecture complète des symboles et codes DMC…");
+        const full = await readCompleteGlyphChart(h);
+        if (!live) return;
+        setCompleteGlyph(full.ok ? full : null);
+        if (full.ok) {
+          const chart: PdfBlock[] = full.tiles.map(t => ({
+            id: "glyph-" + t.page, page: t.page,
+            x0: t.bounds.x0, y0: t.bounds.y0, x1: t.bounds.x1, y1: t.bounds.y1,
+            cols: t.cols, rows: t.rows, label: "Grille DMC exacte · page " + t.page,
+          }));
+          setBlocks(chart);
+          setOrder(chart.map(b => b.id));
+          setPerRow(full.columns);
+          setPageN(chart[0].page);
+          setCenterTab("preview");
+          setVector(null);
+          setMode("vecteur");
+          setBusy("");
+          return;
+        }
         const pages = a.pages.filter((p) => p.kind === "chart");
         const chart = pages.flatMap((p) => p.blocks);
         setBlocks(chart);
-        setOrder(autoOrder(chart).map((b) => b.id));
-
-        // Détection du nombre de colonnes de la mosaïque (3 colonnes par défaut pour les patrons comme BeeL)
+        setOrder(autoOrder(chart).map(b => b.id));
         const suggestedPerRow = a.modelAspect >= 1.2 ? 4 : a.modelAspect <= 0.7 ? 2 : 3;
         setPerRow(Math.min(suggestedPerRow, Math.max(1, chart.length)));
-
         if (pages[0]) setPageN(pages[0].n);
         const initialBoxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }[]>();
         for (const b of chart) {
@@ -171,7 +194,7 @@ export default function PdfPrep({
           list.push({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 });
           initialBoxes.set(b.page, list);
         }
-        setBusy("Lecture du texte et de la numérotation…");
+        setBusy("Lecture vectorielle des axes du patron…");
         const v = await readVectorChart(h, initialBoxes);
         if (!live) return;
         setVector(v);
@@ -432,6 +455,20 @@ export default function PdfPrep({
         // Priorité aux codes DMC réellement présents dans le tableau PDF :
         // l'ancien mode "vecteur" était bien détecté mais jamais utilisé.
         if (mode === "vecteur") {
+          if (completeGlyph?.ok) {
+            // L'ordre des cartes et leur placement influencent l'assemblage
+            // réel, mais leur matrice de cases ne repasse jamais par le raster.
+            const placed: Placed[] = effective.map(b => {
+              const t = completeGlyph.tiles.find(t => t.page === b.page);
+              if (!t) throw new Error("Page vectorielle manquante : " + b.page);
+              return { b, data: {
+                cells: t.cells, byColor: 0, byLegend: t.mapped, unresolved: t.unresolved,
+              } };
+            });
+            const product = assembleFromTileLayout(placed, tileLayout, analysis.title);
+            setAssembled({ ...product, source: "vecteur" });
+            return;
+          }
           if (!vector?.ok) {
             setAssembled(null);
             setError("Correspondance vectorielle indisponible : choisissez Automatique pour lire les couleurs visibles.");
@@ -485,7 +522,7 @@ export default function PdfPrep({
     return () => {
       dead = true;
     };
-  }, [stage, handle, analysis, sig, layoutSig, mode, colors, vector]);
+  }, [stage, handle, analysis, sig, layoutSig, mode, colors, vector, completeGlyph]);
 
   // Les substitutions sont un calque NON DESTRUCTIF. Modifier une estimation
   // ne modifie jamais les données extraites du PDF ; annuler restaure l'original.
@@ -564,11 +601,15 @@ export default function PdfPrep({
           <section className="mx-auto max-w-[860px]">
             <h3 className="text-[15px] font-semibold">Pages analysées</h3>
             <p className="mt-1 text-[13px] text-label-2">
-              {analysis.pages.filter((p) => p.kind === "chart").length} page(s) de grille · {blocks.length} bloc(s) détecté(s) · modèle couleur au format {analysis.modelAspect.toFixed(2)}
+              {completeGlyph?.ok
+                ? `${completeGlyph.tiles.length} pages de grille complètes · ${completeGlyph.columns} colonnes × ${completeGlyph.tiles.length / completeGlyph.columns} rangées · ${completeGlyph.width} × ${completeGlyph.height} points`
+                : `${analysis.pages.filter(p => p.kind === "chart").length} page(s) de grille · ${blocks.length} bloc(s) détecté(s)`}
               {vector?.ok ? " · codes DMC et symboles vectoriels reconnus" : ""}.
             </p>
             <p className="mt-2 text-[12px] text-label-2" role="status">
-              {vector?.ok
+              {completeGlyph?.ok
+                ? `Grille exacte détectée : ${completeGlyph.mapped.toLocaleString("fr-FR")} points avec codes DMC, ${completeGlyph.blank.toLocaleString("fr-FR")} cases vides, ${completeGlyph.legendCount} références et ${completeGlyph.unresolved} symbole(s) sans correspondance. Les 12 pages restent indépendantes et réordonnables avant l'import.`
+                : vector?.ok
                 ? `Lecture vectorielle de ${vector.cells.size} cases avec codes DMC du PDF, à vérifier dans l’aperçu.`
                 : `Légende image : ${analysis.legend.length} correspondance(s) détectée(s). Les codes absents ne peuvent pas être devinés depuis des symboles noirs et blancs.`}
             </p>
@@ -967,7 +1008,7 @@ export default function PdfPrep({
               <section className="rounded-[14px] bg-white/5 p-3.5">
                 <h3 className="mb-2 text-[13px] font-semibold">Lecture des points</h3>
                 <div className="seg mb-2">
-                  {vector?.ok && (
+                  {(vector?.ok || completeGlyph?.ok) && (
                     <button type="button" aria-pressed={mode === "vecteur"} onClick={() => { setMode("vecteur"); setCenterTab("preview"); }}>
                       DMC exacts
                     </button>
@@ -1012,7 +1053,7 @@ export default function PdfPrep({
                   </p>
                   <p className="mt-1 text-[11px] leading-relaxed text-label-3">
                     {assembled.source === "vecteur"
-                      ? "Codes extraits du PDF. Vous pouvez toujours remplacer une teinte manuellement."
+                      ? "Codes extraits de la légende PDF et de toutes les cases, sans estimation de couleur. Vérifiez le placement des pages."
                       : "Couleurs d'image approximatives : vérifiez la légende du PDF avant d'accepter."}
                   </p>
                   <div className="mt-3 max-h-[260px] space-y-3 overflow-y-auto pr-1">
