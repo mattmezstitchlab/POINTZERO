@@ -50,6 +50,11 @@ export default function BrodeuseProfilePanel({profile,onChange}:{profile:Brodeus
      <label>Hauteur maxi (pts)<input type="number" min={20} max={500} value={profile.maxHeight} className="mt-1 w-full rounded border border-white/20 bg-[#27272c] p-2"
        onChange={e=>update("maxHeight",Math.max(20,Math.min(500,+e.target.value||20)))}/></label>
    </div>
+   <label className="block">Temps disponible (minutes, optionnel)
+     <input type="number" min={10} max={50000} value={profile.minutes??""} placeholder="Non renseigné"
+       className="mt-1 w-full rounded border border-white/20 bg-[#27272c] p-2"
+       onChange={e=>update("minutes",e.target.value===""?null:Math.max(10,Math.min(50000,+e.target.value||10)))}/>
+   </label>
    <label className="block">Fils préférés (codes DMC séparés par des virgules)<input className="mt-1 w-full rounded border border-white/20 bg-[#27272c] p-2" placeholder="310, 703, 321"
      value={profile.preferredCodes.join(", ")} onChange={e=>update("preferredCodes",e.target.value.split(/[\s,;]+/).filter(Boolean).slice(0,50))}/></label>
    <div className="border-t border-white/10 pt-3">
