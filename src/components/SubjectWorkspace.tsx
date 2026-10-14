@@ -6,7 +6,7 @@ import { buildPdf, pdfFileName } from "../lib/pdf";
 import { fromObject, type Pattern } from "../lib/pattern";
 import {
   affectedBounds, attachSubject, changeSubject, detectSubjects, duplicateSubject, mergeSubjects,
-  recomposeSubjects, reorderSubject, sceneFromPattern, splitSubject, spriteForExport,
+  recomposeSubjects, removeSubject, reorderSubject, sceneFromPattern, splitSubject, spriteForExport,
   type Bounds, type SubjectLayer, type SubjectScene,
 } from "../lib/subjectEngine";
 import { multiSubjectDemo } from "../lib/subjectDemo";
@@ -331,6 +331,12 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
             <button className="rounded-md border border-white/20 px-2 py-2 text-xs" onClick={()=>operation(()=>setScene(s=>duplicateSubject(s,selected.id)))}><Copy size={14} className="mr-1 inline"/> Dupliquer</button>
           </div>
           <button className="w-full rounded-md border border-white/20 px-3 py-2 text-xs" onClick={exportSelected}><FileJson size={14} className="mr-1 inline"/> Exporter ce sujet seul</button>
+          <button type="button" className="w-full rounded-md border border-white/20 px-3 py-2 text-xs text-white/75" disabled={selected.locked}
+            onClick={()=>operation(()=>{
+              const next=removeSubject(scene,selected.id);setScene(next);
+              setSelectedId(next.layers[0]?.id??null);
+              setMessage("Élément retiré de la proposition. Le patron source reste enregistré.");
+            })}><Trash2 size={14} className="mr-1 inline"/> Retirer cet élément</button>
           <div className="border-t border-white/10 pt-3 text-xs">
             <h4 className="mb-2 font-medium">Fusionner avec un autre sujet</h4>
             <select className={fieldClass} value={mergeId} onChange={e=>setMergeId(e.target.value)}>
