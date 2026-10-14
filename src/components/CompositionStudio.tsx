@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Check, Download, Eye, EyeOff, FileJson, LoaderCircle, RefreshCw, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
+import { ArrowDown, ArrowUp, Check, Download, Eye, EyeOff, FileJson, LoaderCircle, RefreshCw, ScanSearch, ZoomIn, ZoomOut, X } from "lucide-react";
+import StitchMagnifier, { clampFocus, type StitchFocus } from "./StitchMagnifier";
 import { FLOSS, flossIndex } from "../lib/dmc";
 import { buildPdf, pdfFileName } from "../lib/pdf";
 import { downloadBlob, saveProjectFile } from "../lib/io";
@@ -10,7 +11,7 @@ import {
 import { COUNTS, type Pattern } from "../lib/pattern";
 import SubjectWorkspace from "./SubjectWorkspace";
 
-function StitchPreview({ pattern, max = 520 }: { pattern: Pattern; max?: number }) {
+function StitchPreview({ pattern, max = 520, zoom = 1, onInspect }: { pattern: Pattern; max?: number; zoom?: number; onInspect?: (focus: StitchFocus) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
@@ -53,7 +54,21 @@ function StitchPreview({ pattern, max = 520 }: { pattern: Pattern; max?: number 
       ctx.beginPath();ctx.moveTo(seg.x1*cell,seg.y1*cell);ctx.lineTo(seg.x2*cell,seg.y2*cell);ctx.stroke();
     }
   }, [pattern,max]);
-  return <canvas ref={ref} style={{ maxHeight:max, maxWidth:max, imageRendering:"auto" }} className="mx-auto block h-auto w-full object-contain" aria-label={"Aperçu du patron "+pattern.name}/>;
+  const inspect=(e:RPointerEvent<HTMLCanvasElement>)=>{
+    if(!onInspect)return;
+    const bounds=e.currentTarget.getBoundingClientRect();
+    if(bounds.width===0||bounds.height===0)return;
+    onInspect(clampFocus(pattern,{
+      x:Math.floor((e.clientX-bounds.left)/bounds.width*pattern.w),
+      y:Math.floor((e.clientY-bounds.top)/bounds.height*pattern.h)
+    }));
+  };
+  // Zoom purely optical: canvas pixel data remains unchanged and the source is never edited.
+  const baseline=Math.max(1,Math.min(12,max/Math.max(pattern.w,pattern.h)));
+  return <canvas ref={ref} onPointerMove={inspect} onPointerDown={inspect}
+    style={{width:zoom>1?Math.ceil(pattern.w*baseline*zoom):undefined,maxWidth:zoom===1?max:undefined,maxHeight:zoom===1?max:undefined,imageRendering:zoom>1?"pixelated":"auto"}}
+    className={`mx-auto block h-auto object-contain ${zoom===1?"w-full":"max-w-none"} ${onInspect?"cursor-crosshair touch-pan-x touch-pan-y":""}`}
+    aria-label={"Aperçu du patron "+pattern.name}/>;
 }
 
 const DETAIL: Array<{id:Detail;label:string}>=[
@@ -92,6 +107,9 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
   const [subjectsOpen,setSubjectsOpen]=useState(false);
   const [working,setWorking]=useState(false);
   const [message,setMessage]=useState("");
+  const [zoom,setZoom]=useState(1);
+  const [loupe,setLoupe]=useState(true);
+  const [focus,setFocus]=useState<StitchFocus>(()=>({x:Math.floor(source.w/2),y:Math.floor(source.h/2)}));
   const dragged=useRef<string|null>(null);
   const [confirmedReduction,setConfirmedReduction]=useState(false);
   const choose = <K extends keyof ComposeSettings>(key:K,value:ComposeSettings[K])=>{
@@ -206,13 +224,32 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
         <main className="flex min-h-[400px] min-w-0 flex-col items-center justify-center gap-3 bg-[#1b1a1d] px-3 py-5 lg:overflow-y-auto" aria-label="Aperçu central de la composition">
           {error && <p role="alert" className="max-w-lg rounded-md border border-red-400/40 p-4 text-sm text-red-200">{error}</p>}
           {result && <>
+            <div className="flex w-full max-w-[620px] flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1 rounded-[5px] border border-white/15 bg-[#09090b] p-1" role="group" aria-label="Contrôle du zoom">
+                <button type="button" aria-label="Zoom arrière composition" disabled={zoom===1} onClick={()=>setZoom(z=>Math.max(1,z/2))}
+                  className="grid size-8 place-items-center rounded-[4px] text-white hover:bg-white/10 disabled:opacity-25"><ZoomOut size={16}/></button>
+                <span className="w-[38px] text-center font-mono text-xs">{zoom}×</span>
+                <button type="button" aria-label="Zoom avant composition" disabled={zoom===8} onClick={()=>setZoom(z=>Math.min(8,z*2))}
+                  className="grid size-8 place-items-center rounded-[4px] text-white hover:bg-white/10 disabled:opacity-25"><ZoomIn size={16}/></button>
+                <button type="button" aria-label="Activer la loupe des points" aria-pressed={loupe} onClick={()=>setLoupe(v=>!v)}
+                  className={`ml-1 flex min-h-8 items-center gap-1 rounded-[4px] px-2 text-xs ${loupe?"bg-white text-black":"text-white/75 hover:bg-white/10"}`}><ScanSearch size={15}/> Loupe</button>
+              </div>
+            </div>
             <div className="flex w-full max-w-[620px] items-start justify-between gap-4">
               <div><p className="text-[10px] uppercase tracking-[.18em] text-white/45">Aperçu central</p><h3 className="text-lg font-semibold">{result.pattern.name}</h3></div>
               <span className="text-right text-xs text-white/60">{result.pattern.w} × {result.pattern.h} points<br/>{result.pattern.palette.length} fils DMC</span>
             </div>
-            <div className="flex w-full max-w-[620px] items-center justify-center rounded-md bg-[#fbf8f2] p-4">
-              <StitchPreview pattern={result.pattern}/>
+            <div className="relative w-full max-w-[620px] rounded-[6px] border border-white/10 bg-[#fbf8f2]">
+              <div className="thin-scroll max-h-[60dvh] min-h-[240px] w-full overflow-auto p-3" aria-label="Zone de zoom des points">
+                <div className="flex min-h-[210px] min-w-max items-center justify-center">
+                  <StitchPreview pattern={result.pattern} zoom={zoom} onInspect={setFocus}/>
+                </div>
+              </div>
+              {loupe&&<div className="absolute right-2 top-2 z-10 pointer-events-none max-w-[min(252px,70%)]">
+                <StitchMagnifier pattern={result.pattern} focus={focus}/>
+              </div>}
             </div>
+            <p className="max-w-[620px] text-center text-[11px] text-white/55">Survolez ou touchez la grille : la loupe montre les croix, fractions et contours. Le zoom 1× à 8× ne modifie pas votre motif.</p>
             <div className="flex max-w-[620px] flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-white/65">
               <span>{result.pattern.back.length} segments arrière</span>
               <span>Difficulté indicative : {result.estimatedDifficulty}</span>
