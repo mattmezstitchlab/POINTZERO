@@ -40,14 +40,14 @@ const tone=(ctx:AudioContext,code:string,hex:string)=>{
   osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+duration+.015);
   osc.onended=()=>{osc.disconnect();gain.disconnect();};
 };
-interface Props {onBack:()=>void;onPattern:(p:Pattern)=>void;onDesign:(dataURL:string)=>void}
+interface Props {onBack:()=>void;onPattern:(p:Pattern)=>void;onDesign:(dataURL:string)=>void;startInGallery?:boolean}
 const lineDist=(p:ArtPoint,a:ArtPoint,b:ArtPoint)=>{
   const vx=b.x-a.x,vy=b.y-a.y,d=vx*vx+vy*vy||1;
   const t=Math.max(0,Math.min(1,((p.x-a.x)*vx+(p.y-a.y)*vy)/d));
   return Math.hypot(p.x-(a.x+vx*t),p.y-(a.y+vy*t));
 };
 const near=(p:ArtPoint,m:ArtMark)=>m.points.some((a,i)=>i===0?Math.hypot(p.x-a.x,p.y-a.y)<m.width/2+19:lineDist(p,m.points[i-1],a)<m.width/2+15);
-export default function ArtWorldStudio({onBack,onPattern,onDesign}:Props){
+export default function ArtWorldStudio({onBack,onPattern,onDesign,startInGallery=false}:Props){
   const [project,setProject]=useState<ArtProject>(readArt);
   const [gallery,setGallery]=useState<GalleryItem[]>(readGallery);
   const [tool,setTool]=useState<ArtTool>("pencil");
@@ -58,7 +58,7 @@ export default function ArtWorldStudio({onBack,onPattern,onDesign}:Props){
   const [search,setSearch]=useState("");
   const [request,setRequest]=useState("");
   const [status,setStatus]=useState("");
-  const [galleryMode,setGalleryMode]=useState(false);
+  const [galleryMode,setGalleryMode]=useState(startInGallery);
   const [selected,setSelected]=useState<string|null>(null);
   const [draft,setDraft]=useState<ArtMark|null>(null);
   const [past,setPast]=useState<ArtProject[]>([]);
