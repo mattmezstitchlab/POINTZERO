@@ -246,9 +246,9 @@ export default function AcademyStudio({onBack,onAccessibility}:{onBack:()=>void;
                (s.kind==="hero"?" min-h-[325px] flex flex-col justify-center":"")+
                (s.kind==="footer"?" border-t border-black/10":"")} style={s.kind==="hero"?{background:"linear-gradient(135deg,"+project.background+","+project.accent+"14)"}:undefined}>
              <span className="absolute right-3 top-3 rounded-[5px] bg-[#1d1b24] px-2 py-1 text-[10px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">{sectionNames.find(t=>t.kind===s.kind)?.label} · éditer</span>
-             {s.kind==="hero"?<h1 className="max-w-[770px] text-[clamp(30px,4vw,60px)] font-bold leading-[1.14] tracking-[-.045em]">{s.title||"Votre titre"}</h1>:
+             {s.kind==="hero"?<h1 className="max-w-[770px] font-bold leading-[1.14] tracking-[-.045em]" style={{fontSize:device==="mobile"?"32px":device==="tablet"?"44px":"clamp(34px,4.1vw,60px)"}}>{s.title||"Votre titre"}</h1>:
                <h2 className="text-[clamp(23px,3vw,38px)] font-bold leading-[1.2] tracking-[-.03em]">{s.title||"Votre rubrique"}</h2>}
-             {s.kind==="cards"?<div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+             {s.kind==="cards"?<div className={"mt-6 grid gap-3 "+(device==="mobile"?"grid-cols-1":device==="tablet"?"grid-cols-2":"grid-cols-3")}>
                {s.body.split(/\n+/g).filter(Boolean).slice(0,8).map((text,i)=><div key={i} className="rounded-[7px] border border-current/10 p-4 text-sm" style={{backgroundColor:project.accent+"12"}}>{text}</div>)}
              </div>:<p className={"mt-5 max-w-[690px] whitespace-pre-wrap text-sm leading-[1.8] opacity-75 "+(s.kind==="quote"?"italic":"")}>{s.body}</p>}
              {!!s.actionLabel&&<span aria-label="Bouton de démonstration non navigable" className="mt-6 inline-flex min-h-10 self-start items-center rounded-[5px] px-4 text-xs font-semibold text-white" style={{backgroundColor:project.accent}}>
