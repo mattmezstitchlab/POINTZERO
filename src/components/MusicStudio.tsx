@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { Accessibility, Download, Mic, Music2, Pause, Play, Plus, RotateCcw, Save, SkipBack, Sparkles, Trash2, Upload, Users, Volume2 } from "lucide-react";
+import { Accessibility, Download, Mic, Music2, Pause, Play, Plus, RotateCcw, Save, SkipBack, Sparkles, Trash2, Upload, Users, Volume2, VolumeX } from "lucide-react";
 import { StudioFrame, saveStudioFile, studioButton, studioInput } from "./StudioFrame";
 import { MusicAudio } from "../lib/musicStudioAudio";
+import { BASE_FLOSS, flossIndex } from "../lib/dmc";
+import { ART_DMC_FAVORITES } from "../lib/artWorldCore";
 import {
   colorFor, emptyMusicScore, EMOTIONS, formatMusicTime, GESTURES, intentionGesture, makeMusicNote,
   makeMusicScore, MUSIC_KEY, MUSIC_SECONDS, musicToMidi, safeMusicScore, snapMusicTime,
@@ -15,7 +17,7 @@ const timeToX=(t:number)=>18+(t/MUSIC_SECONDS)*(VBW-36);
 const xToTime=(x:number)=>snapMusicTime((x-18)/(VBW-36)*MUSIC_SECONDS);
 const stepButtons="min-h-9 rounded-[5px] border border-white/20 px-3 text-xs text-white/85 hover:bg-white/10 disabled:opacity-35";
 function GestureShape({note,selected,onSelect}:{note:MusicNote;selected:boolean;onSelect:(id:string)=>void}){
-  const x=timeToX(note.time),y=laneY[note.pitch],c=colorFor(note.emotion),big=note.gesture==="circle"?24:note.gesture==="point"?8:16;
+  const x=timeToX(note.time),y=laneY[note.pitch],c=(note.dmcCode?BASE_FLOSS.find(f=>f.code===note.dmcCode)?.hex:undefined)??colorFor(note.emotion),big=note.gesture==="circle"?24:note.gesture==="point"?8:16;
   const backdrop=<circle cx={x} cy={y} r={big+13} fill={c} opacity=".12"/>;
   const shape=(()=>{
     switch(note.gesture){
@@ -43,7 +45,10 @@ export default function MusicStudio({onBack}:Props){
   const [activeGesture,setActiveGesture]=useState<Gesture>("point");
   const [emotion,setEmotion]=useState<Emotion>("Sérénité");
   const [position,setPosition]=useState(0);
-  const [playing,setPlaying]=useState(false);
+  const [playing,setPlaying]=useState(true);
+  const [soundActive,setSoundActive]=useState(true);
+  const [audioOn,setAudioOn]=useState(false);
+  const [dmcCode,setDmcCode]=useState<string|null>(null);
   const [selected,setSelected]=useState<string|null>(null);
   const [intention,setIntention]=useState("");
   const [participant,setParticipant]=useState("");
@@ -61,9 +66,34 @@ export default function MusicStudio({onBack}:Props){
   const media=useRef<MediaRecorder|null>(null);
   const micStream=useRef<MediaStream|null>(null);
   const voiceRef=useRef("");
+  const positionRef=useRef(0);
+  const playingRef=useRef(true);
+  const lastAt=useRef(0);
+  const scoreRef=useRef(score);
+  const soundRef=useRef(true);
   if(!audioRef.current)audioRef.current=new MusicAudio();
   useEffect(()=>{try{localStorage.setItem(MUSIC_KEY,JSON.stringify(score));}catch{setStatus("Stockage saturé. Exportez votre partition JSON.");}},[score]);
   useEffect(()=>{voiceRef.current=voiceUrl;},[voiceUrl]);
+  useEffect(()=>{scoreRef.current=score;},[score]);
+  useEffect(()=>{soundRef.current=soundActive;if(!soundActive)audioRef.current?.stopVoices();},[soundActive]);
+  useEffect(()=>{playingRef.current=playing;lastAt.current=performance.now();},[playing]);
+  // Visual transport starts on mount, without bypassing browser audio autoplay restrictions.
+  useEffect(()=>{
+    lastAt.current=performance.now();
+    tick.current=window.setInterval(()=>{
+      const now=performance.now(),delta=Math.max(0,(now-lastAt.current)/1000);
+      lastAt.current=now;
+      if(!playingRef.current)return;
+      const old=positionRef.current;
+      const next=(old+delta)%MUSIC_SECONDS;
+      if(next<old)audioRef.current?.nextLap();
+      positionRef.current=next;
+      setPosition(next);
+      if(soundRef.current&&audioRef.current?.soundEnabled)
+        audioRef.current.queue(scoreRef.current,next);
+    },60);
+    return ()=>{if(tick.current!==null)window.clearInterval(tick.current);tick.current=null;};
+  },[]);
   useEffect(()=>()=>{
     if(tick.current!==null)window.clearInterval(tick.current);
     audioRef.current?.dispose();
@@ -71,31 +101,38 @@ export default function MusicStudio({onBack}:Props){
     micStream.current?.getTracks().forEach(track=>track.stop());
     if(voiceRef.current)URL.revokeObjectURL(voiceRef.current);
   },[]);
-  const stop=()=>{if(tick.current!==null)window.clearInterval(tick.current);tick.current=null;setPlaying(false);audioRef.current?.pause();};
-  const updateScore=(patch:Partial<MusicScore>)=>{if(playing)stop();setScore(s=>({...s,...patch}));};
+  const stop=()=>{playingRef.current=false;setPlaying(false);audioRef.current?.stopVoices();};
+  const updateScore=(patch:Partial<MusicScore>)=>{setScore(s=>({...s,...patch}));};
   const updateNotes=(fn:(notes:MusicNote[])=>MusicNote[])=>{
-    if(playing)stop();setScore(s=>({...s,notes:fn(s.notes)}));
+    setScore(s=>({...s,notes:fn(s.notes)}));
   };
   const current=score.notes.find(n=>n.id===selected)??null;
+  const preview=async(note:MusicNote)=>{
+    if(!soundRef.current||note.gesture==="text")return;
+    try{await audioRef.current?.preview(note);setAudioOn(true);}
+    catch(e){setStatus(e instanceof Error?e.message:"Son indisponible. Le dessin reste possible.");}
+  };
+  const chooseDMC=async(code:string)=>{
+    setDmcCode(code);
+    if(current)updateNotes(notes=>notes.map(n=>n.id===current.id?{...n,dmcCode:code}:n));
+    if(!soundRef.current)return;
+    try{await audioRef.current?.previewDMC(code);setAudioOn(true);}
+    catch(e){setStatus(e instanceof Error?e.message:"Aperçu DMC indisponible.");}
+  };
   const play=async()=>{
-    if(playing){const p=audioRef.current?.pause()??position;stop();setPosition(p);return;}
+    if(playing){stop();return;}
     try{
-      const at=position>=MUSIC_SECONDS-.1?0:position;
-      await audioRef.current!.play(score,at);
-      setPosition(at);setPlaying(true);setStatus("Lecture locale de la partition.");
-      if(tick.current!==null)window.clearInterval(tick.current);
-      tick.current=window.setInterval(()=>{
-        const p=audioRef.current?.position??0;
-        setPosition(p);
-        if(p>=MUSIC_SECONDS-.01){audioRef.current?.pause();setPlaying(false);if(tick.current!==null)window.clearInterval(tick.current);tick.current=null;}
-      },90);
+      if(soundRef.current){await audioRef.current!.activate();setAudioOn(true);}
+      setPlaying(true);playingRef.current=true;lastAt.current=performance.now();
+      setStatus("Lecture continue, en boucle. Le son est actif après votre interaction.");
     }catch(e){setStatus(e instanceof Error?e.message:"Lecture audio indisponible.");setPlaying(false);}
   };
-  const seek=(p:number)=>{stop();audioRef.current?.seek(p);setPosition(p);};
+  const seek=(p:number)=>{positionRef.current=p%MUSIC_SECONDS;setPosition(positionRef.current);lastAt.current=performance.now();audioRef.current?.stopVoices();};
   const addNote=(gesture:Gesture,time:number,pitch:0|1|2,fromText="")=>{
     if(score.notes.length>=150){setStatus("La partition est limitée à 150 gestes.");return;}
-    const n=makeMusicNote(gesture,time,pitch,emotion,participant,fromText);
+    const n={...makeMusicNote(gesture,time,pitch,emotion,participant,fromText),...(dmcCode?{dmcCode}:{})};
     updateNotes(notes=>[...notes,n]);setSelected(n.id);
+    void preview(n);
   };
   const pt=(e:ReactPointerEvent<SVGSVGElement>)=>{
     const box=e.currentTarget.getBoundingClientRect();
@@ -105,10 +142,10 @@ export default function MusicStudio({onBack}:Props){
     return {x,y,pitch,time:xToTime(x)};
   };
   const pointerDown=(e:ReactPointerEvent<SVGSVGElement>)=>{
-    if(e.button!==0||playing)return;
+    if(e.button!==0)return;
     const target=e.target as Element;
     const element=target.closest("[data-music-note]");const id=element?.getAttribute("data-music-note");
-    if(id){setSelected(id);drag.current=id;e.currentTarget.setPointerCapture?.(e.pointerId);return;}
+    if(id){setSelected(id);drag.current=id;e.currentTarget.setPointerCapture?.(e.pointerId);const existing=score.notes.find(n=>n.id===id);if(existing)void preview(existing);return;}
     const point=pt(e);addNote(activeGesture,point.time,point.pitch,intention.trim().slice(0,100));
   };
   const pointerMove=(e:ReactPointerEvent<SVGSVGElement>)=>{
@@ -123,7 +160,7 @@ export default function MusicStudio({onBack}:Props){
     if(!intention.trim()){setStatus("Écrivez une intention avant de la transformer.");return;}
     if(score.notes.length>=150)return;
     const candidate=intentionGesture(intention,emotion,position,participant);
-    updateNotes(notes=>[...notes,candidate]);setSelected(candidate.id);
+    updateNotes(notes=>[...notes,candidate]);setSelected(candidate.id);void preview(candidate);
     setStatus("LUMI a proposé un geste par une règle locale. Vous pouvez le déplacer, modifier ou supprimer.");
   };
   const saveJson=()=>saveStudioFile("pointzero-partition.json",JSON.stringify(score,null,2));
@@ -140,13 +177,13 @@ export default function MusicStudio({onBack}:Props){
     try{
       const parsed=safeMusicScore(JSON.parse(await file.text()));
       if(!parsed)throw Error("Format de partition non reconnu.");
-      stop();audioRef.current?.seek(0);setPosition(0);setScore(parsed);setSelected(null);setStatus("Partition importée dans ce navigateur.");
+      audioRef.current?.stopVoices();seek(0);setScore(parsed);setSelected(null);setStatus("Partition importée dans ce navigateur.");
     }catch(e){setStatus(e instanceof Error?e.message:"Import impossible.");}
   };
   const newScore=()=>{if(!window.confirm("Créer une partition vierge ? Exportez le projet actuel avant de le remplacer."))return;
-    stop();audioRef.current?.seek(0);setPosition(0);setScore(emptyMusicScore());setSelected(null);};
+    audioRef.current?.stopVoices();seek(0);setScore(emptyMusicScore());setSelected(null);};
   const resetDemo=()=>{if(!window.confirm("Charger la partition de démonstration et remplacer le projet en cours ?"))return;
-    stop();audioRef.current?.seek(0);setPosition(0);setScore(makeMusicScore());setSelected(null);};
+    audioRef.current?.stopVoices();seek(0);setScore(makeMusicScore());setSelected(null);};
   const record=async()=>{
     if(recording){media.current?.stop();setRecording(false);micStream.current?.getTracks().forEach(t=>t.stop());return;}
     try{
