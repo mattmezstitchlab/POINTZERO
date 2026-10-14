@@ -217,12 +217,12 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomin
   return <div className="pz-design fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#151517] text-white">
     <header className="z-20 flex h-[58px] shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#09090b] px-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <span className="text-[13px] font-bold tracking-tight">× POINTZERO</span>
+        <span className="shrink-0 text-[13px] font-bold tracking-tight">× <span className="hidden sm:inline">POINTZERO</span></span>
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
-        {onPhoto&&<button onClick={onPhoto} className={action} aria-label="Ouvrir le studio Photo"><Camera size={15}/><span className="hidden min-[950px]:inline">Photo</span></button>}
-        {onFashion&&<button onClick={onFashion} className={action} aria-label="Ouvrir le studio Stylisme"><Shirt size={15}/><span className="hidden min-[950px]:inline">Stylisme</span></button>}
+        {onPhoto&&<button onClick={onPhoto} className={action+" hidden min-[760px]:inline-flex"} aria-label="Ouvrir le studio Photo"><Camera size={15}/><span className="hidden min-[950px]:inline">Photo</span></button>}
+        {onFashion&&<button onClick={onFashion} className={action+" hidden min-[760px]:inline-flex"} aria-label="Ouvrir le studio Stylisme"><Shirt size={15}/><span className="hidden min-[950px]:inline">Stylisme</span></button>}
       </div>
       <div className="flex min-w-0 items-center gap-1">
         <button type="button" onClick={undo} disabled={!past.length} className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30" aria-label="Annuler"><Undo2 size={16}/></button>
@@ -236,7 +236,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomin
           </div>}
         </div>
         <div className="relative">
-          <button onClick={()=>setShowExport(!showExport)} disabled={busy} className="flex min-h-9 items-center gap-1 rounded-[5px] bg-white px-3 text-xs font-semibold text-black disabled:opacity-40"><Download size={15}/> Exporter</button>
+          <button onClick={()=>setShowExport(!showExport)} disabled={busy} className="flex min-h-9 items-center gap-1 rounded-[5px] bg-white px-3 text-xs font-semibold text-black disabled:opacity-40"><Download size={15}/><span className="hidden sm:inline">Exporter</span></button>
           {showExport&&<div className="pz-design-menu absolute right-0 top-[calc(100%+8px)] z-50 w-[170px] p-2">
             {(["png","svg","pdf","json",...(doc.format==="mini-site"||doc.format==="maquette"?["html"]:[])] as Array<"png"|"svg"|"pdf"|"json"|"html">).map(kind=>
               <button key={kind} className="block w-full rounded-[5px] px-2 py-2 text-left text-xs uppercase hover:bg-white/10" onClick={()=>void exportKind(kind)}>{kind==="html"?"HTML statique":kind==="json"?"Projet JSON":kind}</button>)}
@@ -286,6 +286,10 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomin
             {!drafts.length&&<p className="text-xs text-white/60">Aucun projet enregistré dans la bibliothèque.</p>}
           </>}
         </div>
+        {(onPhoto||onFashion)&&<div className="grid grid-cols-2 gap-2 border-t border-white/10 p-2 min-[760px]:hidden">
+          {onPhoto&&<button className={action} onClick={onPhoto}><Camera size={15}/> Photo</button>}
+          {onFashion&&<button className={action} onClick={onFashion}><Shirt size={15}/> Stylisme</button>}
+        </div>}
       </aside>
       <main ref={stage} aria-label="Canevas de création universel" className="pz-design-stage min-w-0 flex-1 overflow-auto p-4 pt-16 lg:p-5" onClick={()=>setSelected(null)}>
         <div className="mx-auto flex min-h-full w-fit flex-col items-center justify-center">
