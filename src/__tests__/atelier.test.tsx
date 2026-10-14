@@ -62,6 +62,33 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("affiche la landing claire LE MONDE AIME depuis son lien direct, puis ouvre les ateliers", async () => {
+    window.history.replaceState(null,"","/?site=le-monde-aime");
+    await mount();
+    expect(container?.querySelector('[aria-label="Présentation LE MONDE AIME"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Présentation LE MONDE AIME"] h1')?.textContent).toContain("Un amour");
+    await click(button("Ouvrir la musique inclusive depuis LE MONDE AIME"));
+    expect(container?.querySelector('[aria-label="Espace Musique inclusive"]')).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio LE MONDE AIME · Présentation"));
+    await click(button("Créer une œuvre dans LE MONDE AIME"));
+    expect(container?.querySelector('[aria-label="Espace LE MONDE AIME"]')).toBeTruthy();
+  });
+  it("garde la barre de lecture musicale active pendant les ajouts et propose le rail DMC sonore", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Musique inclusive"));
+    expect(button("Mettre en pause")).toBeTruthy();
+    const count=container?.querySelectorAll('[data-music-note]').length??0;
+    await click(button("Ajouter un geste musical au curseur"));
+    expect(container?.querySelectorAll('[data-music-note]').length).toBe(count+1);
+    expect(button("Mettre en pause")).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Nuancier sonore DMC"]')).toBeTruthy();
+    await click(button("Jouer et choisir DMC 820"));
+    expect(button("Jouer et choisir DMC 820")?.getAttribute("aria-pressed")).toBe("true");
+  });
   it("ouvre LE MONDE AIME depuis le menu unique et revient aux autres studios", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
