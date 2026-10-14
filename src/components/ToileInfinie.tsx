@@ -3,6 +3,7 @@ import { Minus, Plus, Home, X, Users, Heart, Hand, Frame } from "lucide-react";
 import CardDeck from "./CardDeck";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { FLOSS } from "../lib/dmc";
+import type { Point } from "../lib/slame";
 import { couleursZone, reglageDe, type RectZone, type ReglageZone } from "../lib/requant";
 
 /**
@@ -438,6 +439,9 @@ export default function ToileInfinie({
   reglages,
   onReglage,
   nbCouleursSource,
+  musicMode = false,
+  musicTrail = [],
+  onMusicCell,
   children,
 }: {
   onOpen: () => void;
@@ -451,6 +455,10 @@ export default function ToileInfinie({
   onReglage: (rect: RectZone, n: number) => void;
   /** Combien de fils la zone porte dans le motif source (plafond du réglage). */
   nbCouleursSource: (rect: RectZone) => number;
+  /** SLÂME selection takes place on the real homepage canvas. */
+  musicMode?: boolean;
+  musicTrail?: Point[];
+  onMusicCell?: (point: Point) => void;
   children: ReactNode;
 }) {
   const monde = useRef<HTMLDivElement>(null);
@@ -473,6 +481,7 @@ export default function ToileInfinie({
   const [zone, setZone] = useState<RectZone | null>(null);
 
   useEffect(() => setMotifPret(false), [motif]);
+  useEffect(() => { if (musicMode) { setOutil("deplacer"); setZone(null); } }, [musicMode]);
 
   /* Les voisines avancent ensemble : un seul battement pour toute la toile. */
   const [tick, setTick] = useState(0);
@@ -596,6 +605,13 @@ export default function ToileInfinie({
       }
       return;
     }
+    if (musicMode && motif && onMusicCell && pts.current.size === 1 && !bouge.current &&
+        !(e.target as Element).closest?.("button,input,textarea,select,a,[data-stop-toile]")) {
+      const c = clientToCell(e.clientX, e.clientY);
+      const x = Math.floor(c.cx - (HERO.w - motif.w) / 2);
+      const y = Math.floor(c.cy - (HERO.h - motif.h) / 2);
+      if (x >= 0 && x < motif.w && y >= 0 && y < motif.h) onMusicCell({ x, y });
+    }
     pts.current.delete(e.pointerId);
     dernier.current = null;
   };
@@ -653,6 +669,35 @@ export default function ToileInfinie({
           style={{ transform: `translate(${vue.x}px, ${vue.y}px) scale(${vue.k})` }}
         >
           {motif && <MotifSurGrille motif={motif} onPret={() => setMotifPret(true)} />}
+          {musicMode && motif && musicTrail.length > 0 && (
+            <svg
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: (HERO.w - motif.w) / 2 * CELL,
+                top: (HERO.h - motif.h) / 2 * CELL,
+                width: motif.w * CELL,
+                height: motif.h * CELL,
+                overflow: "visible",
+                pointerEvents: "none",
+                zIndex: 2,
+              }}
+              viewBox={"0 0 " + motif.w * CELL + " " + motif.h * CELL}
+            >
+              <polyline
+                fill="none"
+                stroke="#6047a0"
+                strokeWidth={Math.max(2.5, CELL * .16)}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity=".85"
+                points={musicTrail.slice(-512).map(p => ((p.x + .5) * CELL) + "," + ((p.y + .5) * CELL)).join(" ")}
+              />
+              {musicTrail.slice(-1).map((p, i) => (
+                <circle key={i} cx={(p.x + .5) * CELL} cy={(p.y + .5) * CELL} r={CELL * .3} fill="#6047a0" stroke="#fff" strokeWidth="2" />
+              ))}
+            </svg>
+          )}
 
           <div className="hero-sheet" style={{ width: HERO_PX.w, height: HERO_PX.h }}>
             <span className="sheet-marque tl" aria-hidden="true" />
