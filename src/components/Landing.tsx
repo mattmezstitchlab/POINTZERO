@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import ToileInfinie, { type MotifGrille } from "./ToileInfinie";
 import HeroPlayground from "./HeroPlayground";
-import FlossRail from "./FlossRail";
-import PaletteSheet from "./PaletteSheet";
-import { appliquerZones, couleursZone, type RectZone, type ReglageZone } from "../lib/requant";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { appendWaypoint, type Point } from "../lib/slame";
 import HomeSlamePanel, { type GrilleMode } from "./HomeSlamePanel";
@@ -21,10 +18,6 @@ interface Props {
 export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Props) {
   const [promptText, setPromptText] = useState("");
   const [source, setSource] = useState<MotifGrille | null>(null);
-  const [reglages, setReglages] = useState<ReglageZone[]>([]);
-  const [railActif, setRailActif] = useState(-1);
-  const [railEdits, setRailEdits] = useState<Pattern | null>(null);
-  const [nuancier, setNuancier] = useState(false);
   const [modeGrille, setModeGrille] = useState<GrilleMode>("toile");
   const [boutique, setBoutique] = useState(false);
   const [musicTrail, setMusicTrail] = useState<Point[]>([]);
@@ -32,12 +25,7 @@ export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Pr
     setMusicTrail(trail => appendWaypoint(trail, point));
   }, []);
 
-  /* Le motif affiché = le source, réglages de zone appliqués. */
-  const motif = useMemo<MotifGrille | null>(() => {
-    if (!source) return null;
-    if (!reglages.length) return source;
-    return { ...source, cross: appliquerZones(source.cross, source.w, source.h, reglages) };
-  }, [source, reglages]);
+  const motif = source;
 
   /* Le motif de la grille, en vrai Pattern : le rail de fils de l'atelier
      (computeStats, symboles, écheveaux) officie ici, pas un rail parallèle. */
@@ -56,17 +44,7 @@ export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Pr
     return p;
   };
 
-  const patternRail = useMemo(() => (motif ? (railEdits ?? motifVersPattern(motif)) : null), [motif, railEdits]);
-  useEffect(() => setRailEdits(null), [motif]);
-
-  const onReglage = (rect: RectZone, n: number) => {
-    setReglages((rs) => {
-      const autres = rs.filter((r) => !(r.rect.x === rect.x && r.rect.y === rect.y && r.rect.w === rect.w && r.rect.h === rect.h));
-      return [...autres, { rect, n: Math.max(2, n) }];
-    });
-  };
-
-  const nbCouleursSource = (rect: RectZone) => (source ? couleursZone(source.cross, source.w, source.h, rect).length : 0);
+  const patternRail = useMemo(() => (motif ? motifVersPattern(motif) : null), [motif]);
 
   return (
     <>
@@ -79,9 +57,9 @@ export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Pr
       motif={motif}
       showShowcase={false}
       displayMotifOnToile={false}
-      reglages={reglages}
-      onReglage={onReglage}
-      nbCouleursSource={nbCouleursSource}
+      reglages={[]}
+      onReglage={() => {}}
+      nbCouleursSource={() => 0}
     >
       <div className={"hero-cadre" + (modeGrille !== "toile" ? " pointer-events-none opacity-0" : "")} data-tag="Créer votre patron à partir de la grille">
         <h1 className="hero-titre relative text-[clamp(34px,4.6vw,64px)] leading-[0.98] font-semibold tracking-[-0.05em] text-black">
@@ -93,8 +71,6 @@ export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Pr
         onGrille={(m) => {
           setSource(m);
           setMusicTrail([]);
-          setReglages([]);
-          if (m) setPointZero(false);
         }}
         prompt={promptText}
         setPrompt={setPromptText}
@@ -118,30 +94,6 @@ export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Pr
       onMode={setModeGrille}
       onAdvanced={onSlame}
     />
-    {patternRail && (
-      <>
-        <FlossRail
-          pattern={patternRail}
-          active={railActif}
-          onActive={setRailActif}
-          onPattern={setRailEdits}
-          onBrowse={() => setNuancier(true)}
-          stitching={false}
-        />
-        <PaletteSheet
-          open={nuancier}
-          onClose={() => setNuancier(false)}
-          pattern={patternRail}
-          color={railActif}
-          onPick={(idx) => {
-            const p = patternRail;
-            ensurePalette(p, idx);
-            setRailEdits({ ...p });
-            setNuancier(false);
-          }}
-        />
-      </>
-    )}
     </>
   );
 }
