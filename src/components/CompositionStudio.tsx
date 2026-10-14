@@ -8,6 +8,7 @@ import {
   type Detail, type RegionCard, type CompositionResult,
 } from "../lib/composition";
 import { COUNTS, type Pattern } from "../lib/pattern";
+import SubjectWorkspace from "./SubjectWorkspace";
 
 function StitchPreview({ pattern, max = 520 }: { pattern: Pattern; max?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -88,6 +89,7 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
   const [cards,setCards]=useState<RegionCard[]>(()=>startCard(source,pattern.composition));
   const [generated,setGenerated]=useState(true);
   const [compare,setCompare]=useState(false);
+  const [subjectsOpen,setSubjectsOpen]=useState(false);
   const [working,setWorking]=useState(false);
   const [message,setMessage]=useState("");
   const dragged=useRef<string|null>(null);
@@ -186,6 +188,9 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
             J'ai comparé avec la source : une grille plus petite peut fusionner des détails.
           </label>}
           <div className="space-y-2 border-t border-white/10 pt-4">
+            <button type="button" className="w-full rounded-md bg-[#c3b9f8] p-3 text-sm font-semibold text-[#18151f]" onClick={()=>setSubjectsOpen(true)}>
+              Décomposer en sujets → Composer
+            </button>
             <button type="button" className="w-full rounded-md border border-white/20 p-2.5 text-sm" onClick={()=>setCompare(v=>!v)}>
               {compare?"Masquer la comparaison":"Comparer les 3 variantes"}
             </button>
@@ -264,6 +269,11 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
           <p className="border-t border-white/10 pt-3 text-[11px] leading-relaxed text-white/45">Les contours et fractions suggérés ne sont pas une reconnaissance certaine des objets. La source reste enregistrée ; l'édition manuelle de l'Atelier reste disponible.</p>
         </aside>
       </div>
+      {subjectsOpen&&<SubjectWorkspace
+        pattern={pattern}
+        onCancel={()=>setSubjectsOpen(false)}
+        onUse={p=>{setSubjectsOpen(false);onUse(p);}}
+      />}
     </div>
   );
 }
