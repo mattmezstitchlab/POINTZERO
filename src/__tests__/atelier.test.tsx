@@ -62,6 +62,25 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre Musique inclusive et permet de déposer des gestes sans manipulation complexe", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Musique inclusive"));
+    expect(container?.querySelector('[aria-label="Espace Musique inclusive"]')).toBeTruthy();
+    const score=container?.querySelector('svg[aria-label^="Partition musicale tactile"]');
+    expect(score).toBeTruthy();
+    const initial=score?.querySelectorAll('[data-music-note]').length??0;
+    await click(button("Émotion Amour"));
+    expect(button("Émotion Amour")?.getAttribute("aria-pressed")).toBe("true");
+    await click(button("Ajouter un geste musical au curseur"));
+    expect(container?.querySelectorAll('[data-music-note]').length).toBe(initial+1);
+    expect(container?.querySelector('[aria-label="Palette des émotions musicales"]')).toBeTruthy();
+    expect(button("Exporter la partition MIDI")).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("ouvre la génération universelle et ses destinations sans perdre le studio graphique", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
