@@ -98,7 +98,7 @@ export default function PhotoStudio({onBack,onUse}:Props) {
     <header className="flex h-[58px] shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#09090b] px-3">
       <div className="flex items-center gap-3">
         <button onClick={onBack} className={button} aria-label="Retour aux supports graphiques"><ArrowLeft size={16}/></button>
-        <div><h1 className="text-[14px] font-semibold">× POINTZERO <span className="font-normal text-white/65">/ Photo</span></h1><p className="text-[10px] text-white/55">Retouche locale · non destructive</p></div>
+        <div><h1 className="text-[14px] font-semibold"><span className="hidden sm:inline">× POINTZERO </span><span className="font-normal text-white/80">Photo</span></h1><p className="hidden text-[10px] text-white/55 sm:block">Retouche locale · non destructive</p></div>
       </div>
       <div className="flex gap-2">
         <button onClick={()=>picker.current?.click()} className={button}><ImagePlus size={15}/><span className="hidden sm:inline">Importer</span></button>
