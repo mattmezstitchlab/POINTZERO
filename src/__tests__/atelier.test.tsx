@@ -62,6 +62,18 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre LE MONDE AIME depuis le menu unique et revient aux autres studios", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio LE MONDE AIME · Atelier libre"));
+    expect(container?.querySelector('[aria-label="Espace LE MONDE AIME"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Toile libre tactile et souris"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Palette universelle de matières, couleurs et sons"]')).toBeTruthy();
+    await click(button("Retour au studio universel"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
+
   it("ouvre Musique inclusive et permet de déposer des gestes sans manipulation complexe", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
