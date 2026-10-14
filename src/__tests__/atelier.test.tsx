@@ -62,6 +62,22 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre Photo et Stylisme depuis les supports sans changer le patron de broderie", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+    await click(button("Ouvrir le studio Photo"));
+    expect(container?.querySelector('[aria-label="Prévisualisation photo"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Réglages de retouche"]')).toBeTruthy();
+    await click(button("Retour aux supports graphiques"));
+    await click(button("Ouvrir le studio Stylisme"));
+    expect(container?.querySelector('[aria-label="Maquette de vêtement"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Propriétés du vêtement"]')).toBeTruthy();
+    await click(button("Retour aux supports graphiques"));
+    await click(button("Ouvrir l'atelier broderie"));
+    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+  });
+
   it("permet de revenir au Studio multiformat sans altérer la broderie", async () => {
     await mount();
     expect(button("Créer des supports graphiques")).toBeTruthy();
