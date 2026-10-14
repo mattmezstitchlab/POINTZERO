@@ -30,7 +30,7 @@ async function svgToPng(markup:string):Promise<Blob>{
     return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error("Impossible de créer le PNG.")),"image/png"));
   }finally{URL.revokeObjectURL(uri);}
 }
-export default function FashionStudio({onBack}:{onBack:()=>void}){
+export default function FashionStudio({onBack,onUse}:{onBack:()=>void;onUse?:(dataUrl:string)=>void}){
   const [project,setProject]=useState<GarmentProject>(restore);
   const [notice,setNotice]=useState("");
   const [busy,setBusy]=useState(false);
@@ -44,6 +44,22 @@ export default function FashionStudio({onBack}:{onBack:()=>void}){
   },[project]);
   const source=fashionToSVG(project,project.view);
   const svgUrl="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(source);
+  const useInDesign=async()=>{
+    if(!onUse||busy)return;
+    setBusy(true);setNotice("");
+    try {
+      const png=await svgToPng(fashionToSVG(project,project.view));
+      if(png.size>4_000_000)throw Error("Maquette trop volumineuse pour la composition.");
+      const reader=new FileReader();
+      const data=await new Promise<string>((resolve,reject)=>{
+        reader.onload=()=>resolve(String(reader.result??""));
+        reader.onerror=()=>reject(Error("Impossible de lire l'illustration."));
+        reader.readAsDataURL(png);
+      });
+      onUse(data);
+    }catch(err){setNotice(err instanceof Error?err.message:"Impossible d'utiliser la maquette.");}
+    finally{setBusy(false);}
+  };
   const exportIt=async(kind:"svg"|"png"|"json"|"fiche")=>{
     setBusy(true);setNotice("");setShowOptions(false);
     try {
@@ -73,6 +89,7 @@ export default function FashionStudio({onBack}:{onBack:()=>void}){
       </div>
       <div className="flex gap-2">
         <button onClick={()=>{setProject(createGarment());setNotice("Nouveau concept créé.");}} className={button} title="Nouveau concept"><RotateCcw size={15}/></button>
+        {onUse&&<button type="button" disabled={busy} onClick={()=>void useInDesign()} aria-label="Utiliser la maquette dans un support" className={button}>Utiliser</button>}
         <div className="relative">
           <button disabled={busy} onClick={()=>setShowOptions(o=>!o)} className="flex min-h-9 items-center gap-2 rounded-[5px] bg-white px-3 text-xs font-semibold text-black disabled:opacity-30"><Download size={15}/> Exporter</button>
           {showOptions&&<div className="pz-design-menu absolute right-0 top-[calc(100%+8px)] z-50 w-[200px] p-2">
@@ -86,7 +103,7 @@ export default function FashionStudio({onBack}:{onBack:()=>void}){
       </div>
     </header>
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <aside aria-label="Bibliothèque de vêtements et motifs" className="thin-scroll shrink-0 overflow-y-auto border-b border-white/10 bg-[#09090b] p-3 lg:w-[250px] lg:border-b-0 lg:border-r">
+      <aside aria-label="Bibliothèque de vêtements et motifs" className="thin-scroll max-h-[25dvh] shrink-0 overflow-y-auto border-b border-white/10 bg-[#09090b] p-3 lg:max-h-none lg:w-[250px] lg:border-b-0 lg:border-r">
         <div className="grid grid-cols-2 gap-1 border-b border-white/10 pb-2">
           <button type="button" onClick={()=>setTab("modeles")} className={(tab==="modeles"?"bg-white text-black":"bg-white/10 text-white")+" min-h-9 rounded-[5px] text-xs font-semibold"}>Vêtements</button>
           <button type="button" onClick={()=>setTab("motifs")} className={(tab==="motifs"?"bg-white text-black":"bg-white/10 text-white")+" min-h-9 rounded-[5px] text-xs font-semibold"}>Motifs</button>
@@ -101,7 +118,7 @@ export default function FashionStudio({onBack}:{onBack:()=>void}){
           </button>)}</div>}
         <p className="mt-3 text-[11px] leading-relaxed text-white/60">Choisissez un vêtement puis appliquez un motif indépendant sur chaque face.</p>
       </aside>
-      <main aria-label="Maquette de vêtement" className="pz-design-stage flex min-h-[280px] min-w-0 flex-1 flex-col items-center justify-center overflow-auto p-3 sm:p-6">
+      <main aria-label="Maquette de vêtement" className="pz-design-stage flex min-h-[165px] min-w-0 flex-1 flex-col items-center justify-center overflow-auto p-3 sm:p-6 lg:min-h-[280px]">
         <div className="mb-3 flex gap-1 rounded-[5px] border border-white/20 bg-[#09090b] p-1">
           <button aria-pressed={project.view==="front"} className={(project.view==="front"?"bg-white text-black":"text-white/80")+" min-h-9 rounded-[4px] px-5 text-xs font-semibold"} onClick={()=>update({view:"front"})}>Devant</button>
           <button aria-pressed={project.view==="back"} className={(project.view==="back"?"bg-white text-black":"text-white/80")+" min-h-9 rounded-[4px] px-5 text-xs font-semibold"} onClick={()=>update({view:"back"})}>Dos</button>
@@ -109,7 +126,7 @@ export default function FashionStudio({onBack}:{onBack:()=>void}){
         <img alt={"Maquette "+project.garment+" "+(project.view==="front"?"devant":"dos")} src={svgUrl} className="block max-h-[65dvh] w-auto max-w-full shadow-[0_18px_60px_#0006]"/>
         <p className="mt-2 text-center text-[11px] text-white/65">Simulation graphique : proportions, couleurs et placement à valider avec un fabricant.</p>
       </main>
-      <aside aria-label="Propriétés du vêtement" className="thin-scroll max-h-[30dvh] w-full shrink-0 overflow-y-auto border-t border-white/10 bg-[#09090b] p-4 lg:max-h-none lg:w-[270px] lg:border-l lg:border-t-0">
+      <aside aria-label="Propriétés du vêtement" className="thin-scroll max-h-[26dvh] w-full shrink-0 overflow-y-auto border-t border-white/10 bg-[#09090b] p-4 lg:max-h-none lg:w-[270px] lg:border-l lg:border-t-0">
         <h2 className="mb-3 text-[13px] font-semibold">Vêtement</h2>
         <label className="block text-[11px] text-white/70">Nom de la collection
           <input aria-label="Nom de la collection" value={project.name} maxLength={120} className={field+" mt-1"} onChange={e=>update({name:e.target.value})}/>
