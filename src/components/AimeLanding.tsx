@@ -49,8 +49,8 @@ export default function AimeLanding({onBack,onCreate,onMusic,onGallery}:Props){
           </h1>
           <p className="mx-auto mt-6 max-w-[690px] text-[15px] leading-[1.8] text-[#6b6777] sm:text-[17px]">Un laboratoire d'art libre, pour les enfants et les grands. Créer, jouer avec les couleurs, faire de la musique et transmettre ce qui nous relie.</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <button onClick={onCreate} className="flex min-h-12 items-center gap-2 rounded-[7px] bg-[#6e58c5] px-6 text-sm font-semibold text-white shadow-[0_8px_24px_#7057ba38] hover:bg-[#5945af]"><Brush size={17}/> Créer une œuvre <ArrowRight size={16}/></button>
-            <button onClick={onMusic} className="flex min-h-12 items-center gap-2 rounded-[7px] border border-[#ded9e9] bg-white px-6 text-sm font-semibold text-[#4d4562] hover:bg-[#f2eff9]"><Music2 size={17}/> Composer ensemble</button>
+            <button aria-label="Créer une œuvre dans LE MONDE AIME" onClick={onCreate} className="flex min-h-12 items-center gap-2 rounded-[7px] bg-[#6e58c5] px-6 text-sm font-semibold text-white shadow-[0_8px_24px_#7057ba38] hover:bg-[#5945af]"><Brush size={17}/> Créer une œuvre <ArrowRight size={16}/></button>
+            <button aria-label="Ouvrir la musique inclusive depuis LE MONDE AIME" onClick={onMusic} className="flex min-h-12 items-center gap-2 rounded-[7px] border border-[#ded9e9] bg-white px-6 text-sm font-semibold text-[#4d4562] hover:bg-[#f2eff9]"><Music2 size={17}/> Composer ensemble</button>
           </div>
         </div>
         <div className="relative mx-auto mt-12 max-w-[1120px] overflow-hidden rounded-[20px] border border-[#ece8f2] bg-white shadow-[0_28px_80px_#51417f1b] sm:mt-16">
@@ -120,7 +120,7 @@ export default function AimeLanding({onBack,onCreate,onMusic,onGallery}:Props){
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div><p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#705ac0]">Galerie</p>
               <h2 className="mt-2 text-[clamp(28px,4vw,44px)] font-bold tracking-[-.04em]">Chaque toile raconte quelque chose.</h2></div>
-            <button onClick={onGallery} className="flex min-h-10 items-center gap-2 rounded-[7px] border border-[#d6cde8] bg-white px-4 text-xs font-semibold text-[#5a478e] hover:bg-[#f9f7ff]"><Frame size={15}/> Mes œuvres privées</button>
+            <button aria-label="Voir la galerie privée LE MONDE AIME" onClick={onGallery} className="flex min-h-10 items-center gap-2 rounded-[7px] border border-[#d6cde8] bg-white px-4 text-xs font-semibold text-[#5a478e] hover:bg-[#f9f7ff]"><Frame size={15}/> Mes œuvres privées</button>
           </div>
           {gallery.length>0?<div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{gallery.slice(0,6).map(item=><article key={item.id} className="overflow-hidden rounded-[11px] border border-[#e0dbe9] bg-white">
               <img className="aspect-[1200/760] w-full bg-white object-contain" alt={"Œuvre privée : "+item.title} src={"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(artToSVG(item.project,{framed:true}))}/>
