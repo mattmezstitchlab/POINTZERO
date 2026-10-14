@@ -26,6 +26,7 @@ export interface RegionCard {
   color: number;
   box: { x: number; y: number; w: number; h: number };
   visible: boolean;
+  overrideCode?: string;
 }
 export type DecisionKind = "couleur" | "confetti" | "contour" | "fraction" | "reduction";
 export interface Decision {
@@ -39,7 +40,7 @@ export interface CompositionSnapshot {
   /** Self-contained source Pattern JSON; free of recursive composition metadata. */
   source: string;
   settings: ComposeSettings;
-  cards: { id: string; name: string; visible: boolean }[];
+  cards: { id: string; name: string; visible: boolean; overrideCode?: string }[];
 }
 export interface CompositionResult {
   pattern: Pattern;
@@ -168,7 +169,8 @@ function remapPalette(p: Pattern, settings: ComposeSettings): number {
   const ranked = usedColors(p.cross);
   if (!ranked.length) return 0;
   const target = settings.detail === "simple" ? 7 : settings.detail === "equilibree" ? 16 : 38;
-  const quota = settings.difficulty === "debutant" ? Math.min(target, 10) : settings.difficulty === "intermediaire" ? Math.min(target, 24) : target;
+  const adjusted = settings.palette === "harmonisee" ? Math.max(3, Math.ceil(target * .65)) : target;
+  const quota = settings.difficulty === "debutant" ? Math.min(adjusted, 10) : settings.difficulty === "intermediaire" ? Math.min(adjusted, 24) : adjusted;
   let keep = ranked.slice(0, quota).map(x => x[0]);
   const accents = ranked
     .filter(([,count]) => count >= 1)
@@ -279,15 +281,20 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
   if (original.w < 1 || original.h < 1) throw new Error("Source invalide.");
   const regions=segmentRegions(original);
   const configured=new Map((cards??[]).map(r=>[r.id,r]));
-  for(const r of regions){const saved=configured.get(r.id);if(saved){r.visible=saved.visible;r.name=saved.name;}}
+  for(const r of regions){const saved=configured.get(r.id);if(saved){r.visible=saved.visible;r.name=saved.name;r.overrideCode=saved.overrideCode;}}
   const before=original.cross.reduce((n,v)=>n+ +(v>=0),0);
   const work=clonePattern(original);
   const invisible=new Set(regions.filter(r=>!r.visible).map(r=>r.id));
-  if(invisible.size){
+  const recolor = new Map(regions.filter(r=>r.overrideCode && FLOSS.some(f=>f.code===r.overrideCode))
+    .map(r=>[r.id,FLOSS.findIndex(f=>f.code===r.overrideCode)]));
+  if(invisible.size || recolor.size){
     const ids=regionIds(original,regions);
-    for(let i=0;i<work.cross.length;i++)if(invisible.has(ids[i])) {
-      work.cross[i]=-1;work.fwd[i]=-1;work.bwd[i]=-1;
-      for(const q of work.q)q[i]=-1;
+    for(let i=0;i<work.cross.length;i++){
+      const id=ids[i];
+      if(invisible.has(id)) {
+        work.cross[i]=-1;work.fwd[i]=-1;work.bwd[i]=-1;
+        for(const q of work.q)q[i]=-1;
+      } else if(recolor.has(id) && work.cross[i]>=0) work.cross[i]=recolor.get(id)!;
     }
   }
   const target = scalePattern(work,settings.width,settings.height);
@@ -319,7 +326,7 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
     version:1,
     source: JSON.stringify(toObject({...original,composition:undefined})),
     settings:{...settings},
-    cards:regions.map(({id,name,visible})=>({id,name,visible})),
+    cards:regions.map(({id,name,visible,overrideCode})=>({id,name,visible,overrideCode})),
   };
   const decisions:Decision[]=[
     {kind:"couleur",confidence:.95,count:reduced,reason:"Rapprochement perceptuel CIEDE2000 entre fils DMC."},
