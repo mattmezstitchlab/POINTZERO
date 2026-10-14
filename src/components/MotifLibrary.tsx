@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, type DragEvent } from "react";
-import { ChevronLeft, FolderOpen, LibraryBig, Plus, Search, X } from "lucide-react";
+import { FolderOpen, LibraryBig, Plus, Search, X } from "lucide-react";
 import { FLOSS } from "../lib/dmc";
 import { MOTIF_PRESETS, PRESET_CATEGORIES, type PresetCategory } from "../lib/motifPresets";
 import { getProject, listProjects, type ProjectRecord } from "../lib/library";
