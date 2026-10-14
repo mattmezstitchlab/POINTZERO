@@ -28,7 +28,6 @@ import AutomaticImageImport from "./components/AutomaticImageImport";
 import ExportStudio from "./components/ExportStudio";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PeerShare from "./components/PeerShare";
-import SlameStudio from "./components/SlameStudio";
 
 type Panel = "palette" | "project" | "library" | "share" | "export" | null;
 type Workspace = "create" | "stitch";
@@ -62,7 +61,6 @@ export default function App() {
   const [categoryPanel, setCategoryPanel] = useState<AtelierCategory | null>(null);
   const [showWelcome, setShowWelcome] = useState(() => !boot || (boot.cross.every((c) => c < 0) && boot.back.length === 0 && boot.long.length === 0));
   const [promptText, setPromptText] = useState("");
-  const [musicMounted, setMusicMounted] = useState(false);
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
   const [autoImage, setAutoImage] = useState<File | null>(null);
   const P = remote ?? store.present;
@@ -75,7 +73,8 @@ export default function App() {
   const checked = useRef(false);
   const notify = useCallback((msg: string) => setToast(msg), []);
   const closePanel = useCallback(() => setPanel(null), []);
-  const insets: Insets = desktop ? { top: 116, right: 0, bottom: 86, left: 90 } : { top: 118, right: 0, bottom: 158, left: 0 };
+  // La grille est véritablement bord à bord : aucun espace réservé aux palettes flottantes.
+  const insets: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -264,7 +263,6 @@ export default function App() {
   const openCategory = (next: AtelierCategory) => {
     setActiveCategory(next);
     setPanel(null);
-    if (next === "music") { setShowWelcome(false); setCategoryPanel(null); setMusicMounted(true); return; }
     if (next === "stitch") chooseWorkspace("stitch");
     else if (next === "compose" || next === "threads") chooseWorkspace("create");
     if (next === "create" && showWelcome) { setCategoryPanel(null); return; }
@@ -281,7 +279,7 @@ export default function App() {
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     panel === "project" ? "settings" : categoryPanel === "compose" ? "edit" :
     categoryPanel === "threads" ? "prepare" : categoryPanel === "stitch" ? "follow" : "settings";
-  return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#f1f0ec] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+  return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
       type="file"
@@ -319,11 +317,11 @@ export default function App() {
       onShare={() => { setCategoryPanel(null); setPanel("share"); }}
       saving={saving} />
     <CategoryBar active={activeCategory} onChoose={openCategory} />
-    {showWelcome && !remote && <div className="pointer-events-none fixed inset-0 z-[28] flex items-center justify-center px-3 pb-16 pt-28"><div className="pointer-events-auto"><AtelierCreate {...createActions} /></div></div>}
+    {showWelcome && !remote && <div className="pointer-events-none fixed inset-0 z-[28] flex items-center justify-center px-3 pb-12 pt-12"><div className="pointer-events-auto"><AtelierCreate {...createActions} /></div></div>}
     <Sheet open={categoryPanel === "create"} onClose={() => setCategoryPanel(null)} title="Créer" subtitle="Une seule création, directement dans la grille"><AtelierCreate {...createActions} compact /></Sheet>
-    <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />
-    {selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
-    <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || categoryPanel !== null || showWelcome || activeCategory === "music" || !!file} />
+    {!showWelcome && <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />}
+    {!showWelcome && selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
+    <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || categoryPanel !== null || showWelcome || !!file} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
     <WorkspacePanel open={panel === "project" || categoryPanel === "compose" || categoryPanel === "threads" || categoryPanel === "stitch"}
       onClose={() => { setCategoryPanel(null); closePanel(); }} pattern={P} onSet={setPattern}
@@ -376,7 +374,6 @@ export default function App() {
     )}
     {panel === "export" && <ExportStudio pattern={P} onClose={closePanel} />}
     <PeerShare open={panel === "share"} onClose={closePanel} pattern={store.present} onView={onRemote} />
-    {musicMounted && <div className={activeCategory === "music" ? "" : "hidden"}><SlameStudio pattern={P} active={activeCategory === "music"} onEditor={() => { chooseWorkspace("create"); setActiveCategory("create"); setCategoryPanel(null); }} /></div>}
     {remote && <button onClick={() => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); }} className="glass fixed left-1/2 top-[78px] z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12px] text-accent-2">Lecture partagée · revenir à mon projet</button>}
     {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: desktop ? 92 : 164 }}>{toast}</div>}
     <span className="sr-only">Direction B. {BASE_FLOSS.length} références DMC documentées. {FLOSS[color]?.name}.</span>
