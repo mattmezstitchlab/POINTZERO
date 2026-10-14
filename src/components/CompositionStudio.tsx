@@ -63,10 +63,11 @@ const startCard = (source:Pattern):RegionCard[] => {
   const saved=source.composition?.cards;
   if(!saved?.length)return current;
   const byId=new Map(current.map(c=>[c.id,c]));
-  const merged=saved.map(s=> {
-    const c=byId.get(s.id);
-    return c ? {...c,name:s.name,visible:s.visible,overrideCode:s.overrideCode} : null;
-  }).filter((c):c is RegionCard=>c!==null);
+  const merged:RegionCard[]=[];
+  for(const selected of saved){
+    const c=byId.get(selected.id);
+    if(c)merged.push({...c,name:selected.name,visible:selected.visible,overrideCode:selected.overrideCode});
+  }
   for(const card of current)if(!merged.some(c=>c.id===card.id))merged.push(card);
   return merged;
 };
