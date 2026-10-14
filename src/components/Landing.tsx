@@ -11,11 +11,12 @@ interface Props {
   onSlame?: () => void;
   onMotif: (p: Pattern) => void;
   onPdf: (file: File) => void;
+  onProjectFile: (file: File) => Promise<string | null>;
 }
 
 /** Accueil épuré : grille nue, une seule création visible après génération.
  * Les patrons PDF et leur puzzle s'ouvrent uniquement dans l'atelier. */
-export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Props) {
+export default function Landing({ onOpen, onMotif, onPdf, onProjectFile, onSlame = onOpen }: Props) {
   const [promptText, setPromptText] = useState("");
   const [source, setSource] = useState<MotifGrille | null>(null);
   const [modeGrille, setModeGrille] = useState<GrilleMode>("toile");
@@ -68,6 +69,7 @@ export default function Landing({ onOpen, onMotif, onPdf, onSlame = onOpen }: Pr
       <HeroPlayground
         onMotif={onMotif}
         onPdf={onPdf}
+        onProjectFile={onProjectFile}
         onGrille={(m) => {
           setSource(m);
           setMusicTrail([]);
