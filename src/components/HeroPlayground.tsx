@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Wand2, FileUp, ArrowRight, RotateCw, Pencil, LoaderCircle } from "lucide-react";
+import { Wand2, FileUp, FileJson, ArrowRight, RotateCw, Pencil, LoaderCircle } from "lucide-react";
 import { FLOSS } from "../lib/dmc";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { genererMotif } from "../lib/generation";
@@ -45,16 +45,19 @@ type Phase =
   | { kind: "erreur"; msg: string };
 
 export default function HeroPlayground({
-  onMotif, onPdf, onGrille, prompt, setPrompt,
+  onMotif, onPdf, onProjectFile, onGrille, prompt, setPrompt,
 }: {
   onMotif: (p: Pattern) => void;
   onPdf: (file: File) => void;
+  onProjectFile: (file: File) => Promise<string | null>;
   onGrille: (m: MotifGrille | null) => void;
   prompt: string;
   setPrompt: (v: string) => void;
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: "repos" });
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000000));
+  const [projectError, setProjectError] = useState("");
+  const [openingProject, setOpeningProject] = useState(false);
 
   const generate = async (graine: number) => {
     const text = prompt.trim();
@@ -84,6 +87,22 @@ export default function HeroPlayground({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (file) onPdf(file);
+  };
+
+  const onSelectProject = async (e: ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    e.target.value = "";
+    if (!selected || openingProject) return;
+    setOpeningProject(true);
+    setProjectError("");
+    try {
+      const error = await onProjectFile(selected);
+      if (error) setProjectError(error);
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : "Impossible d'ouvrir ce projet.");
+    } finally {
+      setOpeningProject(false);
+    }
   };
 
   const reset = () => {
@@ -117,8 +136,8 @@ export default function HeroPlayground({
         </section>
       ) : (
         <>
-          <form className="hero-form mx-auto flex w-full max-w-[680px] flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center" onSubmit={e => { e.preventDefault(); void generate(seed); }}>
-            <input className="field min-h-12 flex-1 rounded-md px-4 text-[15px]" value={prompt}
+          <form className="hero-form mx-auto flex w-full max-w-[780px] flex-col gap-3 rounded-lg p-3 sm:flex-row sm:flex-wrap sm:items-center" onSubmit={e => { e.preventDefault(); void generate(seed); }}>
+            <input className="field min-h-12 min-w-0 flex-1 rounded-md px-4 text-[15px] sm:min-w-[240px]" value={prompt}
               onChange={e => setPrompt(e.target.value)} placeholder="Décrivez votre motif, par exemple un oiseau botanique"
               aria-label="Décrire un motif à générer"/>
             <button type="submit" className="btn-primary min-h-12 shrink-0 px-5" disabled={!prompt.trim() || phase.kind === "chargement"}>
@@ -127,14 +146,19 @@ export default function HeroPlayground({
             </button>
             <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-4">
               <FileUp size={16}/> Importer un PDF
-              <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={onSelectPdf} />
+              <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={onSelectPdf} aria-label="Choisir un PDF" />
+            </label>
+            <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-4">
+              <FileJson size={16}/> {openingProject ? "Ouverture…" : "Importer un projet JSON"}
+              <input type="file" accept=".json,.oxs,application/json" className="sr-only" onChange={e => { void onSelectProject(e); }} aria-label="Choisir un projet POINTZERO JSON ou OXS" />
             </label>
           </form>
+          {projectError && <p className="mx-auto mt-2 max-w-[700px] rounded-md border border-red-300 bg-white p-3 text-center text-sm text-red-800" role="alert">Projet non ouvert : {projectError}</p>}
           {phase.kind === "erreur" && <p className="mx-auto mt-2 max-w-[560px] rounded-md bg-white p-3 text-center text-sm text-[#8c241e]" role="alert">
             {phase.msg} <button className="ml-2 underline" onClick={() => void generate(seed)}>Réessayer</button>
           </p>}
           <p className="hero-note mx-auto mt-3 max-w-[560px] text-center text-xs text-black/60">
-            Votre motif apparaîtra ici. Les PDF et leur puzzle de pages s'ouvrent directement dans l'atelier.
+            Votre motif apparaîtra ici. PDF : montage dans l'atelier. JSON : patron et couleurs DMC ouverts directement dans l'atelier.
           </p>
         </>
       )}
