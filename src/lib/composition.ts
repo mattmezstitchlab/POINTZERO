@@ -49,6 +49,7 @@ export interface CompositionResult {
   decisions: Decision[];
   coverage: { source: number; result: number; lost: number };
   warnings: string[];
+  estimatedDifficulty: "Débutant" | "Intermédiaire" | "Expert";
 }
 
 const MAX_CELLS = 250_000;
@@ -356,9 +357,11 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
     warnings.push("Des croix ont disparu : génération refusée.");
     throw new Error("Conservation des régions impossible. Le motif source n'a pas été modifié.");
   }
+  const complexity=target.palette.length*.8 + (target.back.length/45) + (fractions/10);
+  const estimatedDifficulty=complexity<8?"Débutant":complexity<19?"Intermédiaire":"Expert";
   target.name=original.name + " · " + ({simple:"Simple",equilibree:"Équilibré",precise:"Précis"} as const)[settings.detail];
   target.id=makeId();
-  target.notes=[original.notes??"", "POINTZERO Composition (propositions automatiques)", "Détail : "+settings.detail, "Difficulté : "+settings.difficulty, "Points arrière ajoutés : "+outlines.count, "Points fractionnés ajoutés : "+fractions,
+  target.notes=[original.notes??"", "POINTZERO Composition (propositions automatiques)", "Détail : "+settings.detail, "Difficulté choisie : "+settings.difficulty, "Difficulté estimée (indicative) : "+estimatedDifficulty, "Points arrière ajoutés : "+outlines.count, "Points fractionnés ajoutés : "+fractions,
     "Attention : segmentation basée sur les codes DMC, sans reconnaissance sémantique des yeux, ailes ou feuilles."].filter(Boolean).join("\n");
   target.palette=[];
   const all=new Set<number>([...target.cross,...target.fwd,...target.bwd,...target.q.flatMap(arr=>[...arr]),...target.back.map(s=>s.c),...target.knots.map(s=>s.c),...(target.special??[]).map(s=>s.c)]);
@@ -375,7 +378,7 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
     {kind:"contour",confidence:.68,count:outlines.count,reason:"Segments proposés sur de petites régions sombres et contrastées, non sur toutes les transitions."},
     {kind:"fraction",confidence:.74,count:fractions,reason:"Ponts diagonaux sur cases vides uniquement, réservés au niveau expert précis."},
   ];
-  return {pattern:target,regions,decisions,coverage:{source:before,result:resultCount,lost:before-resultCount},warnings};
+  return {pattern:target,regions,decisions,coverage:{source:before,result:resultCount,lost:before-resultCount},warnings,estimatedDifficulty};
 }
 
 /** Reopen a composed project with the original source; no overwrite of the current design. */
