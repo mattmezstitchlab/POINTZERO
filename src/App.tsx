@@ -399,7 +399,9 @@ export default function App() {
       onExport={() => { setCategoryPanel(null); setPanel("export"); }}
       onSettings={() => { setCategoryPanel(null); setPanel("project"); }}
       onShare={() => { setCategoryPanel(null); setPanel("share"); }}
-      saving={saving} drawing={showDrawingTools} onDrawing={() => { setShowDrawingTools(v => !v); setTool("cross"); setActiveCategory("compose"); }} />
+      saving={saving} drawing={showDrawingTools}
+      onAdvanced={() => { setPanel(null); setCategoryPanel("compose"); setShowWelcome(false); }}
+      onDrawing={() => { setTool(showDrawingTools ? "hand" : "cross"); setShowDrawingTools(!showDrawingTools); setActiveCategory("compose"); }} />
     <CategoryBar active={activeCategory} onChoose={openCategory} />
     <MotifLibrary readOnly={!!remote}
       onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); }}
