@@ -13,6 +13,8 @@ import Canvas, { type Insets, type ViewMode } from "./components/Canvas";
 import Dock from "./components/Dock";
 import TopBar from "./components/TopBar";
 import DesignStudio from "./components/DesignStudio";
+import PhotoStudio from "./components/PhotoStudio";
+import FashionStudio from "./components/FashionStudio";
 import AtelierCreate from "./components/AtelierCreate";
 import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
 import MotifLibrary from "./components/MotifLibrary";
@@ -61,13 +63,14 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 export default function App() {
   const [boot] = useState(loadStored);
   // Existing embroidery projects resume untouched; newcomers open the multiformat studio.
-  const [studioMode, setStudioMode] = useState<"design" | "embroidery">(() => {
+  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion">(() => {
     try {
       const chosen = localStorage.getItem("pointzero:workspace");
-      return chosen === "design" ? "design" : chosen === "embroidery" ? "embroidery" : boot ? "embroidery" : "design";
+      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" ? chosen : boot ? "embroidery" : "design";
     } catch { return "embroidery"; }
   });
-  const switchStudio = (mode: "design" | "embroidery") => {
+  const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
+  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion") => {
     setStudioMode(mode);
     try { localStorage.setItem("pointzero:workspace", mode); } catch { /* Local storage may be restricted. */ }
   };
@@ -374,7 +377,16 @@ export default function App() {
     panel === "project" ? "settings" : categoryPanel === "compose" ? "edit" :
     categoryPanel === "threads" ? "prepare" : categoryPanel === "stitch" ? "follow" : "settings";
   return studioMode === "design"
-    ? <DesignStudio onEmbroidery={() => switchStudio("embroidery")} />
+    ? <DesignStudio onEmbroidery={() => switchStudio("embroidery")}
+        onPhoto={() => switchStudio("photo")} onFashion={() => switchStudio("fashion")}
+        incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
+    : studioMode === "photo"
+    ? <PhotoStudio onBack={() => switchStudio("design")} onUse={dataUrl => {
+        setPhotoHandoff({id:crypto.randomUUID?.()??String(Date.now()),dataUrl});
+        switchStudio("design");
+      }} />
+    : studioMode === "fashion"
+    ? <FashionStudio onBack={() => switchStudio("design")} />
     : <div className={`pz-atelier fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
