@@ -78,6 +78,7 @@ export class MusicAudio {
       voice==="pad"?[[1,.75],[2,.17],[.501,.1]]:
       voice==="drum"?[[1,1],[.5,.18]]:
       [[1,1],[2,.2]];
+    let remaining=harmonics.length;
     for(const [mult,level] of harmonics){
       const oscillator=ctx.createOscillator(),partial=ctx.createGain();
       oscillator.type=voice==="pluck"?"triangle":voice==="drum"?"triangle":"sine";
@@ -89,12 +90,10 @@ export class MusicAudio {
       oscillator.onended=()=>{
         oscillator.disconnect();partial.disconnect();
         this.voices=this.voices.filter(v=>v!==oscillator);
+        if(--remaining===0)master.disconnect();
       };
       this.voices.push(oscillator);
     }
-    // Disconnected after the last scheduled voice has naturally stopped.
-    const end=start+duration+tail+.03;
-    if(end<ctx.currentTime)return;
   }
   dispose(){this.stopVoices();const ctx=this.context;this.context=null;this.enabled=false;if(ctx)void ctx.close();}
 }
