@@ -103,7 +103,7 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
     onPointerCancel={()=>{dragging.current=null;}}/>;
 }
 
-const fieldClass="w-full rounded-[5px] border border-white/25 bg-[#1c1c20] px-2 py-2 text-sm text-white placeholder:text-white/60";
+const fieldClass="w-full rounded-[5px] border border-white/25 bg-[#1c1c20] px-2 py-2 text-sm text-white placeholder:text-white/75";
 export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   pattern:Pattern;onCancel:()=>void;onUse:(p:Pattern)=>void;
 }) {
@@ -216,7 +216,7 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
     <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[252px_minmax(320px,1fr)_252px] lg:overflow-hidden">
       <aside className="thin-scroll space-y-3 border-b border-white/15 bg-[#09090b] p-4 lg:overflow-y-auto lg:border-b-0 lg:border-r" aria-label="Bibliothèque et outils de décomposition">
         <h3 className="text-sm font-semibold">Détection et extraction</h3>
-        <p className="text-xs leading-relaxed text-white/55">Segmentation géométrique des groupes colorés. La reconnaissance sémantique des objets par IA n'est pas encore activée.</p>
+        <p className="text-xs leading-relaxed text-white/70">Segmentation géométrique des groupes colorés. La reconnaissance sémantique des objets par IA n'est pas encore activée.</p>
         <button className="w-full rounded-[5px] border border-white/30 bg-white/10 px-3 py-3 text-left text-sm font-medium text-white hover:bg-white/15" onClick={loadFloral}>
           Tester un bouquet · 3 fleurs + 4 feuilles + branche
         </button>
@@ -245,13 +245,13 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
         </details>
         <div className="border-t border-white/10 pt-3">
           <h4 className="mb-2 text-sm font-medium">Bibliothèque personnelle</h4>
-          <p className="mb-2 text-xs text-white/50">Composants enregistrés sur cet appareil. Les droits d'auteur de chaque source restent applicables.</p>
+          <p className="mb-2 text-xs text-white/70">Composants enregistrés sur cet appareil. Les droits d'auteur de chaque source restent applicables.</p>
           <button className="w-full rounded-md border border-white/20 px-3 py-2 text-xs" onClick={saveSelected} disabled={!selected}><Save size={13} className="mr-1 inline"/> Enregistrer le sujet choisi</button>
           {library.slice(0,12).map(item=><div key={item.id} className="mt-2 flex items-center gap-2 text-xs">
             <button className="min-w-0 flex-1 truncate text-left text-white/80 underline underline-offset-2" onClick={()=>useLibrary(item.id)} title={item.name}>+ {item.name}</button>
             <button aria-label={"Supprimer "+item.name} onClick={()=>operation(()=>setLibrary(deleteLibrarySubject(item.id)))}><Trash2 size={13}/></button>
           </div>)}
-          {library.length===0&&<p className="mt-2 text-xs text-white/35">Bibliothèque vide</p>}
+          {library.length===0&&<p className="mt-2 text-xs text-white/70">Bibliothèque vide</p>}
         </div>
       </aside>
       <main className="thin-scroll min-h-[450px] space-y-4 overflow-y-auto bg-[#0d0d10] p-4" aria-label="Grille de composition des sujets">
@@ -289,7 +289,7 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
             <SubjectPreview pattern={original} scene={{...scene,layers:[]}} selected={null}
               onChoose={()=>{}} onMove={()=>{}} />
           </div>
-          <p className="text-white/55">Le patron source est conservé indépendamment des positions actuelles des sujets.</p>
+          <p className="text-white/70">Le patron source est conservé indépendamment des positions actuelles des sujets.</p>
         </section>}
         {scene.warnings.map((w,i)=><p key={i} className="rounded-md border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">{w}</p>)}
         {composed?.subjectScene?.warnings.filter(w=>!scene.warnings.includes(w)).map((w,i)=><p key={i} className="rounded-md border border-red-300/25 p-2 text-xs text-red-200">{w}</p>)}
@@ -302,7 +302,7 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
       </main>
       <aside className="thin-scroll space-y-3 border-t border-white/15 bg-[#09090b] p-4 lg:overflow-y-auto lg:border-l lg:border-t-0" aria-label="Calques et propriétés des sujets">
         <h3 className="text-sm font-semibold">Sujets indépendants</h3>
-        <p className="text-xs text-white/50">Cliquez sur une zone de la grille, puis déplacez-la. L'ordre des sujets contrôle les chevauchements.</p>
+        <p className="text-xs text-white/70">Cliquez sur une zone de la grille, puis déplacez-la. L'ordre des sujets contrôle les chevauchements.</p>
         <div className="space-y-1.5">
           {scene.layers.map((layer,i)=><div key={layer.id} className={"flex items-center gap-2 rounded-md border p-2 text-xs "+(selectedId===layer.id?"border-white/50 bg-white/15":"border-white/15 bg-white/[.035]")}>
             <button className="min-w-0 flex-1 truncate text-left" onClick={()=>setSelectedId(layer.id)}>{i+1}. {layer.name}</button>
@@ -314,7 +314,7 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
         {selected&&<div className="space-y-3 border-t border-white/15 pt-3">
           <label className="block text-xs text-white/65">Nom du sujet<input className={"mt-1 "+fieldClass} value={selected.name} maxLength={80} onChange={e=>adjust(selected.id,{name:e.target.value})}/></label>
           <div className="grid grid-cols-2 gap-2">
-            {(["x","y"] as const).map(k=><label key={k} className="text-xs text-white/60">{k==="x"?"Colonne":"Rangée"}
+            {(["x","y"] as const).map(k=><label key={k} className="text-xs text-white/75">{k==="x"?"Colonne":"Rangée"}
               <input type="number" className={"mt-1 "+fieldClass} value={selected[k]} disabled={selected.locked} onChange={e=>adjust(selected.id,{[k]:+e.target.value||0})}/>
             </label>)}
           </div>
@@ -350,16 +350,16 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
           </div>
           <details className="border-t border-white/10 pt-3 text-xs">
             <summary className="cursor-pointer font-medium">Séparer une zone rectangulaire</summary>
-            <p className="mt-2 text-white/50">Coordonnées internes au sujet, en cases. Les fractions/contours à la frontière doivent être vérifiés.</p>
+            <p className="mt-2 text-white/70">Coordonnées internes au sujet, en cases. Les fractions/contours à la frontière doivent être vérifiés.</p>
             <div className="mt-2 grid grid-cols-4 gap-1">
-              {(["x","y","w","h"] as const).map(k=><label key={k} className="text-[10px] text-white/60">{k}<input type="number" className={"mt-1 "+fieldClass} min={0} value={split[k]} onChange={e=>setSplit(s=>({...s,[k]:+e.target.value||0}))}/></label>)}
+              {(["x","y","w","h"] as const).map(k=><label key={k} className="text-[10px] text-white/75">{k}<input type="number" className={"mt-1 "+fieldClass} min={0} value={split[k]} onChange={e=>setSplit(s=>({...s,[k]:+e.target.value||0}))}/></label>)}
             </div>
             <button className="mt-2 w-full rounded-md border border-white/20 p-2" onClick={()=>operation(()=>{
               const next=splitSubject(scene,selected.id,split);setScene(next);setSelectedId(next.layers.find(l=>l.name.endsWith("· extrait"))?.id??selected.id);
             })}><Scissors size={14} className="mr-1 inline"/> Séparer</button>
           </details>
         </div>}
-        <p className="border-t border-white/10 pt-3 text-[11px] leading-relaxed text-white/45">Aucune vente en ligne n'est activée. Extraction géométrique réelle, classification sémantique IA à ajouter et valider séparément. Tous les fichiers natifs restent soumis à leurs licences.</p>
+        <p className="border-t border-white/10 pt-3 text-[11px] leading-relaxed text-white/70">Aucune vente en ligne n'est activée. Extraction géométrique réelle, classification sémantique IA à ajouter et valider séparément. Tous les fichiers natifs restent soumis à leurs licences.</p>
       </aside>
     </div>
   </div>;
