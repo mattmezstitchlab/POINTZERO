@@ -386,7 +386,10 @@ export default function App() {
         switchStudio("design");
       }} />
     : studioMode === "fashion"
-    ? <FashionStudio onBack={() => switchStudio("design")} />
+    ? <FashionStudio onBack={() => switchStudio("design")} onUse={dataUrl => {
+        setPhotoHandoff({id:crypto.randomUUID?.()??String(Date.now()),dataUrl});
+        switchStudio("design");
+      }} />
     : <div className={`pz-atelier fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
