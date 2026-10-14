@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Code2, Download, Eye, GraduationCap, Layers3, Monitor, Palette, Plus, RotateCcw, Save, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Code2, Download, Eye, GraduationCap, Layers3, Monitor, Palette, Plus, RotateCcw, Save, Scale, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
+import { LEGAL_ACTIVE_KEY } from "../lib/legalCore";
 import { contrastGrade } from "../lib/accessibilityCore";
 import {
  ACADEMY_KEY, ACADEMY_PROGRESS_KEY, ACADEMY_LESSONS, ACADEMY_TEMPLATES,
@@ -20,7 +21,7 @@ const sectionNames:{kind:SectionKind;label:string;description:string}[]=[
 const localToday=()=>new Date().toISOString().slice(0,10);
 const studioTxt="text-xs text-white/70";
 const bounded=(value:string,n:number)=>value.slice(0,n);
-export default function AcademyStudio({onBack,onAccessibility}:{onBack:()=>void;onAccessibility:()=>void}){
+export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:()=>void;onAccessibility:()=>void;onLegal?:()=>void}){
  const [project,setProject]=useState<SiteProject>(readAcademy);
  const [learning,setLearning]=useState<LearningState>(readLearning);
  const [device,setDevice]=useState<Device>("desktop");
@@ -199,7 +200,7 @@ export default function AcademyStudio({onBack,onAccessibility}:{onBack:()=>void;
        <Layers3 size={14}/><span className="min-w-0 flex-1 truncate">{i+1}. {s.title||"Sans titre"}</span><ChevronRight size={13}/></button>)}
    </div>
  </div>;
- const actions=<div className="flex items-center gap-1.5">
+ const actions=<div className="flex items-center gap-1.5">\n   {onLegal&&<button type="button" aria-label="Vérifier Juridique RGPD du site Academy" onClick={()=>{localStorage.setItem(LEGAL_ACTIVE_KEY,"academy:"+project.id);onLegal();}} className={studioButton+" !px-2"}><Scale size={15}/></button>}
    <button type="button" aria-label="Importer un projet Academy JSON" onClick={()=>picker.current?.click()} className={studioButton+" !px-2"}><Upload size={15}/></button>
    <button type="button" aria-label="Sauvegarder le projet Academy JSON" onClick={exportProject} className={studioButton+" !px-2"}><Save size={15}/></button>
    <button type="button" aria-label="Exporter le site Academy en HTML" onClick={exportHTML} className="flex min-h-9 items-center gap-1.5 rounded-[5px] bg-white px-3 text-xs font-semibold text-black"><Code2 size={15}/> <span className="hidden sm:inline">Export site</span></button>
