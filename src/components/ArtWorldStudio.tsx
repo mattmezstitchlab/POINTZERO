@@ -8,7 +8,7 @@ import {
   ART_KEY, ART_W, ART_H, GALLERY_KEY, ART_DMC_FAVORITES, ART_PAPERS, ART_TOOLS,
   artColor, artId, artMarkSVG, artPaletteAnalysis, artToSVG, dmcSound,
   makeArt, requestArtTool, safeArt, safeGallery, type ArtPoint, type ArtProject,
-  type ArtMark, type ArtTool, type GalleryItem, type ToolConfig
+  type ArtMark, type ArtTool, type GalleryItem
 } from "../lib/artWorldCore";
 
 const today=()=>new Date().toISOString().slice(0,10);
