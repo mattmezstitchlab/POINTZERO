@@ -132,7 +132,7 @@ export default function GenerationStudio({onBack,onPattern,onImage,onMiniSite}:P
       </label>
       {target==="motif"&&<div className="mt-4 space-y-3 border-t border-white/10 pt-4">
         <label className="block text-xs text-white/70">Grille DMC · largeur
-          <select className={studioInput+" mt-1"} value={width} onChange={e=>setWidth(Number(e.target.value))}>
+          <select aria-label="Grille DMC · largeur" className={studioInput+" mt-1"} value={width} onChange={e=>setWidth(Number(e.target.value))}>
             {[120,160,200,240,280,320].map(v=><option key={v} value={v}>{v} points</option>)}
           </select>
         </label>
