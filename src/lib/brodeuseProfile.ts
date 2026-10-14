@@ -50,7 +50,7 @@ export function validatedProfile(value:unknown):BrodeuseProfile {
       const i=item as Record<string,unknown>,skeins=Number(i.skeins),remainingMeters=Number(i.remainingMeters);
       if(!Number.isFinite(skeins)||!Number.isFinite(remainingMeters))continue;
       if(skeins<0||remainingMeters<0)continue;
-      stock[code]={skeins:clamp(Math.floor(skeins),0,1000),remainingMeters:clamp(remainingMeters,0,48)};
+      stock[code]={skeins:clamp(Math.floor(skeins),0,1000),remainingMeters:clamp(remainingMeters,0,8)};
     }
   }
   const skill=["debutant","intermediaire","expert"].includes(String(v.skill))?v.skill as SkillLevel:def.skill;
