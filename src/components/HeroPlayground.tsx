@@ -1,231 +1,143 @@
-import { useState, type ChangeEvent } from "react";
-import { createPortal } from "react-dom";
-import PdfPrep from "./PdfPrep";
-import { Wand2, FileUp, ArrowRight, RotateCw, Eraser, PackageOpen, MapPin, CircleDot } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Wand2, FileUp, ArrowRight, RotateCw, Pencil, LoaderCircle } from "lucide-react";
+import { FLOSS } from "../lib/dmc";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { genererMotif } from "../lib/generation";
-import { useAncreToile, type MotifGrille } from "./ToileInfinie";
+import type { MotifGrille } from "./ToileInfinie";
 
-/**
- * Le hero est un terrain de jeu — et la grille est son seul décor.
- *
- * Plus de scène sombre qui recouvre tout : décrire un motif ou déposer un
- * PDF se fait à même la toile. Le motif décrit se brode case par case sur la
- * grille, derrière le champ (c'est la toile qui le porte, pas un calque) ;
- * le PDF pose sa table magnétique sur la toile, avec ses blocs qu'on
- * déplace vraiment. Ici on ne garde que la mécanique : les phases, le tuyau
- * de génération partagé, et les quelques puces d'état sous le champ.
- *
- * La génération demande un réseau : c'est écrit sous le champ, parce que le
- * reste de l'atelier, lui, fonctionne hors ligne.
- */
+/** L'aperçu du résultat utilise les cases DMC réelles, pas une photo factice. */
+function ApercuMotif({ p }: { p: Pattern }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current, ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const step = 7;
+    canvas.width = p.w * step;
+    canvas.height = p.h * step;
+    ctx.fillStyle = "#fffefa";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = .6;
+    ctx.strokeStyle = "rgba(40,40,40,.08)";
+    for (let x = 0; x <= p.w; x++) {
+      ctx.beginPath(); ctx.moveTo(x * step, 0); ctx.lineTo(x * step, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y <= p.h; y++) {
+      ctx.beginPath(); ctx.moveTo(0, y * step); ctx.lineTo(canvas.width, y * step); ctx.stroke();
+    }
+    for (let i = 0; i < p.cross.length; i++) {
+      const idx = p.cross[i], color = FLOSS[idx]?.hex;
+      if (!color) continue;
+      const x = (i % p.w) * step, y = Math.floor(i / p.w) * step;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x + 1, y + 1); ctx.lineTo(x + 6, y + 6);
+      ctx.moveTo(x + 6, y + 1); ctx.lineTo(x + 1, y + 6); ctx.stroke();
+    }
+  }, [p]);
+  return <canvas ref={ref} className="aspect-square w-full max-w-[230px] rounded-md border border-black/10 bg-white" aria-label={"Aperçu du patron "+p.name} />;
+}
 
 type Phase =
   | { kind: "repos" }
-  | { kind: "image" }
-  | { kind: "grille" }
-  | { kind: "motif"; p: Pattern; source: "description" | "pdf"; file?: File }
-  | { kind: "pdf"; file: File }
+  | { kind: "chargement" }
+  | { kind: "motif"; p: Pattern }
   | { kind: "erreur"; msg: string };
 
 export default function HeroPlayground({
-  onMotif,
-  onGrille,
-  etatZone,
-  onExporter,
-  onPoser,
-  onPointZero,
-  prompt,
-  setPrompt,
+  onMotif, onPdf, onGrille, prompt, setPrompt,
 }: {
   onMotif: (p: Pattern) => void;
-  /** Pose (ou retire, avec null) le motif sur la grille de la toile. */
+  onPdf: (file: File) => void;
   onGrille: (m: MotifGrille | null) => void;
-  /** occupee : un motif est brodé derrière le champ ; libre : grille nue,
-      point zéro possible ; prete : point zéro fait, on peut générer. */
-  etatZone: "occupee" | "libre" | "prete";
-  onExporter: () => void;
-  onPoser: () => void;
-  onPointZero: () => void;
   prompt: string;
   setPrompt: (v: string) => void;
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: "repos" });
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000000));
-  const { table, k, motifPret } = useAncreToile();
 
   const generate = async (graine: number) => {
     const text = prompt.trim();
-    if (!text) return;
-    if (etatZone !== "prete") return; // la grille du hero doit être nue
-    setPhase({ kind: "image" });
+    if (!text || phase.kind === "chargement") return;
+    setPhase({ kind: "chargement" });
     try {
-      setPhase({ kind: "grille" });
       const { cross, palette } = await genererMotif(text, graine);
-      const p = createPattern(text.slice(0, 60) || "Motif généré", 44, 44, 14, 2);
+      const p = createPattern(text.slice(0, 60), 44, 44, 14, 2);
       p.cross = cross;
-      for (const v of palette) ensurePalette(p, v);
+      for (const idx of palette) ensurePalette(p, idx);
       p.provenance = {
         kind: "image",
-        source: "Image générée (Pollinations / Flux), conversion dithering",
+        source: "Image assistée par IA convertie en points DMC",
         author: "",
-        license: "Création assistée par IA : vérifiez l'originalité avant toute diffusion",
+        license: "Vérifier les droits et l'originalité avant toute redistribution",
         personalOnly: false,
       };
-      p.notes = `Description : « ${text} ». 44 × 44, ${palette.length} fils, généré depuis la toile.`;
+      p.notes = "Description : « " + text + " ». Motif de 44 × 44 points.";
       onGrille({ cross, palette, w: 44, h: 44, nom: text });
-      setPhase({ kind: "motif", p, source: "description" });
+      setPhase({ kind: "motif", p });
     } catch {
-      setPhase({
-        kind: "erreur",
-        msg: "Le service d'images n'a pas répondu. La génération demande un réseau — tout le reste de l'atelier fonctionne hors ligne, et l'import de vos propres images aussi.",
-      });
+      setPhase({ kind: "erreur", msg: "La génération n'a pas abouti. Vérifiez votre connexion et réessayez." });
     }
   };
 
-  const onPdf = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setPhase({ kind: "pdf", file: f });
+  const onSelectPdf = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) onPdf(file);
+  };
+
+  const reset = () => {
+    setPhase({ kind: "repos" });
+    onGrille(null);
   };
 
   return (
     <div id="hero-jeu" className="relative mt-6 scroll-m-24">
-      <form
-        className="hero-form mx-auto flex w-full max-w-[680px] flex-col gap-3 rounded-[22px] p-3 sm:flex-row sm:items-center"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void generate(seed);
-        }}
-      >
-        <input
-          className="field min-h-12 flex-1 rounded-full px-5 text-[15px]"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Décrivez un motif : « renard endormi dans les fougères »…"
-          aria-label="Décrire un motif à générer"
-        />
-        <button
-          type="submit"
-          className="btn-primary min-h-12 shrink-0 px-5"
-          disabled={etatZone !== "prete" || !prompt.trim() || phase.kind === "image" || phase.kind === "grille"}
-        >
-          <Wand2 size={16} /> Voir le motif
-        </button>
-        <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-5">
-          <FileUp size={16} /> Un PDF
-          <input type="file" accept="application/pdf" className="sr-only" onChange={onPdf} />
-        </label>
-      </form>
-
-      {etatZone === "occupee" && (
-        <div className="hero-chips mt-4 flex flex-wrap items-center justify-center gap-3">
-          <p className="hero-etat text-[13px] text-black/70">
-            La grille du hero est déjà brodée : libérez-la, puis faites le point zéro.
-          </p>
-          <button type="button" className="btn-quiet min-h-11 px-4" onClick={onExporter}>
-            <PackageOpen size={15} /> Exporter à l'atelier
-          </button>
-          <button type="button" className="btn-quiet min-h-11 px-4" onClick={onPoser}>
-            <MapPin size={15} /> Poser ailleurs sur la toile
-          </button>
-        </div>
-      )}
-
-      {etatZone === "libre" && (
-        <div className="hero-chips mt-4 flex flex-wrap items-center justify-center gap-3">
-          <button type="button" className="btn-primary min-h-11 px-5 hero-hop" onClick={onPointZero}>
-            <CircleDot size={16} /> Faire le point zéro
-          </button>
-          <p className="hero-etat text-[13px] text-black/70">une grille nue, dans le format paysage du hero</p>
-        </div>
-      )}
-
-      {(phase.kind === "image" || phase.kind === "grille") && (
-        <div className="mt-4 flex flex-col items-center gap-3" role="status">
-          <div className="grid grid-cols-8 gap-1" aria-hidden="true">
-            {Array.from({ length: 64 }, (_, i) => (
-              <span key={i} className="hero-load h-3 w-3 rounded-[2px]" style={{ animationDelay: `${i * 22}ms` }} />
-            ))}
+      {phase.kind === "motif" ? (
+        <section className="hero-result mx-auto w-full max-w-[680px] rounded-lg border border-black/10 bg-white/95 p-4 shadow-[0_12px_42px_#00000014] sm:p-5" aria-label="Motif généré">
+          <div className="flex flex-col items-center gap-4 sm:flex-row">
+            <div className="w-[190px] shrink-0 sm:w-[210px]"><ApercuMotif p={phase.p}/></div>
+            <div className="flex min-w-0 flex-1 flex-col gap-2 text-center sm:text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[.15em] text-[#76658a]">Votre motif</p>
+              <h2 className="line-clamp-2 text-xl font-semibold text-[#161616]">{phase.p.name}</h2>
+              <p className="text-xs text-[#646464]">{phase.p.w} × {phase.p.h} points · {phase.p.palette.length} couleurs DMC</p>
+              <button className="mt-2 flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#181819] px-4 text-sm font-semibold text-white" onClick={() => onMotif(phase.p)}>
+                Continuer dans l'atelier <ArrowRight size={16}/>
+              </button>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <button className="flex items-center gap-1 rounded-md px-2 py-2 text-xs text-[#555]" onClick={reset}><Pencil size={13}/> Modifier</button>
+                <button className="flex items-center gap-1 rounded-md px-2 py-2 text-xs text-[#555]" onClick={() => {
+                  const next = Math.floor(Math.random() * 1000000);
+                  setSeed(next);
+                  void generate(next);
+                }}><RotateCw size={13}/> Autre version</button>
+              </div>
+            </div>
           </div>
-          <p className="hero-etat text-[13px] text-black/60">
-            {phase.kind === "image" ? "L'image se dessine chez le service tiers…" : "Conversion en grille DMC, case par case…"}
-          </p>
-        </div>
-      )}
-
-      {phase.kind === "erreur" && (
-        <div className="mx-auto mt-4 max-w-[560px] rounded-[16px] border border-warn/40 bg-warn/10 p-4 text-center backdrop-blur-md">
-          <p className="text-[13.5px] leading-relaxed text-black/80">{phase.msg}</p>
-          <button type="button" className="btn-quiet mt-3" onClick={() => void generate(seed)}>
-            <RotateCw size={15} /> Réessayer
-          </button>
-        </div>
-      )}
-
-      {phase.kind === "motif" && (
-        <div className={`hero-chips mt-4 flex flex-wrap items-center justify-center gap-3 transition-all duration-500 ${motifPret ? "hero-hop opacity-100" : "pointer-events-none opacity-0"}`}>
-          <p className="hero-etat text-[13px] text-black/60" role="status">
-            {phase.p.w} × {phase.p.h} cases · {phase.p.palette.length} fils DMC · prêt à broder
-          </p>
-          <button type="button" className="btn-primary min-h-11 px-5" onClick={() => onMotif(phase.p)}>
-            Continuer dans l'atelier <ArrowRight size={16} />
-          </button>
-          {phase.source === "description" ? (
-            <button
-              type="button"
-              className="btn-quiet min-h-11 px-4"
-              onClick={() => {
-                const next = Math.floor(Math.random() * 1000000);
-                setSeed(next);
-                void generate(next);
-              }}
-            >
-              <RotateCw size={15} /> Une autre vision
+        </section>
+      ) : (
+        <>
+          <form className="hero-form mx-auto flex w-full max-w-[680px] flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center" onSubmit={e => { e.preventDefault(); void generate(seed); }}>
+            <input className="field min-h-12 flex-1 rounded-md px-4 text-[15px]" value={prompt}
+              onChange={e => setPrompt(e.target.value)} placeholder="Décrivez votre motif, par exemple un oiseau botanique"
+              aria-label="Décrire un motif à générer"/>
+            <button type="submit" className="btn-primary min-h-12 shrink-0 px-5" disabled={!prompt.trim() || phase.kind === "chargement"}>
+              {phase.kind === "chargement" ? <LoaderCircle className="animate-spin" size={16}/> : <Wand2 size={16}/>}
+              {phase.kind === "chargement" ? "Création…" : "Générer"}
             </button>
-          ) : (
-            <button
-              type="button"
-              className="btn-quiet min-h-11 px-4"
-              disabled={!phase.file}
-              onClick={() => phase.file && setPhase({ kind: "pdf", file: phase.file })}
-            >
-              Revoir le puzzle
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn-quiet min-h-11 px-4"
-            onClick={() => {
-              onGrille(null);
-              setPhase({ kind: "repos" });
-            }}
-          >
-            <Eraser size={15} /> Effacer la grille
-          </button>
-        </div>
+            <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-4">
+              <FileUp size={16}/> Importer un PDF
+              <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={onSelectPdf} />
+            </label>
+          </form>
+          {phase.kind === "erreur" && <p className="mx-auto mt-2 max-w-[560px] rounded-md bg-white p-3 text-center text-sm text-[#8c241e]" role="alert">
+            {phase.msg} <button className="ml-2 underline" onClick={() => void generate(seed)}>Réessayer</button>
+          </p>}
+          <p className="hero-note mx-auto mt-3 max-w-[560px] text-center text-xs text-black/60">
+            Votre motif apparaîtra ici. Les PDF et leur puzzle de pages s'ouvrent directement dans l'atelier.
+          </p>
+        </>
       )}
-
-      <p className="hero-etat hero-note mx-auto mt-3 block w-fit max-w-[560px] text-center text-[11.5px] leading-relaxed text-black/60">
-        La génération appelle un service tiers d'images : elle demande un réseau. Le PDF, lui, se
-        reconstitue entièrement chez vous — et tout l'atelier fonctionne hors ligne.
-      </p>
-
-      {/* La table magnétique du PDF vit sur la toile, pas dans un calque. */}
-      {phase.kind === "pdf" &&
-        table &&
-        createPortal(
-          <PdfPrep
-            embedded
-            echelleMonde={k}
-            file={phase.file}
-            onClose={() => setPhase({ kind: "repos" })}
-            onImport={(p) => {
-              onGrille({ cross: p.cross, palette: p.palette, w: p.w, h: p.h, nom: p.name });
-              setPhase({ kind: "motif", p, source: "pdf", file: phase.file });
-            }}
-          />,
-          table,
-        )}
     </div>
   );
 }
