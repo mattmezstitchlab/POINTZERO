@@ -21,3 +21,40 @@ export function deltaE2000([L1, a1, b1]: Lab, [L2, a2, b2]: Lab): number {
   const dl = (L2 - L1) / sl, dc = (cp2 - cp1) / sc, d = dH / sh;
   return Math.sqrt(dl * dl + dc * dc + d * d + rt * dc * d);
 }
+
+/**
+ * Plus proches voisins d'une couleur dans une table fabricant.
+ *
+ * Une seule implémentation pour toutes les tables (fils, perles de verre,
+ * perles à repasser, strass) : le tri par CIEDE2000 croissant et l'exclusion
+ * des références arrêtées sont les mêmes partout.
+ */
+export function nearestColors<T extends { lab: Lab; discontinued?: boolean }>(
+  lab: Lab,
+  pool: T[],
+  limit = 3,
+  includeDiscontinued = false,
+): (T & { deltaE: number })[] {
+  const out: (T & { deltaE: number })[] = [];
+  for (const item of pool) {
+    if (item.discontinued && !includeDiscontinued) continue;
+    out.push({ ...item, deltaE: deltaE2000(lab, item.lab) });
+  }
+  out.sort((a, b) => a.deltaE - b.deltaE);
+  return out.slice(0, Math.max(0, limit));
+}
+
+/**
+ * Libellé court d'un écart CIEDE2000, sur l'échelle documentée par la source
+ * des données couleur : sous ~1 l'écart est invisible, sous ~3 les deux
+ * couleurs sont proches, au-dessus de ~10 elles sont différentes.
+ *
+ * Sert aux fils comme aux perles, pour ne pas avoir deux échelles en vitrine.
+ */
+export function deltaELabel(d: number): string {
+  if (d < 1) return "identique à l'œil";
+  if (d < 3) return "très proche";
+  if (d < 6) return "proche";
+  if (d < 12) return "teinte approchée";
+  return "teinte différente";
+}

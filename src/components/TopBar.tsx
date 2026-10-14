@@ -1,4 +1,4 @@
-import { CheckCircle2, Film, FolderOpen, Layers, Maximize, PencilLine, Redo2, SlidersHorizontal, Type, Undo2 } from "lucide-react";
+import { CheckCircle2, Compass, FolderOpen, Layers, Maximize, PencilLine, Redo2, SlidersHorizontal, Type, Undo2 } from "lucide-react";
 import type { Pattern } from "../lib/pattern";
 import type { ViewMode } from "./Canvas";
 
@@ -19,7 +19,9 @@ interface Props {
   projectOpen: boolean;
   onProject: () => void;
   onLibrary: () => void;
-  onStudio: () => void;
+  /** Ouvre le guide pas à pas, et le champ de questions. */
+  onGuide: () => void;
+  guideOpen?: boolean;
   saving: string;
 }
 
@@ -116,6 +118,7 @@ export default function TopBar(p: Props) {
           type="button"
           className="btn-icon"
           aria-pressed={p.projectOpen}
+          data-guide="project-button"
           aria-label="Projet, réglages et export"
           title="Projet, réglages et export"
           onClick={p.onProject}
@@ -126,8 +129,8 @@ export default function TopBar(p: Props) {
         <button type="button" className="btn-icon" onClick={p.onLibrary} aria-label="Mes projets" title="Mes projets et versions">
           <FolderOpen size={18} />
         </button>
-        <button type="button" className="btn-icon hidden sm:inline-grid" onClick={p.onStudio} aria-label="Présentation guidée" title="Visite et studio vidéo">
-          <Film size={18} />
+        <button type="button" className="btn-icon hidden sm:inline-grid" onClick={p.onGuide} aria-pressed={!!p.guideOpen} aria-label="Guide de l'atelier" title="Guide pas à pas, et un champ pour poser une question">
+          <Compass size={18} />
         </button>
       </div>
       <span className="sr-only" role="status">

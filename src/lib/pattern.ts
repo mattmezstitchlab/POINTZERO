@@ -90,6 +90,8 @@ export interface Pattern {
   fabric?: FabricSettings;
   provenance?: Provenance;
   symbolMap?: Record<string, number>;
+  /** Code DMC -> reference de perle fabricant (Miyuki Delica), choisie par la brodeuse. */
+  beadMap?: Record<string, string>;
   supplies?: Record<string, Supply>;
   mistakes?: number[];
   parked?: Parked[];
@@ -106,6 +108,10 @@ export interface Pattern {
 }
 
 const clampN = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+/** Garde-fou de désérialisation : un objet plat code -> code, ou rien. */
+const isCodeMap = (v: unknown): v is Record<string, string> =>
+  !!v && typeof v === "object" && !Array.isArray(v) &&
+  Object.values(v as Record<string, unknown>).every((x) => typeof x === "string" && x.length <= 40);
 export const makeId = () => globalThis.crypto?.randomUUID?.() ?? `pz-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 const q4 = (n: number): Pattern["q"] => [
   new Int16Array(n).fill(-1),
@@ -154,7 +160,7 @@ export function clonePattern(p: Pattern): Pattern {
     knots: p.knots.slice(),
     palette: p.palette.slice(),
     stock: { ...p.stock },
-    symbolMap: { ...p.symbolMap }, supplies: { ...p.supplies },
+    symbolMap: { ...p.symbolMap }, beadMap: { ...p.beadMap }, supplies: { ...p.supplies },
     mistakes: [...(p.mistakes ?? [])], parked: [...(p.parked ?? [])],
     special: [...(p.special ?? [])], annotations: [...(p.annotations ?? [])],
     layers: (p.layers ?? []).map((l) => ({ ...l })), sessions: [...(p.sessions ?? [])],
@@ -185,6 +191,44 @@ export function ornamentKey(kind: string, v: Seg | Knot | Special): string {
   return "x1" in v ? `${kind}:DMC=${code}:${v.x1},${v.y1},${v.x2},${v.y2}` : `${kind}:DMC=${code}:${v.x},${v.y}`;
 }
 
+/**
+ * Instantanés de calques déjà relus.
+ *
+ * `compositePattern` est appelée à chaque image du rendu — y compris au simple
+ * survol de la grille, qui redessine pour l'infobulle. Sans mémoire, chaque
+ * calque non actif était redésérialisé (JSON.parse de tout le motif) à chaque
+ * image. La clé est la chaîne de l'instantané : si le calque change, la chaîne
+ * change, donc l'entrée devient inaccessible et finit évincée.
+ *
+ * La mémoire est bornée des deux côtés : on ne garde pas les instantanés d'un
+ * motif trop grand (un 1 000 × 1 000 pèse ~15 Mo de tableaux typés une fois
+ * relu) et on ne garde que huit entrées, éviction par la plus ancienne.
+ */
+const SNAPSHOT_CACHE = new Map<string, Pattern>();
+const SNAPSHOT_CACHE_CELLS = 250_000;
+const SNAPSHOT_CACHE_MAX = 8;
+
+/** Relit l'instantané d'un calque, une fois par version de son contenu. */
+function layerSnapshot(json: string, w: number, h: number): Pattern | null {
+  const cached = SNAPSHOT_CACHE.get(json);
+  if (cached) return cached;
+  try {
+    const part = fromObject(JSON.parse(json));
+    if (!part || part.w !== w || part.h !== h) return null;
+    if (w * h <= SNAPSHOT_CACHE_CELLS) {
+      if (SNAPSHOT_CACHE.size >= SNAPSHOT_CACHE_MAX) {
+        const oldest = SNAPSHOT_CACHE.keys().next();
+        if (!oldest.done) SNAPSHOT_CACHE.delete(oldest.value);
+      }
+      SNAPSHOT_CACHE.set(json, part);
+    }
+    return part;
+  } catch {
+    /* Un calque optionnel corrompu ne doit pas faire tomber le projet en cours. */
+    return null;
+  }
+}
+
 export function compositePattern(p: Pattern): Pattern {
   if (!p.layers?.length) return p;
   const out = createPattern(p.name, p.w, p.h, p.count, p.strands);
@@ -202,8 +246,8 @@ export function compositePattern(p: Pattern): Pattern {
     if (!layer.visible) continue;
     if (layer.id === p.activeLayer) merge(p);
     else if (layer.snapshot) {
-      try { const part = fromObject(JSON.parse(layer.snapshot)); if (part && part.w === p.w && part.h === p.h) merge(part); }
-      catch { /* A corrupted optional layer must not crash the current project. */ }
+      const part = layerSnapshot(layer.snapshot, p.w, p.h);
+      if (part) merge(part);
     }
   }
   return { ...p, cross: out.cross, fwd: out.fwd, bwd: out.bwd, q: out.q, back: out.back, long: out.long, knots: out.knots, special: out.special, layers: [] };
@@ -255,6 +299,39 @@ export interface Totals {
 
 export function pitchCm(count: Count) {
   return 2.54 / count;
+}
+
+/**
+ * Longueur cumulée de brin simple, en cm, pour une ligne de couleur et un
+ * comptage effectif donné (points par pouce). C'est la seule formule de
+ * consommation de l'app : l'export PDF et la légende l'utilisent aussi, pour
+ * que le nombre d'écheveaux annoncé soit le même partout.
+ */
+export function consumptionCm(r: ColorStat, p: Pattern, effective: number): number {
+  const pitch = 2.54 / Math.max(1, effective);
+  const strands = FLOSS[r.idx]?.blend?.reduce((n, b) => n + b.strands, 0) ?? p.strands;
+  return (
+    r.cross * strands * CROSS_K * pitch +
+    r.half * strands * HALF_K * pitch +
+    r.quarter * strands * QUARTER_K * pitch +
+    r.back * BACK_K * pitch * (p.backStrands ?? 1) +
+    r.long * LONG_K * strands * pitch +
+    r.knots * KNOT_CM * strands +
+    r.petite * CROSS_K * pitch / 2 * strands
+  );
+}
+
+/**
+ * Écheveaux nécessaires si le motif était brodé sur un autre comptage de toile.
+ * Chaque fil est arrondi séparément : on n'achète pas un quart d'écheveau.
+ */
+export function skeinsAtCount(p: Pattern, rows: ColorStat[], effective: number): number {
+  let total = 0;
+  for (const r of rows) {
+    const meters = (consumptionCm(r, p, effective) * (p.waste ?? WASTE)) / 100;
+    if (meters > 0) total += Math.ceil(meters / SKEIN_STRAND_M);
+  }
+  return total;
 }
 
 export function computeStats(input: Pattern): { rows: ColorStat[]; totals: Totals } {
@@ -364,18 +441,11 @@ export function computeStats(input: Pattern): { rows: ColorStat[]; totals: Total
     detail(k.kind, k);
   }
 
-  const pitch = 2.54 / effectiveCount(p);
   let totalM = 0;
   let totalSk = 0;
+  const pitch = 2.54 / effectiveCount(p);
   for (const s of map.values()) {
-    const strands = FLOSS[s.idx].blend?.reduce((n, b) => n + b.strands, 0) ?? p.strands;
-    const cm =
-      s.cross * strands * CROSS_K * pitch +
-      s.half * strands * HALF_K * pitch +
-      s.quarter * strands * QUARTER_K * pitch +
-      s.back * BACK_K * pitch * (p.backStrands ?? 1) +
-      s.long * LONG_K * strands * pitch +
-      s.knots * KNOT_CM * strands + s.petite * CROSS_K * pitch / 2 * strands;
+    const cm = consumptionCm(s, p, effectiveCount(p));
     // meters = somme des longueurs de chacun des brins séparés.
     s.meters = (cm * (p.waste ?? WASTE)) / 100;
     s.skeins = s.meters > 0 ? Math.ceil(s.meters / SKEIN_STRAND_M) : 0;
@@ -424,7 +494,7 @@ export function toObject(p: Pattern) {
     id: p.id, folder: p.folder, fabric: p.fabric, provenance: p.provenance,
     backStrands: p.backStrands, waste: p.waste,
     ornamentDone: p.ornamentDone,
-    symbolMap: p.symbolMap, supplies: p.supplies, mistakes: p.mistakes,
+    symbolMap: p.symbolMap, beadMap: p.beadMap, supplies: p.supplies, mistakes: p.mistakes,
     parked: p.parked, special: p.special, annotations: p.annotations,
     notes: p.notes, reference: p.reference, sessions: p.sessions, layers: p.layers, activeLayer: p.activeLayer,
     // Les points sont stockés par indices pour rester compacts. Cette table rend
@@ -508,6 +578,7 @@ export function fromObject(input: unknown): Pattern | null {
     fabric,
     provenance: o.provenance as Provenance | undefined,
     symbolMap: o.symbolMap as Record<string, number> | undefined,
+    beadMap: isCodeMap(o.beadMap) ? (o.beadMap as Record<string, string>) : undefined,
     supplies: o.supplies as Record<string, Supply> | undefined,
     mistakes: Array.isArray(o.mistakes) ? o.mistakes.filter((i) => Number.isInteger(i) && i >= 0 && i < n) : [],
     parked: Array.isArray(o.parked) ? (o.parked as Parked[]).map((k) => ({ ...k, c: remap(k.c) })).filter((k) => k.c >= 0) : [],
