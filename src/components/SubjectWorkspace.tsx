@@ -66,7 +66,7 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
     for(const layer of scene.layers){
       const sprite=JSON.parse(layer.sprite) as {w:number;h:number};
       const w=sprite.w*layer.scale,h=sprite.h*layer.scale;
-      ctx.strokeStyle=selected===layer.id?"#007aff":"rgba(30,30,30,.28)";
+      ctx.strokeStyle=selected===layer.id?"#111114":"rgba(30,30,30,.28)";
       ctx.lineWidth=selected===layer.id?2:1;ctx.setLineDash(selected===layer.id?[]:[5,4]);
       ctx.strokeRect(layer.x*scale,layer.y*scale,w*scale,h*scale);
     }
@@ -80,7 +80,7 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
     };
   };
   return <canvas ref={canvas} role="img" aria-label="Grille de sujets : cliquer ou faire glisser pour sélectionner et déplacer"
-    className="mx-auto block w-full max-w-[720px] cursor-move touch-none rounded-md border border-black/15 bg-white"
+    className="mx-auto block w-full max-w-[720px] cursor-move touch-none rounded-[5px] border border-black/15 bg-white"
     style={{aspectRatio:pattern.w+"/"+pattern.h,imageRendering:"pixelated"}}
     onPointerDown={e=>{
       const p=point(e);
@@ -103,7 +103,7 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
     onPointerCancel={()=>{dragging.current=null;}}/>;
 }
 
-const fieldClass="w-full rounded-md border border-white/20 bg-[#27272b] px-2 py-2 text-sm text-white";
+const fieldClass="w-full rounded-[5px] border border-white/25 bg-[#1c1c20] px-2 py-2 text-sm text-white placeholder:text-white/60";
 export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   pattern:Pattern;onCancel:()=>void;onUse:(p:Pattern)=>void;
 }) {
@@ -202,22 +202,22 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
       setScene(next);setSelectedId(next.layers.at(-1)!.id);
     });
   };
-  return <div className="fixed inset-0 z-[79] flex flex-col bg-[#111114] text-white" role="dialog" aria-modal="true" aria-label="Décomposer et recomposer les sujets">
-    <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
-      <div><p className="text-[10px] uppercase tracking-[.16em] text-[#b0a7d9]">POINTZERO · Atelier · Moteur de sujets</p>
+  return <div className="pz-decomposition fixed inset-0 z-[79] flex flex-col bg-[#09090b] text-white" role="dialog" aria-modal="true" aria-label="Décomposer et recomposer les sujets">
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/15 bg-[#09090b] px-4 py-3">
+      <div><p className="text-[10px] uppercase tracking-[.16em] text-white/70">POINTZERO · Atelier · Moteur de sujets</p>
         <h2 className="text-lg font-semibold">Décomposer → Composer</h2></div>
       <div className="flex items-center gap-2">
-        <button className="rounded-md border border-white/20 px-3 py-2 text-xs" onClick={onCancel}><X size={14} className="mr-1 inline"/> Fermer</button>
-        <button className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-40" disabled={!output||busy||((offscreen||hiddenCount>0||risks)&&!confirmed)} onClick={finish}>
+        <button className="rounded-[5px] border border-white/25 px-3 py-2 text-xs text-white hover:bg-white/10" onClick={onCancel}><X size={14} className="mr-1 inline"/> Fermer</button>
+        <button className="pz-decomposition-primary rounded-[5px] bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-40" disabled={!output||busy||((offscreen||hiddenCount>0||risks)&&!confirmed)} onClick={finish}>
           <Check size={15} className="mr-1 inline"/> Utiliser dans l'atelier
         </button>
       </div>
     </header>
-    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[220px_minmax(320px,1fr)_300px] lg:overflow-hidden">
-      <aside className="space-y-4 border-b border-white/10 p-4 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[252px_minmax(320px,1fr)_252px] lg:overflow-hidden">
+      <aside className="thin-scroll space-y-3 border-b border-white/15 bg-[#09090b] p-4 lg:overflow-y-auto lg:border-b-0 lg:border-r" aria-label="Bibliothèque et outils de décomposition">
         <h3 className="text-sm font-semibold">Détection et extraction</h3>
         <p className="text-xs leading-relaxed text-white/55">Segmentation géométrique des groupes colorés. La reconnaissance sémantique des objets par IA n'est pas encore activée.</p>
-        <button className="w-full rounded-md border border-[#bca7ff] bg-[#bca7ff]/10 px-3 py-3 text-left text-sm" onClick={loadFloral}>
+        <button className="w-full rounded-[5px] border border-white/30 bg-white/10 px-3 py-3 text-left text-sm font-medium text-white hover:bg-white/15" onClick={loadFloral}>
           Tester un bouquet · 3 fleurs + 4 feuilles + branche
         </button>
         <button className="w-full rounded-md border border-white/30 px-3 py-2 text-left text-sm" onClick={resetDemo}>Ancienne démo : oiseau, fleur, maison</button>
@@ -226,7 +226,7 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
           setSelectedId(next.layers.at(-1)!.id);setMessage("Petit oiseau ajouté, éditable indépendamment.");
         })}>+ Petit oiseau facultatif</button>
         <label className="block text-xs text-white/70">Profondeur brodable
-          <select className="mt-2 w-full rounded-md border border-white/20 bg-[#27272c] p-2 text-sm" value={scene.depth??"naturelle"}
+          <select className="mt-2 w-full rounded-[5px] border border-white/25 bg-[#1c1c20] p-2 text-sm text-white" value={scene.depth??"naturelle"}
             onChange={e=>{setScene(prev=>({...prev,depth:e.target.value as "naturelle"|"renforcee"}));setConfirmed(false);}}>
             <option value="naturelle">Naturelle : superposition seule</option>
             <option value="renforcee">Renforcée : contours d'appui ciblés</option>
@@ -254,19 +254,19 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
           {library.length===0&&<p className="mt-2 text-xs text-white/35">Bibliothèque vide</p>}
         </div>
       </aside>
-      <main className="min-h-[450px] space-y-4 overflow-y-auto bg-[#1d1c20] p-4" aria-label="Grille de composition des sujets">
+      <main className="thin-scroll min-h-[450px] space-y-4 overflow-y-auto bg-[#0d0d10] p-4" aria-label="Grille de composition des sujets">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div><p className="text-[11px] uppercase tracking-[.12em] text-white/45">Composition interactive</p><h3 className="text-base font-semibold">{composed?.name??"Motif"}</h3></div>
+          <div><p className="text-[11px] uppercase tracking-[.12em] text-white/70">Composition interactive</p><h3 className="text-base font-semibold">{composed?.name??"Motif"}</h3></div>
           <span className="text-xs text-white/65">{output?.w} × {output?.h} points · {scene.layers.length} éléments · {currentCount} croix</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-white/75">Ma version :</span>
           {(["original","stock","debutant","expert","reduite","petit"] as AdaptationMode[]).map(m=>
             <button type="button" key={m} aria-pressed={mode===m}
-              className={"rounded-md border px-2 py-1.5 capitalize "+(mode===m?"border-[#c3b9f8] bg-[#c3b9f8]/20":"border-white/15")}
+              className={"rounded-[5px] border px-2 py-1.5 capitalize "+(mode===m?"border-white bg-white text-black":"border-white/25 bg-white/[.04] text-white/80 hover:bg-white/10")}
               onClick={()=>{setMode(m);setConfirmed(false);}}>{m==="stock"?"Mes fils":m==="debutant"?"Débutant":m==="reduite"?"Peu de couleurs":m==="petit"?"Petit format":m==="expert"?"Expert":"Original"}</button>)}
         </div>
-        <div className="rounded-md bg-[#faf7f0] p-3">
+        <div className="rounded-[6px] border border-white/15 bg-[#f8f4ee] p-3">
           {output&&<SubjectPreview pattern={output} scene={scene} selected={selectedId} onChoose={setSelectedId} onMove={(id,x,y)=>adjust(id,{x,y})}/>}
         </div>
         {adapted&&<div className="space-y-1 text-xs text-white/70">
@@ -300,11 +300,11 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
         {result.error&&<p role="alert" className="text-sm text-red-200">{result.error}</p>}
         {message&&<p role="status" className="text-xs text-white/70">{message}</p>}
       </main>
-      <aside className="space-y-3 border-t border-white/10 p-4 lg:overflow-y-auto lg:border-l lg:border-t-0">
+      <aside className="thin-scroll space-y-3 border-t border-white/15 bg-[#09090b] p-4 lg:overflow-y-auto lg:border-l lg:border-t-0" aria-label="Calques et propriétés des sujets">
         <h3 className="text-sm font-semibold">Sujets indépendants</h3>
         <p className="text-xs text-white/50">Cliquez sur une zone de la grille, puis déplacez-la. L'ordre des sujets contrôle les chevauchements.</p>
         <div className="space-y-1.5">
-          {scene.layers.map((layer,i)=><div key={layer.id} className={"flex items-center gap-2 rounded-md border p-2 text-xs "+(selectedId===layer.id?"border-[#9a8af5] bg-white/10":"border-white/10")}>
+          {scene.layers.map((layer,i)=><div key={layer.id} className={"flex items-center gap-2 rounded-md border p-2 text-xs "+(selectedId===layer.id?"border-white/50 bg-white/15":"border-white/15 bg-white/[.035]")}>
             <button className="min-w-0 flex-1 truncate text-left" onClick={()=>setSelectedId(layer.id)}>{i+1}. {layer.name}</button>
             <button aria-label={"Monter "+layer.name} disabled={i===0} className="disabled:opacity-20" onClick={()=>setScene(s=>reorderSubject(s,layer.id,-1))}><ArrowUp size={14}/></button>
             <button aria-label={"Descendre "+layer.name} disabled={i===scene.layers.length-1} className="disabled:opacity-20" onClick={()=>setScene(s=>reorderSubject(s,layer.id,1))}><ArrowDown size={14}/></button>
