@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { ArrowDown, ArrowUp, Download, Eye, EyeOff, ImagePlus, Laptop, Plus, Save, Smartphone, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Eye, EyeOff, ImagePlus, Laptop, Save, Smartphone, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import { createMiniSite, MINI_DRAFTS, MINI_KEY, MINI_KINDS, miniProjectFile, miniSection, miniSiteToHTML, safeMiniSite, type MiniKind, type MiniSection, type MiniSectionKind, type MiniSite } from "../lib/miniSiteCore";
 import { loadProjectOptions } from "../lib/budgetCore";
