@@ -22,6 +22,7 @@ import MiniSiteStudio from "./components/MiniSiteStudio";
 import PDFStudio from "./components/PDFStudio";
 import GenerationStudio from "./components/GenerationStudio";
 import MusicStudio from "./components/MusicStudio";
+import ArtWorldStudio from "./components/ArtWorldStudio";
 import type { MiniSite } from "./lib/miniSiteCore";
 import { loadProjectOptions } from "./lib/budgetCore";
 import AtelierCreate from "./components/AtelierCreate";
@@ -72,16 +73,16 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 export default function App() {
   const [boot] = useState(loadStored);
   // Existing embroidery projects resume untouched; newcomers open the multiformat studio.
-  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music">(() => {
+  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world">(() => {
     try {
       const chosen = localStorage.getItem("pointzero:workspace");
-      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" || chosen === "generation" || chosen === "music" ? chosen : boot ? "embroidery" : "design";
+      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" || chosen === "generation" || chosen === "music" || chosen === "art-world" ? chosen : boot ? "embroidery" : "design";
     } catch { return "embroidery"; }
   });
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
   const [miniSiteHandoff,setMiniSiteHandoff] = useState<MiniSite|null>(null);
   const [linkedProject,setLinkedProject] = useState<{id:string;name:string}|null>(null);
-  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music") => {
+  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world") => {
     if(mode==="budget"||mode==="programme"||mode==="admin")setLinkedProject(loadProjectOptions()[0]??null);
     setStudioMode(mode);
     try { localStorage.setItem("pointzero:workspace", mode); } catch { /* Local storage may be restricted. */ }
@@ -398,6 +399,7 @@ export default function App() {
         onBudget={() => switchStudio("budget")} onProgramme={() => switchStudio("programme")} onAdmin={() => switchStudio("admin")}
         onMiniSite={() => switchStudio("mini-site")} onPDF={() => switchStudio("pdf")}
         onGeneration={() => switchStudio("generation")} onMusic={() => switchStudio("music")}
+        onArtWorld={() => switchStudio("art-world")}
         incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
     : studioMode === "photo"
     ? <PhotoStudio onBack={() => switchStudio("design")} onUse={dataUrl => {
@@ -427,6 +429,16 @@ export default function App() {
       }} />
     : studioMode === "music"
     ? <MusicStudio onBack={() => switchStudio("design")} />
+    : studioMode === "art-world"
+    ? <ArtWorldStudio onBack={() => switchStudio("design")}
+        onDesign={dataUrl=>{
+          setPhotoHandoff({id:crypto.randomUUID?.()??String(Date.now()),dataUrl});
+          switchStudio("design");
+        }}
+        onPattern={p=>{
+          setWorkspace("create");setView("pattern");
+          void loadPattern(p);switchStudio("embroidery");
+        }} />
     : studioMode === "generation"
     ? <GenerationStudio onBack={() => switchStudio("design")}
         onImage={dataUrl=>{
