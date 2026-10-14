@@ -103,8 +103,19 @@ export default function DesignStudio({ onEmbroidery }: Props) {
   };
   const decline = (format:DesignFormat) => {
     if(format===doc.format){setShowDecline(false);return;}
+    // La déclinaison ne détruit jamais le support d'origine : le conserver
+    // explicitement dans Mes créations, en plus de l'historique Annuler.
+    const versions=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
+    let preserved=false;
+    try {
+      localStorage.setItem(DRAFTS,JSON.stringify(versions));
+      setDrafts(versions);
+      preserved=true;
+    } catch { /* The user can still undo and export the original JSON. */ }
     change(duplicateDesign(doc,format));setSelected(null);setShowDecline(false);setSidebar(false);
-    setNotice("Déclinaison créée. Vérifiez les placements et les tailles de texte avant export.");
+    setNotice(preserved
+      ? "Déclinaison créée. Original conservé dans Mes créations. Vérifiez la mise en page."
+      : "Déclinaison créée. Stockage plein : annulez ou exportez l'original en JSON.");
   };
   const saveDraft = () => {
     const next=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
