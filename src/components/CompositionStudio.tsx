@@ -157,7 +157,10 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
           </fieldset>
           <label className="block text-xs font-medium">Palette
             <select className="mt-2 w-full rounded-md border border-white/20 bg-[#28282e] p-2 text-sm" value={settings.palette} onChange={e=>choose("palette",e.target.value as ComposeSettings["palette"])}>
-              <option value="originale">Originale</option><option value="harmonisee">Harmonisée (moins de nuances)</option><option value="personnalisee">Personnalisée · codes DMC</option>
+              <option value="originale">Originale</option><option value="harmonisee">Harmonisée (moins de nuances)</option>
+              <option value="complementaire">Complémentaire</option>
+              <option value="douce">Douce / pastel</option>
+              <option value="contrastee">Contrastée</option><option value="personnalisee">Personnalisée · codes DMC</option>
             </select>
           </label>
           {settings.palette==="personnalisee" && <label className="block text-xs">Mes codes DMC
