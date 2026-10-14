@@ -7,7 +7,7 @@ import {
   composePattern, compositionSource, initialSettings, segmentRegions, type ComposeSettings,
   type Detail, type RegionCard, type CompositionResult,
 } from "../lib/composition";
-import { type Pattern } from "../lib/pattern";
+import { COUNTS, type Pattern } from "../lib/pattern";
 
 function StitchPreview({ pattern, max = 520 }: { pattern: Pattern; max?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -58,13 +58,13 @@ function StitchPreview({ pattern, max = 520 }: { pattern: Pattern; max?: number 
 const DETAIL: Array<{id:Detail;label:string}>=[
   {id:"simple",label:"Simple"},{id:"equilibree",label:"Équilibré"},{id:"precise",label:"Précis"},
 ];
-const startCard = (source:Pattern):RegionCard[] => {
+const startCard = (source:Pattern, saved?: Pattern["composition"]):RegionCard[] => {
   const current=segmentRegions(source);
-  const saved=source.composition?.cards;
-  if(!saved?.length)return current;
+  const chosen=saved?.cards;
+  if(!chosen?.length)return current;
   const byId=new Map(current.map(c=>[c.id,c]));
   const merged:RegionCard[]=[];
-  for(const selected of saved){
+  for(const selected of chosen){
     const c=byId.get(selected.id);
     if(c)merged.push({...c,name:selected.name,visible:selected.visible,overrideCode:selected.overrideCode});
   }
@@ -85,7 +85,7 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
   const [settings,setSettings]=useState<ComposeSettings>(
     ()=>pattern.composition?.settings ?? initialSettings(source)
   );
-  const [cards,setCards]=useState<RegionCard[]>(()=>startCard(pattern.composition?pattern:source));
+  const [cards,setCards]=useState<RegionCard[]>(()=>startCard(source,pattern.composition));
   const [generated,setGenerated]=useState(true);
   const [compare,setCompare]=useState(false);
   const [working,setWorking]=useState(false);
@@ -164,6 +164,13 @@ export default function CompositionStudio({ pattern, onCancel, onUse }: {
           <label className="block text-xs font-medium">Difficulté
             <select className="mt-2 w-full rounded-md border border-white/20 bg-[#28282e] p-2 text-sm" value={settings.difficulty} onChange={e=>choose("difficulty",e.target.value as ComposeSettings["difficulty"])}>
               <option value="debutant">Débutant</option><option value="intermediaire">Intermédiaire</option><option value="expert">Expert (fractions proposées)</option>
+            </select>
+          </label>
+          <label className="block text-xs font-medium">Comptage de la toile
+            <select className="mt-2 w-full rounded-md border border-white/20 bg-[#28282e] p-2 text-sm"
+              value={settings.count??source.count}
+              onChange={e=>choose("count",Number(e.target.value) as Pattern["count"])}>
+              {COUNTS.map(c=><option key={c} value={c}>{c} points par pouce (ct)</option>)}
             </select>
           </label>
           <fieldset className="space-y-2"><legend className="text-xs font-medium">Dimensions de la grille</legend>
