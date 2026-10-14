@@ -8,7 +8,7 @@ const loadDrafts=():MiniSite[]=>{try {const json=JSON.parse(localStorage.getItem
 const slug=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-")||"mini-site";
 interface Props {onBack:()=>void;incomingDraft?:MiniSite|null}
 export default function MiniSiteStudio({onBack,incomingDraft}:Props) {
-  const [doc,setDoc]=useState<MiniSite>(()=>incomingDraft??load);
+  const [doc,setDoc]=useState<MiniSite>(()=>incomingDraft??load());
   const [drafts,setDrafts]=useState<MiniSite[]>(loadDrafts);
   const [selected,setSelected]=useState<string|null>(null);
   const [viewport,setViewport]=useState<"phone"|"desktop">("desktop");
