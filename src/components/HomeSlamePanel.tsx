@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { appendWaypoint, motifTrail, stepsForTrail, type ExpressionMood, type MusicStep, type Point, type ScaleName } from "../lib/slame";
+import { motifTrail, stepsForTrail, type ExpressionMood, type MusicStep, type Point, type ScaleName } from "../lib/slame";
 import { slameToMidi } from "../lib/slameMidi";
 import type { Pattern } from "../lib/pattern";
 
