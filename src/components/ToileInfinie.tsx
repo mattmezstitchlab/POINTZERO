@@ -3,6 +3,7 @@ import { Minus, Plus, Home, X, Users, Heart, Hand, Frame } from "lucide-react";
 import CardDeck from "./CardDeck";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { FLOSS } from "../lib/dmc";
+import type { Point } from "../lib/slame";
 import { couleursZone, reglageDe, type RectZone, type ReglageZone } from "../lib/requant";
 
 /**
@@ -434,10 +435,15 @@ export default function ToileInfinie({
   onOpen,
   onMotif,
   motif,
-  motifsPoses,
+  motifsPoses = [],
   reglages,
   onReglage,
   nbCouleursSource,
+  musicMode = false,
+  showShowcase = false,
+  displayMotifOnToile = false,
+  musicTrail = [],
+  onMusicCell,
   children,
 }: {
   onOpen: () => void;
@@ -445,12 +451,20 @@ export default function ToileInfinie({
   /** Le motif brodé à même la grille, derrière le champ : ambiance ou décrit. */
   motif: MotifGrille | null;
   /** Les motifs libérés du hero, posés ailleurs sur la toile. */
-  motifsPoses: PoseMotif[];
+  motifsPoses?: PoseMotif[];
   /** Les réglages de zone déjà appliqués (outil zone). */
   reglages: ReglageZone[];
   onReglage: (rect: RectZone, n: number) => void;
   /** Combien de fils la zone porte dans le motif source (plafond du réglage). */
   nbCouleursSource: (rect: RectZone) => number;
+  /** SLÂME selection takes place on the real homepage canvas. */
+  musicMode?: boolean;
+  /** Animations et badges commerciaux historiques : masqués sur l’accueil. */
+  showShowcase?: boolean;
+  /** Préférer un aperçu dans le résultat du champ, non derrière le champ. */
+  displayMotifOnToile?: boolean;
+  musicTrail?: Point[];
+  onMusicCell?: (point: Point) => void;
   children: ReactNode;
 }) {
   const monde = useRef<HTMLDivElement>(null);
@@ -473,13 +487,15 @@ export default function ToileInfinie({
   const [zone, setZone] = useState<RectZone | null>(null);
 
   useEffect(() => setMotifPret(false), [motif]);
+  useEffect(() => { if (musicMode) { setOutil("deplacer"); setZone(null); } }, [musicMode]);
 
   /* Les voisines avancent ensemble : un seul battement pour toute la toile. */
   const [tick, setTick] = useState(0);
   useEffect(() => {
+    if (!showShowcase) return;
     const id = window.setInterval(() => setTick((t) => t + 1), 800);
     return () => window.clearInterval(id);
-  }, []);
+  }, [showShowcase]);
 
   const nZone =
     zone && motif ? (reglageDe(zone, reglages)?.n ?? couleursZone(motif.cross, motif.w, motif.h, zone).length) : 0;
@@ -487,11 +503,11 @@ export default function ToileInfinie({
 
   const designs = useMemo(() => {
     const m = new Map<string, MiniDesign[]>();
-    for (const v of VOISINES) {
+    for (const v of showShowcase ? VOISINES : []) {
       m.set(v.id, [miniDesign(v.seed), miniDesign(v.seed + 101), miniDesign(v.seed + 202)]);
     }
     return m;
-  }, []);
+  }, [showShowcase]);
 
   const zoomAt = (cx: number, cy: number, facteur: number) => {
     setVue((v) => {
@@ -596,6 +612,13 @@ export default function ToileInfinie({
       }
       return;
     }
+    if (musicMode && motif && onMusicCell && pts.current.size === 1 && !bouge.current &&
+        !(e.target as Element).closest?.("button,input,textarea,select,a,[data-stop-toile]")) {
+      const c = clientToCell(e.clientX, e.clientY);
+      const x = Math.floor(c.cx - (HERO.w - motif.w) / 2);
+      const y = Math.floor(c.cy - (HERO.h - motif.h) / 2);
+      if (x >= 0 && x < motif.w && y >= 0 && y < motif.h) onMusicCell({ x, y });
+    }
     pts.current.delete(e.pointerId);
     dernier.current = null;
   };
@@ -652,7 +675,36 @@ export default function ToileInfinie({
           data-k={vue.k.toFixed(3)}
           style={{ transform: `translate(${vue.x}px, ${vue.y}px) scale(${vue.k})` }}
         >
-          {motif && <MotifSurGrille motif={motif} onPret={() => setMotifPret(true)} />}
+          {displayMotifOnToile && motif && <MotifSurGrille motif={motif} onPret={() => setMotifPret(true)} />}
+          {musicMode && motif && musicTrail.length > 0 && (
+            <svg
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: (HERO.w - motif.w) / 2 * CELL,
+                top: (HERO.h - motif.h) / 2 * CELL,
+                width: motif.w * CELL,
+                height: motif.h * CELL,
+                overflow: "visible",
+                pointerEvents: "none",
+                zIndex: 2,
+              }}
+              viewBox={"0 0 " + motif.w * CELL + " " + motif.h * CELL}
+            >
+              <polyline
+                fill="none"
+                stroke="#6047a0"
+                strokeWidth={Math.max(2.5, CELL * .16)}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity=".85"
+                points={musicTrail.slice(-512).map(p => ((p.x + .5) * CELL) + "," + ((p.y + .5) * CELL)).join(" ")}
+              />
+              {musicTrail.slice(-1).map((p, i) => (
+                <circle key={i} cx={(p.x + .5) * CELL} cy={(p.y + .5) * CELL} r={CELL * .3} fill="#6047a0" stroke="#fff" strokeWidth="2" />
+              ))}
+            </svg>
+          )}
 
           <div className="hero-sheet" style={{ width: HERO_PX.w, height: HERO_PX.h }}>
             <span className="sheet-marque tl" aria-hidden="true" />
@@ -691,7 +743,7 @@ export default function ToileInfinie({
             <MotifPose key={po.id} pose={po} />
           ))}
 
-          {VOISINES.map((v) => {
+          {showShowcase && VOISINES.map((v) => {
             const liste = designs.get(v.id) ?? [miniDesign(v.seed)];
             const depart = (v.seed * 7) % 9;
             const cycle = liste[0].ordre.length + 6; // terminé, puis on repart
@@ -712,19 +764,19 @@ export default function ToileInfinie({
           })}
 
           {/* Le tableau des 54 cartes : une composition, pas une liste. */}
-          <div className="tableau-cartes" data-stop-toile style={{ left: 88 * CELL, top: -4 * CELL }}>
+          {showShowcase && <div className="tableau-cartes" data-stop-toile style={{ left: 88 * CELL, top: -4 * CELL }}>
             <p className="tableau-titre">Le tableau du SAL · 54 cartes</p>
             <CardDeck dense />
-          </div>
+          </div>}
 
           {/* La table magnétique du PDF se pose ici quand on dépose un fichier. */}
-          <div
+          {showShowcase && <div
             ref={setTable}
             className="ancre-table"
             data-scroll-interne
             data-stop-toile
             style={{ left: 0, top: (HERO.h + 6) * CELL, width: 46 * CELL }}
-          />
+          />}
         </div>
 
         {/* Le strict minimum d'interface, posé sur la toile. */}
@@ -740,7 +792,7 @@ export default function ToileInfinie({
           </button>
         </header>
 
-        <div className="outil-palette" role="group" aria-label="Palette d'outils">
+        {displayMotifOnToile && <div className="outil-palette" role="group" aria-label="Palette d'outils">
           <button
             type="button"
             aria-label="Outil déplacer"
@@ -760,11 +812,9 @@ export default function ToileInfinie({
           >
             <Frame size={16} />
           </button>
-        </div>
+        </div>}
 
-
-
-        {zone && motif && (
+        {displayMotifOnToile && zone && motif && (
           <div className="zone-panneau" data-zone role="group" aria-label="Réglage de la zone sélectionnée">
             <p className="zone-titre">
               Zone {zone.w} × {zone.h} cases · ≈ {((zone.w * 2.54) / 14).toFixed(1).replace(".", ",")} ×{" "}
@@ -800,14 +850,14 @@ export default function ToileInfinie({
           </button>
         </div>
 
-        <div className="toile-chips">
+        {showShowcase && <div className="toile-chips">
           <p className="toile-chip geste">Molette : zoomer doucement · Glisser : se déplacer · Dézoomez : tout est sur la grille</p>
           <p className="toile-chip honnete">
             Démo hors ligne : les voisines sont simulées en local (pas encore de serveur) et le paiement est simulé
           </p>
-        </div>
+        </div>}
 
-        {achat && <FeuilleAchat achat={achat} onFermer={() => setAchat(null)} onMotif={onMotif} />}
+        {showShowcase && achat && <FeuilleAchat achat={achat} onFermer={() => setAchat(null)} onMotif={onMotif} />}
       </div>
     </AncresCtx.Provider>
   );

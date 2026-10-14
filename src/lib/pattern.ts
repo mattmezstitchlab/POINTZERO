@@ -68,7 +68,29 @@ export interface Knot {
  * - done : marquage d'avancement (points déjà brodés)
  * Les points arrière, lancés et noeuds vivent sur les trous (0..w / 0..h).
  */
+export interface CompositionMetadata {
+  version: 1;
+  source: string;
+  settings: {
+    detail: "simple" | "equilibree" | "precise";
+    difficulty: "debutant" | "intermediaire" | "expert";
+    palette: "originale" | "harmonisee" | "personnalisee" | "complementaire" | "douce" | "contrastee";
+    codes: string; width: number; height: number; count?: Count;
+  };
+  cards: { id: string; name: string; visible: boolean; overrideCode?: string }[];
+}
+
 export interface Pattern {
+  /** Optional auditable DMC adaptation recipe. Original sprite scene unaffected. */
+  adaptation?: {
+    version:1;mode: import("./brodeuseProfile").AdaptationMode;
+    substitutions:{from:string;to:string;deltaE:number}[];
+    warnings:string[];profileBrand:string;
+  };
+  /** Autonomous reusable subject layers; optional in legacy projects. */
+  subjectScene?: import("./subjectEngine").SubjectScene;
+  /** Optional recipe; legacy projects remain compatible and unchanged. */
+  composition?: CompositionMetadata;
   name: string;
   w: number;
   h: number;
@@ -150,6 +172,9 @@ export function createPattern(name: string, w: number, h: number, count: Count =
 export function clonePattern(p: Pattern): Pattern {
   return {
     ...p,
+    composition: p.composition ? { ...p.composition, settings: { ...p.composition.settings }, cards: p.composition.cards.map(c => ({ ...c })) } : undefined,
+    subjectScene: p.subjectScene ? { ...p.subjectScene, layers: p.subjectScene.layers.map(l=>({...l})), warnings:[...p.subjectScene.warnings] } : undefined,
+    adaptation:p.adaptation ? { ...p.adaptation, substitutions:p.adaptation.substitutions.map(s=>({...s})), warnings:p.adaptation.warnings.slice()} : undefined,
     cross: p.cross.slice(),
     fwd: p.fwd.slice(),
     bwd: p.bwd.slice(),
@@ -491,6 +516,9 @@ export function fabricInfo(p: Pattern) {
 export function toObject(p: Pattern) {
   return {
     v: 3,
+    composition: p.composition,
+    subjectScene: p.subjectScene,
+    adaptation:p.adaptation,
     id: p.id, folder: p.folder, fabric: p.fabric, provenance: p.provenance,
     backStrands: p.backStrands, waste: p.waste,
     ornamentDone: p.ornamentDone,
@@ -576,6 +604,50 @@ export function fromObject(input: unknown): Pattern | null {
     ornamentDone: Array.isArray(o.ornamentDone) ? o.ornamentDone.filter((v): v is string => typeof v === "string") : [],
     folder: typeof o.folder === "string" ? o.folder : "",
     fabric,
+    composition: (() => {
+      const v = o.composition;
+      if (!v || typeof v !== "object") return undefined;
+      const c = v as Partial<CompositionMetadata>;
+      if (c.version !== 1 || typeof c.source !== "string" || c.source.length > 8_000_000 ||
+          !c.settings || typeof c.settings !== "object" || !Array.isArray(c.cards) ||
+          c.cards.length > 32 ||
+          c.cards.some(x => !x || typeof x.id !== "string" || typeof x.name !== "string" ||
+            x.name.length > 120 || typeof x.visible !== "boolean" ||
+            (x.overrideCode !== undefined && (typeof x.overrideCode !== "string" || x.overrideCode.length > 30)))) return undefined;
+      return c as CompositionMetadata;
+    })(),
+    subjectScene: (() => {
+      const value=o.subjectScene;
+      if(!value || typeof value!=="object")return undefined;
+      const scene=value as import("./subjectEngine").SubjectScene;
+      if(scene.version!==1 || typeof scene.source!=="string" || scene.source.length>12_000_000 ||
+        typeof scene.backdrop!=="string" || scene.backdrop.length>12_000_000 ||
+        !Array.isArray(scene.layers) || scene.layers.length>16 ||
+        !Array.isArray(scene.warnings) || scene.warnings.some(v=>typeof v!=="string"||v.length>500) ||
+        scene.layers.some(l=> !l || typeof l.id!=="string" || l.id.length>110 ||
+          typeof l.name!=="string" || l.name.length>120 ||
+          typeof l.sprite!=="string" || l.sprite.length>5_000_000 ||
+          !Number.isInteger(l.x) || !Number.isInteger(l.y) ||
+          Math.abs(l.x)>1000 || Math.abs(l.y)>1000 ||
+          typeof l.scale!=="number" || !Number.isFinite(l.scale) || l.scale<.25 || l.scale>3 ||
+          typeof l.visible!=="boolean" || typeof l.locked!=="boolean" ||
+          !["auto","manual","library"].includes(l.origin) ||
+          (l.tint!==undefined && (typeof l.tint!=="string" || l.tint.length>30))
+        ))return undefined;
+      return scene;
+    })(),
+    adaptation: (() => {
+      const x=o.adaptation;
+      if(!x||typeof x!=="object")return undefined;
+      const a=x as NonNullable<Pattern["adaptation"]>;
+      if(a.version!==1||!["original","stock","debutant","expert","petit","reduite"].includes(a.mode)||
+        typeof a.profileBrand!=="string"||a.profileBrand.length>40||!Array.isArray(a.warnings)||
+        a.warnings.length>30||a.warnings.some(v=>typeof v!=="string"||v.length>500)||
+        !Array.isArray(a.substitutions)||a.substitutions.length>100||
+        a.substitutions.some(t=>!t||typeof t.from!=="string"||typeof t.to!=="string"||
+          flossIndex(t.from)<0||flossIndex(t.to)<0||!Number.isFinite(t.deltaE)))return undefined;
+      return a;
+    })(),
     provenance: o.provenance as Provenance | undefined,
     symbolMap: o.symbolMap as Record<string, number> | undefined,
     beadMap: isCodeMap(o.beadMap) ? (o.beadMap as Record<string, string>) : undefined,

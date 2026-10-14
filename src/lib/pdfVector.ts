@@ -55,8 +55,11 @@ interface Anchor {
 }
 
 export function codeOfText(str: string): string {
-  const s = str.trim().replace(/^DMC\s*/i, "").toUpperCase();
-  return /^(\d{1,4}|B5200|ECRU|BLANC)$/.test(s) ? s : "";
+  // Légendes usuelles : "DMC 310", "DMC #310", "310", "310 Black",
+  // "B5200 Blanc" ; refuser les nombres d'axes non associés à un symbole.
+  const normalized = str.trim().toUpperCase().replace(/^DMC\s*[:#-]?\s*/, "");
+  const token = /^(B5200|ECRU|BLANC|\d{1,4})(?=$|[\s,:;–-])/.exec(normalized);
+  return token && flossIndex(token[1]) >= 0 ? token[1] : "";
 }
 
 const median = (xs: number[]) => {
@@ -180,6 +183,10 @@ export async function readVectorChart(
   for (const p of pages) {
     const outside = splitRuns(p.items, (x, y) => !insideAny(p.boxes, x, y));
     for (const row of cluster(outside, (it) => it.y, 5)) {
+      // Les graduations 0, 5, 10... au-dessus des grilles sont parfois
+      // elles-mêmes des codes DMC existants. Ne jamais les interpréter
+      // comme des paires « symbole → couleur ».
+      if (row.length >= 3 && row.every(it => /^-?\d{1,4}$/.test(it.str.trim()))) continue;
       const codes = row
         .map((it) => ({ it, code: codeOfText(it.str) }))
         .filter((c) => c.code && flossIndex(c.code) >= 0)

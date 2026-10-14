@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { ArrowLeft, Check, Grid3x3, Magnet, Undo2, ZoomIn, ZoomOut } from "lucide-react";
-import { FLOSS } from "../lib/dmc";
+import { FLOSS, flossIndex } from "../lib/dmc";
+import { closestDmcAlternatives, patternFromVector, remapImportedPalette } from "../lib/pdfColorImport";
 import {
   analyzePdf,
   convertBlockAuto,
@@ -11,6 +12,7 @@ import {
   type PdfBlock,
 } from "../lib/pdfAnalysis";
 import { readVectorChart, type VectorResult } from "../lib/pdfVector";
+import { readCompleteGlyphChart, type CompleteGlyphChart } from "../lib/pdfGlyphChart";
 import type { PdfHandle } from "../lib/pdfimport";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 
@@ -45,6 +47,25 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 const keyOf = (b: PdfBlock, mode: Mode, colors: number) =>
   `${mode}|${colors}|${b.id}|${b.page}|${b.x0.toFixed(2)},${b.y0.toFixed(2)},${b.x1.toFixed(2)},${b.y1.toFixed(2)}|${b.cols}x${b.rows}`;
 
+/** Positions sans chevauchement, même si les blocs ont différentes dimensions. */
+export function positionsPuzzle(
+  blocks: PdfBlock[], columns: number, uniformSizes: boolean, size: { cols: number; rows: number },
+) {
+  const positions: Record<string, { x: number; y: number }> = {};
+  const n = Math.max(1, columns);
+  let x = 0, y = 0, rowHeight = 0;
+  blocks.forEach((block, index) => {
+    if (index > 0 && index % n === 0) {
+      y += rowHeight; x = 0; rowHeight = 0;
+    }
+    positions[block.id] = { x, y };
+    x += uniformSizes ? size.cols : block.cols;
+    rowHeight = Math.max(rowHeight, uniformSizes ? size.rows : block.rows);
+  });
+  return positions;
+}
+
+
 export default function PdfPrep({
   file,
   onClose,
@@ -69,6 +90,7 @@ export default function PdfPrep({
   const [analysis, setAnalysis] = useState<PdfAnalysis | null>(null);
   const [handle, setHandle] = useState<PdfHandle | null>(null);
   const [vector, setVector] = useState<VectorResult | null>(null);
+  const [completeGlyph, setCompleteGlyph] = useState<CompleteGlyphChart | null>(null);
   const [stage, setStage] = useState(0);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -80,6 +102,7 @@ export default function PdfPrep({
   const [mode, setMode] = useState<Mode>("auto");
   const [colors, setColors] = useState(24);
   const [assembled, setAssembled] = useState<Assembled | null>(null);
+  const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [author, setAuthor] = useState("");
   const [authorized, setAuthorized] = useState(false);
 
@@ -87,9 +110,13 @@ export default function PdfPrep({
   const [centerTab, setCenterTab] = useState<"puzzle" | "preview">("puzzle");
   // Puzzle manuel : positions en coordonnées de points de grille (x, y en cases)
   const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [uniformSizes, setUniformSizes] = useState(true);
+  const [uniformSizes, setUniformSizes] = useState(false);
   const [magnet, setMagnet] = useState(true);
   const [zoom, setZoom] = useState(1);
+  const [addingZone, setAddingZone] = useState(false);
+  const [zoneDraft, setZoneDraft] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const zoneStart = useRef<{ x: number; y: number } | null>(null);
+  const draggedCard = useRef<string | null>(null);
 
   const handleRef = useRef<PdfHandle | null>(null);
   const registry = useRef(new SymbolRegistry());
@@ -114,6 +141,10 @@ export default function PdfPrep({
   useEffect(() => {
     let live = true;
     setBusy("Analyse du PDF…");
+    registry.current = new SymbolRegistry();
+    cache.current.clear();
+    setCorrections({});
+    setCompleteGlyph(null);
     analyzePdf(file, (m) => {
       if (live) setBusy(m);
     })
@@ -127,15 +158,35 @@ export default function PdfPrep({
         setAnalysis(a);
         setAuthor(a.author);
         a.legend.forEach((e) => registry.current.addKnown(e.bits, e.code));
+        // Priorité à la vraie matrice de glyphes lorsqu'elle est complète.
+        // BeeL.pdf, par exemple, porte même ses cases vides dans le texte PDF :
+        // 12 grilles = 193 × 200 cases ; le raster perd des zones.
+        setBusy("Lecture complète des symboles et codes DMC…");
+        const full = await readCompleteGlyphChart(h);
+        if (!live) return;
+        setCompleteGlyph(full.ok ? full : null);
+        if (full.ok) {
+          const chart: PdfBlock[] = full.tiles.map(t => ({
+            id: "glyph-" + t.page, page: t.page,
+            x0: t.bounds.x0, y0: t.bounds.y0, x1: t.bounds.x1, y1: t.bounds.y1,
+            cols: t.cols, rows: t.rows, label: "Grille DMC exacte · page " + t.page,
+          }));
+          setBlocks(chart);
+          setOrder(chart.map(b => b.id));
+          setPerRow(full.columns);
+          setPageN(chart[0].page);
+          setCenterTab("preview");
+          setVector(null);
+          setMode("vecteur");
+          setBusy("");
+          return;
+        }
         const pages = a.pages.filter((p) => p.kind === "chart");
         const chart = pages.flatMap((p) => p.blocks);
         setBlocks(chart);
-        setOrder(autoOrder(chart).map((b) => b.id));
-
-        // Détection du nombre de colonnes de la mosaïque (3 colonnes par défaut pour les patrons comme BeeL)
+        setOrder(autoOrder(chart).map(b => b.id));
         const suggestedPerRow = a.modelAspect >= 1.2 ? 4 : a.modelAspect <= 0.7 ? 2 : 3;
         setPerRow(Math.min(suggestedPerRow, Math.max(1, chart.length)));
-
         if (pages[0]) setPageN(pages[0].n);
         const initialBoxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }[]>();
         for (const b of chart) {
@@ -143,7 +194,7 @@ export default function PdfPrep({
           list.push({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 });
           initialBoxes.set(b.page, list);
         }
-        setBusy("Lecture du texte et de la numérotation…");
+        setBusy("Lecture vectorielle des axes du patron…");
         const v = await readVectorChart(h, initialBoxes);
         if (!live) return;
         setVector(v);
@@ -162,6 +213,38 @@ export default function PdfPrep({
       handleRef.current = null;
     };
   }, [file]);
+
+  const zonePoint = (e: RPointerEvent<HTMLElement>) => {
+    const bounds = e.currentTarget.getBoundingClientRect();
+    return {
+      x: Math.min(100, Math.max(0, (e.clientX - bounds.left) / bounds.width * 100)),
+      y: Math.min(100, Math.max(0, (e.clientY - bounds.top) / bounds.height * 100)),
+    };
+  };
+  const finishMissingZone = (e: RPointerEvent<HTMLDivElement>) => {
+    const start = zoneStart.current;
+    zoneStart.current = null;
+    if (!start) return;
+    const end = zonePoint(e);
+    const x0 = Math.min(start.x, end.x), y0 = Math.min(start.y, end.y);
+    const x1 = Math.max(start.x, end.x), y1 = Math.max(start.y, end.y);
+    setZoneDraft(null);
+    if (x1 - x0 < 3 || y1 - y0 < 3) return;
+    const nearby = blocks.find(b => b.page === pageN) ?? blocks[0];
+    const b: PdfBlock = {
+      id: "manuelle-" + Date.now() + "-" + Math.random().toString(36).slice(2, 5),
+      page: pageN, x0, y0, x1, y1,
+      cols: nearby?.cols ?? 40, rows: nearby?.rows ?? 40,
+      label: "Zone ajoutée manuellement",
+    };
+    setBlocks(previous => [...previous, b]);
+    setOrder(previous => [...previous, b.id]);
+    setMode("auto");
+    setVector(null);
+    cache.current.clear();
+    setAddingZone(false);
+    setManualPositions({});
+  };
 
   const page = analysis?.pages.find((p) => p.n === pageN);
   const pageBlocks = blocks.filter((b) => b.page === pageN);
@@ -187,22 +270,10 @@ export default function PdfPrep({
   const blockH = (b: PdfBlock) => (uniformSizes ? uniformDim.rows : b.rows);
 
   // Mosaïque ordonnée par défaut (pages dans l'ordre numérique, rangées régulières)
-  const defaultMosaic = useMemo(() => {
-    const map: Record<string, { x: number; y: number }> = {};
-    let col = 0;
-    let row = 0;
-    effective.forEach((b, i) => {
-      if (i > 0 && i % perRow === 0) {
-        col = 0;
-        row++;
-      }
-      const x = col * (uniformSizes ? uniformDim.cols : b.cols);
-      const y = row * (uniformSizes ? uniformDim.rows : b.rows);
-      map[b.id] = { x, y };
-      col++;
-    });
-    return map;
-  }, [effective, perRow, uniformSizes, uniformDim]);
+  const defaultMosaic = useMemo(
+    () => positionsPuzzle(effective, perRow, uniformSizes, uniformDim),
+    [effective, perRow, uniformSizes, uniformDim],
+  );
 
   // Position effective de chaque bloc sur la table de montage
   const tileLayout = useMemo(() => {
@@ -346,20 +417,19 @@ export default function PdfPrep({
 
   const arrangeMosaic = (cols: number) => {
     setPerRow(cols);
-    const map: Record<string, { x: number; y: number }> = {};
-    let c = 0;
-    let r = 0;
-    effective.forEach((b, i) => {
-      if (i > 0 && i % cols === 0) {
-        c = 0;
-        r++;
-      }
-      const x = c * (uniformSizes ? uniformDim.cols : b.cols);
-      const y = r * (uniformSizes ? uniformDim.rows : b.rows);
-      map[b.id] = { x, y };
-      c++;
+    setManualPositions(positionsPuzzle(effective, cols, uniformSizes, uniformDim));
+  };
+
+  const moveCard = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= order.length) return;
+    setOrder(previous => {
+      const next = previous.slice();
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
     });
-    setManualPositions(map);
+    // Les positions suivent le nouvel ordre.
+    setManualPositions({});
   };
 
   const resetToDefault = () => {
@@ -382,6 +452,42 @@ export default function PdfPrep({
           return;
         }
         setError("");
+        // Priorité aux codes DMC réellement présents dans le tableau PDF :
+        // l'ancien mode "vecteur" était bien détecté mais jamais utilisé.
+        if (mode === "vecteur") {
+          if (completeGlyph?.ok) {
+            // L'ordre des cartes et leur placement influencent l'assemblage
+            // réel, mais leur matrice de cases ne repasse jamais par le raster.
+            const placed: Placed[] = effective.map(b => {
+              const t = completeGlyph.tiles.find(t => t.page === b.page);
+              if (!t) throw new Error("Page vectorielle manquante : " + b.page);
+              return { b, data: {
+                cells: t.cells, byColor: 0, byLegend: t.mapped, unresolved: t.unresolved,
+              } };
+            });
+            const product = assembleFromTileLayout(placed, tileLayout, analysis.title);
+            setAssembled({ ...product, source: "vecteur" });
+            return;
+          }
+          if (!vector?.ok) {
+            setAssembled(null);
+            setError("Correspondance vectorielle indisponible : choisissez Automatique pour lire les couleurs visibles.");
+            return;
+          }
+          const p = patternFromVector(vector, analysis.title);
+          if (!p) {
+            setAssembled(null);
+            setError("Codes DMC vectoriels illisibles : choisissez Automatique.");
+            return;
+          }
+          const miss = Object.values(vector.unmapped).reduce((sum, n) => sum + n, 0);
+          setAssembled({
+            pattern: p, rawW: p.w, rawH: p.h, fitW: p.w, fitH: p.h,
+            scaled: false, blocks: effective.length, byColor: 0,
+            byLegend: vector.cells.size, unresolved: miss, source: "vecteur",
+          });
+          return;
+        }
         for (let i = 0; i < effective.length; i++) {
           const b = effective[i];
           const key = keyOf(b, mode, colors);
@@ -416,13 +522,26 @@ export default function PdfPrep({
     return () => {
       dead = true;
     };
-  }, [stage, handle, analysis, sig, layoutSig, mode, colors]);
+  }, [stage, handle, analysis, sig, layoutSig, mode, colors, vector, completeGlyph]);
 
-  const preview = useMemo(() => (assembled ? renderPreview(assembled.pattern) : ""), [assembled]);
+  // Les substitutions sont un calque NON DESTRUCTIF. Modifier une estimation
+  // ne modifie jamais les données extraites du PDF ; annuler restaure l'original.
+  const correctedPattern = useMemo(
+    () => assembled ? remapImportedPalette(assembled.pattern, corrections) : null,
+    [assembled, corrections],
+  );
+  const preview = useMemo(() => (correctedPattern ? renderPreview(correctedPattern) : ""), [correctedPattern]);
+  const detectedColors = useMemo(() => {
+    if (!assembled) return [];
+    const counts = new Map<number, number>();
+    for (const idx of assembled.pattern.cross) if (idx >= 0) counts.set(idx, (counts.get(idx) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [assembled]);
 
   const commit = () => {
     if (!assembled) return;
-    const p = assembled.pattern;
+    const p = correctedPattern;
+    if (!p) return;
     p.provenance = {
       kind: "pdf",
       source: file.name,
@@ -430,7 +549,7 @@ export default function PdfPrep({
       license: authorized ? "Droits de redistribution déclarés" : "Usage personnel uniquement",
       personalOnly: !authorized,
     };
-    p.notes = `PDF reconstitué : ${assembled.blocks} blocs assemblés en mosaïque magnétique (${assembled.fitW} × ${assembled.fitH} pts).`;
+    p.notes = `PDF reconstitué : ${assembled.blocks} blocs (${assembled.fitW} × ${assembled.fitH} pts). Codes DMC ${assembled.source === "vecteur" ? "lus dans la légende vectorielle" : "lus dans l'image / estimés par couleur"} : ${assembled.byLegend} associés, ${assembled.byColor} déduits par couleur, ${assembled.unresolved} symboles non résolus. Vérifier les estimations sur la légende originale. Substitutions manuelles : ${Object.entries(corrections).filter(([from, to]) => from !== to && flossIndex(to) >= 0).map(([from, to]) => from + "→" + to).join(", ") || "aucune"}.\nDocument original : ${file.name}`;
     onImport(p);
   };
 
@@ -482,8 +601,17 @@ export default function PdfPrep({
           <section className="mx-auto max-w-[860px]">
             <h3 className="text-[15px] font-semibold">Pages analysées</h3>
             <p className="mt-1 text-[13px] text-label-2">
-              {analysis.pages.filter((p) => p.kind === "chart").length} page(s) de grille · {blocks.length} bloc(s) détecté(s) · modèle couleur au format {analysis.modelAspect.toFixed(2)}
-              {vector?.ok ? " · texte vectoriel disponible" : ""}.
+              {completeGlyph?.ok
+                ? `${completeGlyph.tiles.length} pages de grille complètes · ${completeGlyph.columns} colonnes × ${completeGlyph.tiles.length / completeGlyph.columns} rangées · ${completeGlyph.width} × ${completeGlyph.height} points`
+                : `${analysis.pages.filter(p => p.kind === "chart").length} page(s) de grille · ${blocks.length} bloc(s) détecté(s)`}
+              {vector?.ok ? " · codes DMC et symboles vectoriels reconnus" : ""}.
+            </p>
+            <p className="mt-2 text-[12px] text-label-2" role="status">
+              {completeGlyph?.ok
+                ? `Grille exacte détectée : ${completeGlyph.mapped.toLocaleString("fr-FR")} points avec codes DMC, ${completeGlyph.blank.toLocaleString("fr-FR")} cases vides, ${completeGlyph.legendCount} références et ${completeGlyph.unresolved} symbole(s) sans correspondance. Les 12 pages restent indépendantes et réordonnables avant l'import.`
+                : vector?.ok
+                ? `Lecture vectorielle de ${vector.cells.size} cases avec codes DMC du PDF, à vérifier dans l’aperçu.`
+                : `Légende image : ${analysis.legend.length} correspondance(s) détectée(s). Les codes absents ne peuvent pas être devinés depuis des symboles noirs et blancs.`}
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {analysis.pages.map((p) => (
@@ -528,8 +656,24 @@ export default function PdfPrep({
                 ))}
               </div>
               <div
-                className="relative touch-none select-none overflow-hidden rounded-[14px] bg-white shadow-2xl"
+                className={"relative touch-none select-none overflow-hidden rounded-[14px] bg-white shadow-2xl" + (addingZone ? " cursor-crosshair outline outline-2 outline-[#30d158]" : "")}
                 style={{ aspectRatio: `1 / ${page.aspect}` }}
+                onPointerDown={e => {
+                  if (!addingZone) return;
+                  const point = zonePoint(e);
+                  zoneStart.current = point;
+                  setZoneDraft({ x0: point.x, y0: point.y, x1: point.x, y1: point.y });
+                  e.currentTarget.setPointerCapture?.(e.pointerId);
+                }}
+                onPointerMove={e => {
+                  const start = zoneStart.current;
+                  if (!addingZone || !start) return;
+                  const end = zonePoint(e);
+                  setZoneDraft({ x0: Math.min(start.x, end.x), y0: Math.min(start.y, end.y),
+                    x1: Math.max(start.x, end.x), y1: Math.max(start.y, end.y) });
+                }}
+                onPointerUp={e => { if (addingZone) finishMissingZone(e); }}
+                onPointerCancel={() => { zoneStart.current = null; setZoneDraft(null); }}
               >
                 <img src={page.thumb} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-fill" draggable={false} />
                 {pageBlocks.map((b) => (
@@ -546,12 +690,24 @@ export default function PdfPrep({
                     </span>
                   </div>
                 ))}
+                {addingZone && zoneDraft && (
+                  <div className="pointer-events-none absolute z-30 border-2 border-[#30d158] bg-[#30d158]/15"
+                    style={{ left: zoneDraft.x0 + "%", top: zoneDraft.y0 + "%",
+                      width: zoneDraft.x1 - zoneDraft.x0 + "%", height: zoneDraft.y1 - zoneDraft.y0 + "%" }} />
+                )}
               </div>
+              {addingZone && <p className="mt-2 text-xs text-[#30d158]">Tracez un rectangle autour de la partie oubliée du PDF.</p>}
             </div>
             <aside className="lg:w-[42%]">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-[15px] font-semibold">Blocs de la page {pageN}</h3>
               </div>
+              <button type="button" className="btn-quiet mb-3 min-h-10 w-full"
+                aria-pressed={addingZone}
+                onClick={() => { setAddingZone(!addingZone); setZoneDraft(null); zoneStart.current = null; }}>
+                {addingZone ? "Annuler le tracé" : "+ Récupérer une zone manquante"}
+              </button>
+              <p className="mb-3 text-xs text-label-3">Si une partie du dessin est oubliée, dessinez-la sur l'image à gauche, puis corrigez ses dimensions en cases ci-dessous. Une zone ajoutée utilise la lecture par image et conserve les autres blocs.</p>
               <div className="space-y-2">
                 {pageBlocks.map((b, i) => (
                   <div key={b.id} className="flex items-center gap-2 rounded-[12px] bg-white/5 px-3 py-2">
@@ -582,7 +738,7 @@ export default function PdfPrep({
                 <button className="btn-quiet flex-1" onClick={() => setStage(0)}>
                   Retour
                 </button>
-                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => setStage(2)}>
+                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => { setCenterTab(mode === "vecteur" ? "preview" : "puzzle"); setStage(2); }}>
                   Monter le puzzle →
                 </button>
               </div>
@@ -821,8 +977,42 @@ export default function PdfPrep({
               </section>
 
               <section className="rounded-[14px] bg-white/5 p-3.5">
+                <h3 className="mb-2 text-[13px] font-semibold">Ordre des cartes du puzzle</h3>
+                <p className="mb-2 text-[11px] text-label-3">Glissez les cartes pour les réordonner (ou utilisez les flèches). Ajustez ensuite les positions sur le tableau magnétique.</p>
+                <div className="max-h-48 space-y-1 overflow-y-auto">
+                  {effective.map((b, i) => (
+                    <div key={b.id} draggable
+                      onDragStart={e => { draggedCard.current = b.id; e.dataTransfer.effectAllowed = "move"; }}
+                      onDragOver={e => { if (draggedCard.current) e.preventDefault(); }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        const from = effective.findIndex(x => x.id === draggedCard.current);
+                        if (from >= 0) moveCard(from, i - from);
+                        draggedCard.current = null;
+                      }}
+                      onDragEnd={() => { draggedCard.current = null; }}
+                      className="flex cursor-grab items-center gap-2 rounded-md border border-white/10 bg-black/15 p-2 active:cursor-grabbing">
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-white/10 text-[11px]">{i + 1}</span>
+                      {analysis?.pages.find(p => p.n === b.page)?.thumb && (
+                        <img src={analysis.pages.find(p => p.n === b.page)!.thumb}
+                          className="h-10 w-8 shrink-0 rounded-sm bg-white object-cover" alt={`Aperçu page ${b.page}`} draggable={false} />
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-xs">Page {b.page} · {b.cols} × {b.rows}</span>
+                      <button type="button" disabled={i === 0} className="px-2 py-1 text-xs disabled:opacity-20" aria-label={`Monter la carte ${i + 1}`} onClick={() => moveCard(i, -1)}>↑</button>
+                      <button type="button" disabled={i === effective.length - 1} className="px-2 py-1 text-xs disabled:opacity-20" aria-label={`Descendre la carte ${i + 1}`} onClick={() => moveCard(i, 1)}>↓</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-[14px] bg-white/5 p-3.5">
                 <h3 className="mb-2 text-[13px] font-semibold">Lecture des points</h3>
                 <div className="seg mb-2">
+                  {(vector?.ok || completeGlyph?.ok) && (
+                    <button type="button" aria-pressed={mode === "vecteur"} onClick={() => { setMode("vecteur"); setCenterTab("preview"); }}>
+                      DMC exacts
+                    </button>
+                  )}
                   <button type="button" aria-pressed={mode === "auto"} onClick={() => setMode("auto")}>
                     Automatique
                   </button>
@@ -831,7 +1021,11 @@ export default function PdfPrep({
                   </button>
                 </div>
                 <p className="text-[11.5px] leading-relaxed text-label-3">
-                  Lit chaque case d'après sa vraie couleur de fil DMC. Les symboles noirs/blancs sont reliés à la légende.
+                  {mode === "vecteur"
+                    ? "Codes DMC de la légende associés aux symboles vectoriels. L’assemblage suit les axes du PDF (pas le déplacement manuel des tuiles). Les symboles inconnus restent vides."
+                    : mode === "auto"
+                      ? "Associe les symboles lisibles à la légende DMC ; pour les cases visiblement colorées, propose le fil le plus proche."
+                      : "Photographie couleur : estimation des références DMC à partir des pixels imprimés. À vérifier avant de broder."}
                 </p>
                 {mode === "photo" && (
                   <div className="mt-2.5">
@@ -849,6 +1043,60 @@ export default function PdfPrep({
                   </div>
                 )}
               </section>
+
+              {assembled && correctedPattern && (
+                <section className="rounded-[14px] bg-white/5 p-3.5" aria-label="Couleurs DMC reconnues">
+                  <h3 className="mb-2 text-[13px] font-semibold">Couleurs et codes DMC</h3>
+                  <p className="text-[11px] leading-relaxed text-label-3">
+                    {assembled.byLegend} points liés à la légende · {assembled.byColor} points estimés par couleur.
+                    {assembled.unresolved > 0 && ` ${assembled.unresolved} symbole(s) sans code reconnu, laissés vides.`}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-label-3">
+                    {assembled.source === "vecteur"
+                      ? "Codes extraits de la légende PDF et de toutes les cases, sans estimation de couleur. Vérifiez le placement des pages."
+                      : "Couleurs d'image approximatives : vérifiez la légende du PDF avant d'accepter."}
+                  </p>
+                  <div className="mt-3 max-h-[260px] space-y-3 overflow-y-auto pr-1">
+                    {detectedColors.map(([idx, count]) => {
+                      const floss = FLOSS[idx];
+                      if (!floss) return null;
+                      const suggestion = closestDmcAlternatives(idx, 3);
+                      const selected = corrections[floss.code] ?? floss.code;
+                      const valid = flossIndex(selected.toUpperCase().trim()) >= 0;
+                      return (
+                        <div key={floss.code} className="rounded-md border border-white/10 bg-white/5 p-2.5">
+                          <div className="mb-2 flex items-center gap-2 text-[12px]">
+                            <span className="h-5 w-5 shrink-0 rounded-sm border border-white/20" style={{ backgroundColor: FLOSS[flossIndex(valid ? selected.toUpperCase().trim() : floss.code)]?.hex ?? floss.hex }} />
+                            <span className="min-w-0 flex-1 truncate">DMC {floss.code} · {floss.name}</span>
+                            <span className="text-[11px] text-label-3">{count} pts</span>
+                          </div>
+                          <label className="block text-[11px] text-label-3">
+                            Remplacer par code DMC
+                            <input
+                              value={selected}
+                              onChange={e => setCorrections(previous => ({ ...previous, [floss.code]: e.target.value.toUpperCase().trim() }))}
+                              className={`field mt-1 min-h-9 w-full text-[12px] ${valid ? "" : "border-[#ff9f0a]"}`}
+                              aria-label={`Code DMC de remplacement pour ${floss.code}`}
+                            />
+                          </label>
+                          {!valid && <p className="mt-1 text-[11px] text-[#ffbd70]">Code non reconnu, couleur originale conservée.</p>}
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {suggestion.map(s => (
+                              <button key={s.idx} type="button" className="flex items-center gap-1 rounded border border-white/15 px-1.5 py-1 text-[11px] text-label-2"
+                                title={`Couleur proche de DMC ${floss.code}, écart CIEDE2000 ${s.deltaE.toFixed(1)}`}
+                                onClick={() => setCorrections(previous => ({ ...previous, [floss.code]: FLOSS[s.idx].code }))}>
+                                <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: FLOSS[s.idx].hex }} />
+                                {FLOSS[s.idx].code}
+                              </button>
+                            ))}
+                            {selected !== floss.code && <button type="button" className="px-1 text-[11px] text-accent-2" onClick={() => setCorrections(previous => ({ ...previous, [floss.code]: floss.code }))}>Rétablir</button>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
               <section className="rounded-[14px] bg-white/5 p-3.5">
                 <h3 className="mb-2 text-[13px] font-semibold">Auteur et droits</h3>
@@ -909,7 +1157,7 @@ function autoOrder(blocks: PdfBlock[]) {
   return [...blocks].sort((a, b) => a.page - b.page || a.y0 - b.y0 || a.x0 - b.x0);
 }
 
-function assembleFromTileLayout(
+export function assembleFromTileLayout(
   list: Placed[],
   layout: { b: PdfBlock; x: number; y: number; w: number; h: number }[],
   name: string,
@@ -931,19 +1179,27 @@ function assembleFromTileLayout(
     unresolved += p.data.unresolved;
   }
 
-  const W = Math.max(1, Math.min(maxX, 1000));
-  const H = Math.max(1, Math.min(maxY, 1000));
+  // Ne pas tronquer AVANT fitGrid : autrement les dernières pages
+  // sont repliées sur la bordure et des zones entières disparaissent.
+  const W = Math.max(1, Math.ceil(maxX));
+  const H = Math.max(1, Math.ceil(maxY));
+  if (W * H > 8_000_000) throw new Error("Grille trop grande : réduisez les blocs ou le nombre de pages.");
   const raw = new Int16Array(W * H).fill(-1);
 
   for (const p of list) {
     const t = layout.find((item) => item.b.id === p.b.id);
     if (!t) continue;
-    for (let r = 0; r < p.b.rows; r++) {
-      for (let c = 0; c < p.b.cols; c++) {
-        const gx = Math.min(W - 1, Math.max(0, t.x + c));
-        const gy = Math.min(H - 1, Math.max(0, t.y + r));
-        const v = p.data.cells[r * p.b.cols + c];
-        if (v >= 0) raw[gy * W + gx] = v;
+    // Une carte peut être ajustée à des dimensions communes. Si c'est
+    // le cas, rééchantillonner ses cellules de façon explicite, sans trou.
+    for (let r = 0; r < t.h; r++) {
+      for (let c = 0; c < t.w; c++) {
+        const srcX = Math.min(p.b.cols - 1, Math.floor(c * p.b.cols / t.w));
+        const srcY = Math.min(p.b.rows - 1, Math.floor(r * p.b.rows / t.h));
+        const gx = t.x + c;
+        const gy = t.y + r;
+        if (gx < 0 || gy < 0 || gx >= W || gy >= H) continue;
+        const value = p.data.cells[srcY * p.b.cols + srcX];
+        if (value >= 0) raw[gy * W + gx] = value;
       }
     }
   }

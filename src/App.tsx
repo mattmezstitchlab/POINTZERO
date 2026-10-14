@@ -3,7 +3,7 @@ import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
 import { blankPattern, initState, loadStored, reducer, saveStored } from "./lib/store";
 import { buildTemplate } from "./lib/convert";
 import { clonePattern, compositePattern, computeStats, createPattern, ensurePalette, type Pattern, type Supply } from "./lib/pattern";
-import { readProjectFile, saveProjectFile } from "./lib/io";
+import { readProjectFile, readTextFile, saveProjectFile } from "./lib/io";
 import { fromOxs } from "./lib/oxs";
 import { readInventory, saveLibrary, writeInventory } from "./lib/library";
 import { clearSelection, extractSelection, pasteSelection, transformPart, type Selection } from "./lib/editing";
@@ -22,6 +22,8 @@ import SelectionBar from "./components/SelectionBar";
 import ImportStudio from "./components/ImportStudio";
 import PdfPrep from "./components/PdfPrep";
 import PromptStudio from "./components/PromptStudio";
+import CompositionStudio from "./components/CompositionStudio";
+import AutomaticImageImport from "./components/AutomaticImageImport";
 import ExportStudio from "./components/ExportStudio";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Coach, { type Ask } from "./components/Coach";
@@ -58,6 +60,8 @@ export default function App() {
   const [boot] = useState(loadStored);
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
+  const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
+  const [autoImage, setAutoImage] = useState<File | null>(null);
   const P = remote ?? store.present;
   const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>("real"), [workspace, setWorkspace] = useState<Workspace>("create");
   const [symbols, setSymbols] = useState(false), [panel, setPanel] = useState<Panel>(null), [file, setFile] = useState<File | null>(null), [pdfFile, setPdfFile] = useState<File | null>(null), [promptOpen, setPromptOpen] = useState(false), [selection, setSelection] = useState<Selection | null>(null), [clipboard, setClipboard] = useState<Pattern | null>(null);
@@ -231,15 +235,35 @@ export default function App() {
     window.addEventListener("keydown", keys); return () => window.removeEventListener("keydown", keys);
   }, [screen, chooseTool, remote, workspace, closePanel]);
 
+  /** Même décodeur, quel que soit le point d'entrée : accueil, atelier, panneau Projet. */
+  const openProjectFromFile = async (f: File, navigateToEditor = false): Promise<string | null> => {
+    try {
+      if (!/\.(json|oxs)$/i.test(f.name)) throw new Error("Choisissez un fichier .pointzero.json, .json ou .oxs.");
+      if (f.size > 25 * 1024 * 1024) throw new Error("Ce projet dépasse 25 Mo.");
+      const p = /\.oxs$/i.test(f.name) ? fromOxs(await readTextFile(f)) : await readProjectFile(f);
+      if (!p) throw new Error("Projet invalide ou format JSON incompatible. Le fichier original reste intact.");
+      await loadPattern(p);
+      setWorkspace("create");
+      setView("pattern");
+      setTool("cross");
+      if (navigateToEditor) { window.location.hash = "atelier"; setScreen("editor"); }
+      notify(`« ${p.name} » ouvert · ${p.w} × ${p.h} points · ${p.palette.length} couleurs DMC`);
+      return null;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Impossible d’ouvrir ce projet.";
+      notify(message);
+      return message;
+    }
+  };
+
   const panelActions = {
     importFile: (f: File) => {
       closePanel();
       if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") setPdfFile(f);
-      else setFile(f);
+      else setAutoImage(f);
     },
-    openFile: async (f: File) => {
-      try { const p = /\.oxs$/i.test(f.name) ? fromOxs(await f.text()) : await readProjectFile(f); if (!p) throw new Error("Projet invalide ou ancienne version sans table de codes fiable"); await loadPattern(p); notify(`« ${p.name} » ouvert`); } catch (e) { notify(e instanceof Error ? e.message : "Impossible d’ouvrir ce fichier"); }
-    },
+    importAdvanced: (f: File) => { closePanel(); setFile(f); },
+    openFile: (f: File) => { void openProjectFromFile(f); },
     export: () => setPanel("export" as Panel), save: () => { saveProjectFile(P); notify("Fichier projet téléchargé"); },
     new: (w: number, h: number) => { try { const next = createPattern("Nouveau motif", w, h, P.count, P.strands); next.fabric = P.fabric; void loadPattern(next); } catch (e) { notify(e instanceof Error ? e.message : "Dimensions invalides"); } },
     library: () => setPanel("library" as Panel), guide: () => openCoach(), share: () => setPanel("share" as Panel), prompt: () => { closePanel(); setPromptOpen(true); }, notify,
@@ -343,7 +367,10 @@ export default function App() {
     // Les étapes « outil » se valident dans chooseTool, au toucher.
   }, [coachOpen, coachStep, ask, color, strokes, panel, coachNext]);
 
+  const projectInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const openEditor = () => { window.location.hash = "atelier"; setScreen("editor"); };
+  const openComposition = () => { if (!remote) { closePanel(); setCompositionInput(P); } };
   const openSlame = () => { window.location.hash = "slame"; setScreen("slame"); };
   const openLanding = () => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); closePanel(); history.pushState(null, "", window.location.pathname + window.location.search); setScreen("landing"); window.scrollTo(0, 0); };
   const onRemote = useCallback((p: Pattern | null) => { setRemote(p); if (p) { setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); } }, []);
@@ -356,27 +383,67 @@ export default function App() {
       <Landing
         onOpen={openEditor}
         onSlame={openSlame}
-        onMotif={(motif) => {
-          setPattern(motif);
+        onImage={(image) => { setAutoImage(image); setWorkspace("create"); setView("pattern"); openEditor(); }}
+        onProjectFile={(file) => openProjectFromFile(file, true)}
+        onPdf={(file) => {
+          // Le fichier n'est jamais rendu sur la landing. Le calage, le puzzle
+          // et la livraison dans la grille DMC appartiennent à l'atelier.
+          setPdfFile(file);
+          setWorkspace("create");
+          setView("pattern");
           openEditor();
+        }}
+        onMotif={(motif) => {
+          // Charger le patron en tant que vrai projet, sans laisser
+          // l'initialisation de l'exemple d'atelier l'écraser ensuite.
+          void loadPattern(motif).then(openEditor).catch(() => {
+            notify("Impossible d’ouvrir ce patron. Vérifiez la bibliothèque locale.");
+          });
         }}
       />
     );
   return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-black ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+    <input
+      ref={imageInputRef}
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      className="sr-only"
+      aria-label="Choisir une image à composer"
+      onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)setAutoImage(selected);}}
+    />
+    <input
+      ref={projectInputRef}
+      type="file"
+      accept=".json,.oxs,application/json"
+      aria-label="Sélectionner un projet POINTZERO JSON"
+      className="sr-only"
+      onChange={e => {
+        const chosen = e.target.files?.[0];
+        e.target.value = "";
+        if (chosen) void openProjectFromFile(chosen);
+      }}
+    />
     <Canvas pattern={P} tool={remote ? "hand" : tool} color={color} view={view} symbols={symbols} highlightActive={workspace === "stitch"} insets={insets} fitKey={fitKey} onlyActive={prefs.onlyActive} highContrast={prefs.highContrast} pencilOnly={prefs.pencilOnly} symmetry={prefs.symmetry} annotation={prefs.annotation} readOnly={!!remote} selection={selection} halfDirection={prefs.halfDirection}
       onSelection={setSelection} onBegin={() => { if (!remote) dispatch({ type: "begin" }); }}
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
       onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); if (changed) setStrokes((n) => n + 1); }}
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }} />
     <button type="button" onClick={openSlame} className="fixed right-4 top-[78px] z-40 rounded-xl border border-[#baa5ff] bg-[#473677] px-4 py-2 text-sm font-semibold text-white shadow-lg" aria-label="Ouvrir SLÂME : broder la musique et parler">♫ SLÂME</button>
-    <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
+    <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onImportProject={() => projectInputRef.current?.click()} onCompose={openComposition} onImportImage={() => imageInputRef.current?.click()} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
     <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} coachTool={coachOpen ? coachTool : null} />
     {selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
     <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || !!file} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
     <WorkspacePanel open={panel === "project"} onClose={closePanel} pattern={P} onSet={setPattern} actions={panelActions} prefs={prefs} onPrefs={setPrefs} onTool={chooseTool} tool={tool} color={color} onColor={(idx) => setColor(idx)} workspace={workspace} />
     <LibrarySheet open={panel === "library"} onClose={closePanel} onLoad={(p) => void loadPattern(p)} onNew={() => panelActions.new(80, 80)} inventory={inventory} />
-    {file && <ImportStudio file={file} onClose={() => setFile(null)} onImport={(p) => { void loadPattern(p); setWorkspace("create"); setView("pattern"); notify("Import contrôlé validé. Vérifiez le patron avant de commencer."); }} />}
+    {autoImage && <AutomaticImageImport file={autoImage}
+      onCancel={() => setAutoImage(null)}
+      onReady={p => { setAutoImage(null); setCompositionInput(p); setWorkspace("create"); setView("pattern"); }}/> }
+    {file && <ImportStudio file={file} onClose={() => setFile(null)} onImport={(p) => {
+      setFile(null); setWorkspace("create"); setView("pattern");
+      setCompositionInput(p);
+      notify("Source image analysée. Vérifiez les propositions de composition avant validation.");
+    }} />}
     {pdfFile && (
       <ErrorBoundary label="La préparation du PDF" onReset={() => setPdfFile(null)}>
         <PdfPrep
@@ -384,15 +451,33 @@ export default function App() {
           onClose={() => setPdfFile(null)}
           onImport={(p) => {
             setPdfFile(null);
-            void loadPattern(p);
             setWorkspace("create");
             setView("pattern");
-            notify("Patron reconstitué en une grille. Vérifiez le calage avant de commencer.");
+            setCompositionInput(p);
+            notify("Patron PDF reconstitué. Les couleurs source sont conservées et la composition reste facultative.");
           }}
         />
       </ErrorBoundary>
     )}
-    {promptOpen && <PromptStudio initialPrompt="" onClose={() => setPromptOpen(false)} onImport={(p) => { setPromptOpen(false); void loadPattern(p); setWorkspace("create"); setView("pattern"); notify("Motif généré. Vérifiez les couleurs avant de commencer."); }} />}
+    {promptOpen && <PromptStudio initialPrompt="" onClose={() => setPromptOpen(false)} onImport={(p) => {
+      setPromptOpen(false); setWorkspace("create"); setView("pattern");
+      setCompositionInput(p);
+      notify("Image générée. Choisissez le niveau de composition avant d'utiliser le motif.");
+    }} />}
+    {compositionInput && (
+      <ErrorBoundary label="Le moteur de composition" onReset={() => setCompositionInput(null)}>
+        <CompositionStudio
+          pattern={compositionInput}
+          onCancel={() => setCompositionInput(null)}
+          onUse={p => {
+            setCompositionInput(null);
+            setWorkspace("create"); setView("pattern");
+            void loadPattern(p);
+            notify("Motif composé. La source reste dans le JSON ; contrôlez les détails avant de broder.");
+          }}
+        />
+      </ErrorBoundary>
+    )}
     {panel === "export" && <ExportStudio pattern={P} onClose={closePanel} />}
     <Coach
       open={coachOpen && !remote}
