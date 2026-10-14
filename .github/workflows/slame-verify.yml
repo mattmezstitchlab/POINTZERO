@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - feat/slame-music-communication-prototype
-      - feat/beel-complete-dmc-import
 jobs:
   verify:
     runs-on: ubuntu-latest
