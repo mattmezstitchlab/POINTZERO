@@ -55,8 +55,11 @@ interface Anchor {
 }
 
 export function codeOfText(str: string): string {
-  const s = str.trim().replace(/^DMC\s*/i, "").toUpperCase();
-  return /^(\d{1,4}|B5200|ECRU|BLANC)$/.test(s) ? s : "";
+  // Légendes usuelles : "DMC 310", "DMC #310", "310", "310 Black",
+  // "B5200 Blanc" ; refuser les nombres d'axes non associés à un symbole.
+  const normalized = str.trim().toUpperCase().replace(/^DMC\s*[:#-]?\s*/, "");
+  const token = /^(B5200|ECRU|BLANC|\d{1,4})(?=$|[\s,:;–-])/.exec(normalized);
+  return token && flossIndex(token[1]) >= 0 ? token[1] : "";
 }
 
 const median = (xs: number[]) => {
