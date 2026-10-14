@@ -4,6 +4,17 @@ import {
  intentionGesture, musicEvents, musicToMidi, safeMusicScore, snapMusicTime
 } from "../lib/musicStudioCore";
 describe("POINTZERO Studio Musique inclusive",()=>{
+ it("associe un DMC au timbre d'une note et à son export, en conservant les anciennes partitions",()=>{
+   const score=emptyMusicScore(),note=makeMusicNote("point",2,1,"Sérénité");
+   const uncolored=musicEvents({...score,notes:[note]})[0];
+   const withDMC={...note,dmcCode:"820"};
+   expect(safeMusicScore({...score,notes:[withDMC]})).not.toBeNull();
+   expect(safeMusicScore({...score,notes:[{...note,dmcCode:"javascript:evil"}]})).toBeNull();
+   expect(safeMusicScore({...score,notes:[note]})).not.toBeNull();
+   const colorful=musicEvents({...score,notes:[withDMC]})[0];
+   expect(colorful.midi).not.toBe(uncolored.midi);
+   expect(musicToMidi({...score,notes:[withDMC]})).not.toEqual(musicToMidi({...score,notes:[note]}));
+ });
  it("garde des gestes universels et une palette sémantique lisible",()=>{
   expect(GESTURES.map(g=>g.id)).toEqual(["point","circle","square","line","wave","group","star","text"]);
   expect(new Set(EMOTIONS.map(e=>e.hex)).size).toBe(9);
