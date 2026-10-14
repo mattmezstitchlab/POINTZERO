@@ -224,11 +224,33 @@ function recolored(idx:number,tint:string|undefined,cache:Map<number,number>):nu
  * fractional stitches. Order is the sole overlap rule. PDF/Canvas consume
  * exactly the Pattern returned here; no secondary PDF renderer.
  */
-export function recomposeSubjects(scene:SubjectScene):Pattern {
+export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:Bounds):Pattern {
   if(scene.version!==1||scene.layers.length>MAX_SUBJECTS)throw new Error("Scène de broderie invalide.");
   const base=read(scene.backdrop),source=read(scene.source);
   if(base.w*base.h>MAX_CELLS)throw new Error("Grille trop grande.");
-  const out=clonePattern(base);
+  const partial=!!previous&&!!dirty &&
+    previous.subjectScene?.source===scene.source &&
+    previous.subjectScene?.backdrop===scene.backdrop &&
+    previous.w===base.w && previous.h===base.h &&
+    Number.isFinite(dirty.x)&&Number.isFinite(dirty.y)&&dirty.w>0&&dirty.h>0;
+  const out=clonePattern(partial?previous!:base);
+  if(partial){
+    const x0=Math.max(0,Math.floor(dirty!.x)),y0=Math.max(0,Math.floor(dirty!.y));
+    const x1=Math.min(base.w,Math.ceil(dirty!.x+dirty!.w));
+    const y1=Math.min(base.h,Math.ceil(dirty!.y+dirty!.h));
+    // Rebuild ONLY the affected cells from the immutable background. All
+    // overlapping sprites touching this rectangle will be repainted below.
+    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+      const i=at(x,y,base);
+      out.cross[i]=base.cross[i];out.fwd[i]=base.fwd[i];out.bwd[i]=base.bwd[i];
+      out.done[i]=base.done[i];
+      for(let q=0;q<4;q++)out.q[q][i]=base.q[q][i];
+    }
+    // Ornaments must stay consistent even when they cross a dirty rectangle.
+    // Recreating these short arrays costs much less than regenerating all cells.
+    out.back=base.back.slice();out.long=base.long.slice();
+    out.knots=base.knots.slice();out.special=base.special?.slice()??[];
+  }
   out.name=source.name+" · sujets recomposés";
   out.layers=[];out.activeLayer=undefined;out.composition=undefined;out.subjectScene=undefined;
   const warningSet=new Set<string>();
@@ -240,6 +262,7 @@ export function recomposeSubjects(scene:SubjectScene):Pattern {
     for(let dy=0;dy<dh;dy++)for(let dx=0;dx<dw;dx++){
       const x=layer.x+dx,y=layer.y+dy;
       if(!inside(x,y,out)){warningSet.add("Certains points sont hors de la grille. Déplacez le sujet.");continue;}
+      if(partial && (x<dirty!.x || y<dirty!.y || x>=dirty!.x+dirty!.w || y>=dirty!.y+dirty!.h))continue;
       const sx=Math.min(sprite.w-1,Math.floor((dx+.5)/ratio)),sy=Math.min(sprite.h-1,Math.floor((dy+.5)/ratio));
       const a=at(sx,sy,sprite),b=at(x,y,out);
       for(const key of ["cross","fwd","bwd"] as const)if(sprite[key][a]>=0)out[key][b]=recolored(sprite[key][a],layer.tint,tint);
