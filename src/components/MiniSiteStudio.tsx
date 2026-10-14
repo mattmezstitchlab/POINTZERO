@@ -74,7 +74,8 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   const exportHTML=()=>{saveStudioFile(slug(doc.name)+".html",miniSiteToHTML(doc),"text/html;charset=utf-8");
     setStatus("HTML exporté. "+evaluation.errors+" correction(s) prioritaires restantes selon le pré-audit local ; publication et vérifications humaines à effectuer.");};
   const preview=miniSiteToHTML(doc);
-  const actions=<div className="flex gap-1">\n    {onLegal&&<button type="button" className={studioButton+" !px-2"} onClick={()=>{localStorage.setItem(LEGAL_ACTIVE_KEY,"mini-site:"+doc.id);onLegal();}} title="Vérifier les obligations juridiques" aria-label="Vérifier Juridique RGPD du mini-site"><Scale size={16}/></button>}
+  const actions=<div className="flex gap-1">
+    {onLegal&&<button type="button" className={studioButton+" !px-2"} onClick={()=>{localStorage.setItem(LEGAL_ACTIVE_KEY,"mini-site:"+doc.id);onLegal();}} title="Vérifier les obligations juridiques" aria-label="Vérifier Juridique RGPD du mini-site"><Scale size={16}/></button>}
     <button type="button" className={studioButton+" !px-2"} onClick={store} title="Enregistrer dans Mes mini-sites" aria-label="Enregistrer le mini-site"><Save size={16}/></button>
     <button type="button" className={studioButton+" !px-2"} onClick={()=>filePicker.current?.click()} title="Importer JSON" aria-label="Importer un mini-site JSON"><Upload size={16}/></button>
     <button type="button" className={studioButton+" !px-2"} onClick={()=>saveStudioFile(slug(doc.name)+".pointzero.json",miniProjectFile(doc))} title="Exporter JSON" aria-label="Exporter le mini-site JSON"><Download size={16}/></button>
