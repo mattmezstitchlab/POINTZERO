@@ -14,7 +14,7 @@ const safeLoad=():MusicScore=>{try{return safeMusicScore(JSON.parse(localStorage
 const timeToX=(t:number)=>18+(t/MUSIC_SECONDS)*(VBW-36);
 const xToTime=(x:number)=>snapMusicTime((x-18)/(VBW-36)*MUSIC_SECONDS);
 const stepButtons="min-h-9 rounded-[5px] border border-white/20 px-3 text-xs text-white/85 hover:bg-white/10 disabled:opacity-35";
-function GestureShape({note,selected}:{note:MusicNote;selected:boolean}){
+function GestureShape({note,selected,onSelect}:{note:MusicNote;selected:boolean;onSelect:(id:string)=>void}){
   const x=timeToX(note.time),y=laneY[note.pitch],c=colorFor(note.emotion),big=note.gesture==="circle"?24:note.gesture==="point"?8:16;
   const backdrop=<circle cx={x} cy={y} r={big+13} fill={c} opacity=".12"/>;
   const shape=(()=>{
@@ -29,7 +29,8 @@ function GestureShape({note,selected}:{note:MusicNote;selected:boolean}){
     }
   })();
   return <g data-music-note={note.id} role="button" tabIndex={0} aria-label={GESTURES.find(g=>g.id===note.gesture)?.label+" · "+note.emotion+" · "+formatMusicTime(note.time)}
-    className="cursor-grab focus:outline-none" opacity={.98}>
+    className="cursor-grab focus:outline-none focus:ring-2" opacity={.98} onClick={()=>onSelect(note.id)}
+    onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onSelect(note.id);}}}>
     {backdrop}{selected&&<circle cx={x} cy={y} r={big+18} fill="none" stroke="#6d5bca" strokeWidth="3" strokeDasharray="5 4"/>}
     {shape}
     <circle cx={x} cy={y} r="43" fill="transparent"/>
@@ -256,7 +257,7 @@ export default function MusicStudio({onBack}:Props){
       </section>
     </div>}
   >
-    <div className={"mx-auto max-w-[1320px] pb-32 "+(large?"text-[16px]":"")+(quiet?" motion-reduce:transition-none":"")}>
+    <div className={"mx-auto max-w-[1320px] pb-32 "+(large?" text-[16px]":"")+(quiet?" [&_*]:!animate-none [&_*]:!transition-none":"")}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-white/65">Partition sensible · expérience locale</p>
           <input aria-label="Titre de la partition" maxLength={150} value={score.title} onChange={e=>updateScore({title:e.target.value})}
@@ -289,7 +290,7 @@ export default function MusicStudio({onBack}:Props){
               <text x="22" y={y+52} fontSize="12" fill="#7d7989">{["Aigu","Médium","Grave"][i]}</text>
             </g>)}
             <rect x={timeToX(position)} y="42" width="3" height="385" fill="#7061c3" opacity=".95" pointerEvents="none"/>
-            {score.notes.map(n=><GestureShape key={n.id} note={n} selected={selected===n.id}/>)}
+            {score.notes.map(n=><GestureShape key={n.id} note={n} selected={selected===n.id} onSelect={setSelected}/>)}
           </svg>
         </div>
         <div className="border-t border-black/10 p-3 sm:p-4">
