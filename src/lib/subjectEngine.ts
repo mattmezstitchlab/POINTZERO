@@ -254,7 +254,14 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
   out.name=source.name+" · sujets recomposés";
   out.layers=[];out.activeLayer=undefined;out.composition=undefined;out.subjectScene=undefined;
   const warningSet=new Set<string>();
-  for(const layer of scene.layers){
+  // Negative index = immutable backdrop; nonnegative = last visible
+  // foreground sprite at this stitch cell.
+  const topOwner=new Int16Array(base.w*base.h).fill(-1);
+  const backOwners=new Array<number>(out.back.length).fill(-1);
+  const longOwners=new Array<number>(out.long.length).fill(-1);
+  const knotOwners=new Array<number>(out.knots.length).fill(-1);
+  const specialOwners=new Array<number>(out.special?.length??0).fill(-1);
+  for(const [layerIndex,layer] of scene.layers.entries()){
     if(!layer.visible)continue;
     const sprite=read(layer.sprite);
     const ratio=layer.scale,tint=new Map<number,number>();
@@ -262,9 +269,17 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
     for(let dy=0;dy<dh;dy++)for(let dx=0;dx<dw;dx++){
       const x=layer.x+dx,y=layer.y+dy;
       if(!inside(x,y,out)){warningSet.add("Certains points sont hors de la grille. Déplacez le sujet.");continue;}
-      if(partial && (x<dirty!.x || y<dirty!.y || x>=dirty!.x+dirty!.w || y>=dirty!.y+dirty!.h))continue;
       const sx=Math.min(sprite.w-1,Math.floor((dx+.5)/ratio)),sy=Math.min(sprite.h-1,Math.floor((dy+.5)/ratio));
       const a=at(sx,sy,sprite),b=at(x,y,out);
+      const painted=sprite.cross[a]>=0||sprite.fwd[a]>=0||sprite.bwd[a]>=0||sprite.q.some(q=>q[a]>=0);
+      if(!painted)continue;
+      topOwner[b]=layerIndex;
+      if(partial && (x<dirty!.x || y<dirty!.y || x>=dirty!.x+dirty!.w || y>=dirty!.y+dirty!.h))continue;
+      // An opaque embroidery stitch covers ALL channels from a lower object.
+      // Without this, the lower object's quarters survive under a top cross.
+      out.cross[b]=out.fwd[b]=out.bwd[b]=-1;
+      for(const q of out.q)q[b]=-1;
+      out.done[b]=0;
       for(const key of ["cross","fwd","bwd"] as const)if(sprite[key][a]>=0)out[key][b]=recolored(sprite[key][a],layer.tint,tint);
       for(let q=0;q<4;q++)if(sprite.q[q][a]>=0)out.q[q][b]=recolored(sprite.q[q][a],layer.tint,tint);
       if(sprite.done[a])out.done[b]=1;
@@ -274,20 +289,60 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
       const a=node(s.x1,s.y1),b=node(s.x2,s.y2);
       return {x1:a.x,y1:a.y,x2:b.x,y2:b.y,c:recolored(s.c,layer.tint,tint)};
     }).filter(s=>s.x1>=0&&s.x2>=0&&s.y1>=0&&s.y2>=0&&s.x1<=out.w&&s.x2<=out.w&&s.y1<=out.h&&s.y2<=out.h);
-    out.back.push(...segments(sprite.back));
-    out.long.push(...segments(sprite.long));
-    out.knots.push(...sprite.knots.map(k=>({...node(k.x,k.y),c:recolored(k.c,layer.tint,tint)}))
-      .filter(k=>k.x>=0&&k.y>=0&&k.x<=out.w&&k.y<=out.h));
-    out.special=[...(out.special??[]),...(sprite.special??[]).map(k=>({...node(k.x,k.y),kind:k.kind,c:recolored(k.c,layer.tint,tint)}))
-      .filter(k=>k.x>=0&&k.y>=0&&k.x<=out.w&&k.y<=out.h)];
+    const newBack=segments(sprite.back),newLong=segments(sprite.long);
+    out.back.push(...newBack);out.long.push(...newLong);
+    backOwners.push(...newBack.map(()=>layerIndex));longOwners.push(...newLong.map(()=>layerIndex));
+    const newKnots=sprite.knots.map(k=>({...node(k.x,k.y),c:recolored(k.c,layer.tint,tint)}))
+      .filter(k=>k.x>=0&&k.y>=0&&k.x<=out.w&&k.y<=out.h);
+    const newSpecial=(sprite.special??[]).map(k=>({...node(k.x,k.y),kind:k.kind,c:recolored(k.c,layer.tint,tint)}))
+      .filter(k=>k.x>=0&&k.y>=0&&k.x<=out.w&&k.y<=out.h);
+    out.knots.push(...newKnots);
+    out.special=[...(out.special??[]),...newSpecial];
+    knotOwners.push(...newKnots.map(()=>layerIndex));
+    specialOwners.push(...newSpecial.map(()=>layerIndex));
     if(layer.scale!==1)warningSet.add("Les fractions et contours redimensionnés doivent être vérifiés visuellement.");
   }
+  // Clip hidden lower contours at later subject overlaps. Uncovered
+  // segments remain untouched (important for exact PDF/JSON round trips).
+  // This is raster-based visibility, not artistic regeneration of outlines.
+  const hidden=(x:number,y:number,owner:number)=>{
+    const xx=Math.max(0,Math.min(out.w-1,Math.floor(x)));
+    const yy=Math.max(0,Math.min(out.h-1,Math.floor(y)));
+    return topOwner[yy*out.w+xx]>owner;
+  };
+  const clipSegments=(segments:Seg[],owners:number[]):Seg[]=>{
+    const final:Seg[]=[];
+    for(let i=0;i<segments.length;i++){
+      const seg=segments[i],owner=owners[i];
+      const dx=seg.x2-seg.x1,dy=seg.y2-seg.y1;
+      const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)*4));
+      let first=-1;let blocked=false;
+      for(let k=0;k<steps;k++){
+        const t=(k+.5)/steps;
+        const visible=!hidden(seg.x1+dx*t,seg.y1+dy*t,owner);
+        if(visible&&first<0)first=k;
+        if(!visible){blocked=true;if(first>=0){
+          const a=first/steps,b=k/steps;
+          if(b-a>=1/steps)final.push({...seg,x1:seg.x1+dx*a,y1:seg.y1+dy*a,x2:seg.x1+dx*b,y2:seg.y1+dy*b});
+          first=-1;
+        }}
+      }
+      if(!blocked){final.push(seg);continue;}
+      if(first>=0)final.push({...seg,x1:seg.x1+dx*first/steps,y1:seg.y1+dy*first/steps,x2:seg.x2,y2:seg.y2});
+    }
+    return final;
+  };
+  out.back=clipSegments(out.back,backOwners);
+  out.long=clipSegments(out.long,longOwners);
+  out.knots=out.knots.filter((k,i)=>!hidden(k.x,k.y,knotOwners[i]));
+  out.special=out.special?.filter((k,i)=>!hidden(k.x,k.y,specialOwners[i]));
   out.palette=[];
   const all=[...out.cross,...out.fwd,...out.bwd,...out.q.flatMap(a=>Array.from(a)),
     ...out.back.map(a=>a.c),...out.long.map(a=>a.c),...out.knots.map(a=>a.c),...(out.special??[]).map(a=>a.c)];
   for(const idx of new Set(all))if(idx>=0&&FLOSS[idx])ensurePalette(out,idx);
   out.provenance=source.provenance;out.fabric=source.fabric;
   out.stock=source.stock;out.supplies=source.supplies;
+  out.adaptation=undefined;
   out.subjectScene={...scene,warnings:[...scene.warnings,...warningSet]};
   return out;
 }
