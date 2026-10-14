@@ -200,7 +200,8 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
        <Layers3 size={14}/><span className="min-w-0 flex-1 truncate">{i+1}. {s.title||"Sans titre"}</span><ChevronRight size={13}/></button>)}
    </div>
  </div>;
- const actions=<div className="flex items-center gap-1.5">\n   {onLegal&&<button type="button" aria-label="Vérifier Juridique RGPD du site Academy" onClick={()=>{localStorage.setItem(LEGAL_ACTIVE_KEY,"academy:"+project.id);onLegal();}} className={studioButton+" !px-2"}><Scale size={15}/></button>}
+ const actions=<div className="flex items-center gap-1.5">
+   {onLegal&&<button type="button" aria-label="Vérifier Juridique RGPD du site Academy" onClick={()=>{localStorage.setItem(LEGAL_ACTIVE_KEY,"academy:"+project.id);onLegal();}} className={studioButton+" !px-2"}><Scale size={15}/></button>}
    <button type="button" aria-label="Importer un projet Academy JSON" onClick={()=>picker.current?.click()} className={studioButton+" !px-2"}><Upload size={15}/></button>
    <button type="button" aria-label="Sauvegarder le projet Academy JSON" onClick={exportProject} className={studioButton+" !px-2"}><Save size={15}/></button>
    <button type="button" aria-label="Exporter le site Academy en HTML" onClick={exportHTML} className="flex min-h-9 items-center gap-1.5 rounded-[5px] bg-white px-3 text-xs font-semibold text-black"><Code2 size={15}/> <span className="hidden sm:inline">Export site</span></button>
