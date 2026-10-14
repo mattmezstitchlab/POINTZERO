@@ -22,7 +22,7 @@ import { loadProjectOptions } from "./lib/budgetCore";
 import AtelierCreate from "./components/AtelierCreate";
 import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
 import MotifLibrary from "./components/MotifLibrary";
-import CompositionProperties from "./components/CompositionProperties";
+import EmbroideryInspector from "./components/EmbroideryInspector";
 import { getMotifPreset } from "./lib/motifPresets";
 import { attachSubject, changeSubject, duplicateSubject, recomposeSubjects, removeSubject, reorderSubject, sceneFromPattern, type SubjectScene, type SubjectLayer } from "./lib/subjectEngine";
 import Sheet from "./components/Sheet";
@@ -89,20 +89,24 @@ export default function App() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const subjectMove = useRef<{ scene: SubjectScene; base: Pattern; id: string; x: number; y: number } | null>(null);
   const [showDrawingTools, setShowDrawingTools] = useState(false);
+  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
   const [autoImage, setAutoImage] = useState<File | null>(null);
   const P = remote ?? store.present;
   const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>("real"), [workspace, setWorkspace] = useState<Workspace>("create");
   const [symbols, setSymbols] = useState(false), [panel, setPanel] = useState<Panel>(null), [file, setFile] = useState<File | null>(null), [pdfFile, setPdfFile] = useState<File | null>(null), [promptOpen, setPromptOpen] = useState(false), [selection, setSelection] = useState<Selection | null>(null), [clipboard, setClipboard] = useState<Pattern | null>(null);
   const [prefs, setPrefs] = useState(initialPreferences), [inventory, setInventory] = useState(readInventory), [saving, setSaving] = useState("Sauvegarde locale"), [toast, setToast] = useState("");
-  const [fitKey, setFitKey] = useState(0), desktop = useMedia("(min-width: 1024px)");
+  const [fitKey, setFitKey] = useState(0), desktop = useMedia("(min-width: 1024px)"), wide = useMedia("(min-width: 1280px)");
   const ready = useRef(true), prevTool = useRef<Tool>("cross"), lastViews = useRef<{ create: ViewMode; stitch: ViewMode }>({ create: "real", stitch: "pattern" });
   const snapshot = useRef({ P, remote, prefs, workspace, store }); snapshot.current = { P, remote, prefs, workspace, store };
   const checked = useRef(false);
   const notify = useCallback((msg: string) => setToast(msg), []);
   const closePanel = useCallback(() => setPanel(null), []);
-  // La grille est véritablement bord à bord : aucun espace réservé aux palettes flottantes.
-  const insets: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  // Les outils sont de véritables panneaux, comme dans Photo.
+  // Canvas conserve son moteur plein écran mais centre/ajuste le patron
+  // dans la surface libre, entre les panneaux et la bande DMC.
+  const insets: Insets = { top: 58, right: wide ? 260 : 0, bottom: 94, left: desktop ? 252 : 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -150,7 +154,7 @@ export default function App() {
     if (!remote) { try { await saveLibrary(store.present, true); } catch { /* The explicit file backup remains available. */ } }
     const next = { ...p, supplies: { ...p.supplies, ...inventory } };
     setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
-    setSelection(null); setSelectedSubjectId(null); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setCategoryPanel(null); setShowWelcome(false);
+    setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setCategoryPanel(null); setShowWelcome(false);
   };
 
   useEffect(() => {
@@ -403,7 +407,7 @@ export default function App() {
     ? <ProgrammeStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
     : studioMode === "admin"
     ? <AdminStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
-    : <div className={`pz-atelier fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+    : <div className={`pz-atelier pz-embroidery-studio fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
       type="file"
@@ -431,7 +435,10 @@ export default function App() {
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
       onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
       onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
-    <TopBar pattern={P} onDesign={() => switchStudio("design")} onCreate={() => { setPanel(null); setActiveCategory("create"); setCategoryPanel("create"); setShowWelcome(false); }}
+    <TopBar pattern={P} onDesign={() => switchStudio("design")}
+      onToggleLeft={() => { setMobileLibraryOpen(v=>!v); setMobileInspectorOpen(false); }}
+      onToggleRight={() => { setMobileInspectorOpen(v=>!v); setMobileLibraryOpen(false); }}
+      onCreate={() => { setPanel(null); setActiveCategory("create"); setCategoryPanel("create"); setShowWelcome(false); }}
       canUndo={!remote && store.past.length > 0 && !store.pending}
       canRedo={!remote && store.future.length > 0 && !store.pending}
       onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })}
@@ -444,22 +451,34 @@ export default function App() {
       saving={saving} drawing={showDrawingTools}
       onAdvanced={() => { setPanel(null); setCategoryPanel("compose"); setShowWelcome(false); }}
       onDrawing={() => { setTool(showDrawingTools ? "hand" : "cross"); setShowDrawingTools(!showDrawingTools); setActiveCategory("compose"); }} />
-    <CategoryBar active={activeCategory} onChoose={openCategory} />
-    <MotifLibrary readOnly={!!remote}
-      onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); }}
-      onAddSaved={sprite => addStitchedPattern(sprite)}
-      onOpenProject={p => { void loadPattern(p); setTool("hand"); }}
-      onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose"); }}
-      onOpenLibrary={() => { setCategoryPanel(null); setPanel("library"); }} />
-    <CompositionProperties scene={sceneFromPattern(P)} selectedId={selectedSubjectId}
-      onSelect={id => { setSelectedSubjectId(id); setActiveCategory("compose"); setTool("hand"); }}
-      onChange={changeSelectedSubject} onReorder={(id,delta) => updateScene(scene => reorderSubject(scene,id,delta))}
-      onDuplicate={duplicateSelectedSubject} onRemove={removeSelectedSubject} readOnly={!!remote} />
+    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[58px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
+      aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
+    <aside aria-label="Bibliothèque et outils de broderie"
+      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[58px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <CategoryBar docked active={activeCategory} onChoose={next=>{openCategory(next);setMobileLibraryOpen(false);}} />
+      <MotifLibrary docked readOnly={!!remote}
+        onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileLibraryOpen(false); }}
+        onAddSaved={sprite => {addStitchedPattern(sprite);setMobileLibraryOpen(false);}}
+        onOpenProject={p => { void loadPattern(p); setTool("hand");setMobileLibraryOpen(false); }}
+        onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose");setMobileLibraryOpen(false); }}
+        onOpenLibrary={() => { setCategoryPanel(null);setMobileLibraryOpen(false);setPanel("library"); }} />
+    </aside>
+    <aside aria-label="Panneau de réglages broderie" className={`pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 ${mobileInspectorOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <EmbroideryInspector pattern={P} tool={remote ? "hand" : tool} onTool={chooseTool} activeColor={color}
+        view={view} onView={setView} symbols={symbols} onSymbols={() => setSymbols(v=>!v)}
+        onFit={() => setFitKey(k=>k+1)}
+        onSettings={() => {setMobileInspectorOpen(false);setCategoryPanel(null);setPanel("project");}}
+        onBrowse={() => {setMobileInspectorOpen(false);setPanel("palette");}} workspace={workspace}
+        scene={sceneFromPattern(P)} selectedId={selectedSubjectId}
+        onSelect={id => {setSelectedSubjectId(id);setActiveCategory("compose");setTool("hand");}}
+        onChange={changeSelectedSubject} onReorder={(id,delta) => updateScene(scene=>reorderSubject(scene,id,delta))}
+        onDuplicate={duplicateSelectedSubject} onRemove={removeSelectedSubject} readOnly={!!remote}/>
+    </aside>
     {showWelcome && !remote && <div className="pointer-events-none fixed inset-0 z-[28] flex items-center justify-center px-3 pb-12 pt-12"><div className="pointer-events-auto"><AtelierCreate {...createActions} /></div></div>}
     <Sheet open={categoryPanel === "create"} onClose={() => setCategoryPanel(null)} title="Créer" subtitle="Une seule création, directement dans la grille"><AtelierCreate {...createActions} compact /></Sheet>
-    {!showWelcome && (showDrawingTools || activeCategory === "stitch") && <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />}
+    {!showWelcome && showDrawingTools && <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />}
     {!showWelcome && selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
-    <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={(!showDrawingTools && activeCategory !== "stitch") || panel !== null || categoryPanel !== null || showWelcome || !!file} />
+    <FlossRail fullWidth pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={showWelcome || !!file} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
     <WorkspacePanel open={panel === "project" || categoryPanel === "compose" || categoryPanel === "threads" || categoryPanel === "stitch"}
       onClose={() => { setCategoryPanel(null); closePanel(); }} pattern={P} onSet={setPattern}
@@ -513,7 +532,7 @@ export default function App() {
     {panel === "export" && <ExportStudio pattern={P} onClose={closePanel} />}
     <PeerShare open={panel === "share"} onClose={closePanel} pattern={store.present} onView={onRemote} />
     {remote && <button onClick={() => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); }} className="glass fixed left-1/2 top-[78px] z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12px] text-accent-2">Lecture partagée · revenir à mon projet</button>}
-    {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: desktop ? 92 : 164 }}>{toast}</div>}
+    {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: 102 }}>{toast}</div>}
     <span className="sr-only">Direction B. {BASE_FLOSS.length} références DMC documentées. {FLOSS[color]?.name}.</span>
   </div>;
 }
