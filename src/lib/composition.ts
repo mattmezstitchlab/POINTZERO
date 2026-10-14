@@ -10,7 +10,7 @@ import { removeConfetti } from "./quantize";
  */
 export type Detail = "simple" | "equilibree" | "precise";
 export type Difficulty = "debutant" | "intermediaire" | "expert";
-export type PaletteMode = "originale" | "harmonisee" | "personnalisee";
+export type PaletteMode = "originale" | "harmonisee" | "personnalisee" | "complementaire" | "douce" | "contrastee";
 export interface ComposeSettings {
   detail: Detail;
   difficulty: Difficulty;
@@ -185,9 +185,32 @@ function remapPalette(p: Pattern, settings: ComposeSettings): number {
     if (allowed.length) keep = [...new Set(allowed)].slice(0, 40);
   }
   const map = new Map<number, number>();
-  for (const [idx] of ranked) map.set(idx, keep.includes(idx) ? idx : nearestFloss(FLOSS[idx].lab, keep));
+  const harmony=(idx:number):number=>{
+    const c=FLOSS[idx];if(!c)return idx;
+    const [L,a,b]=c.lab;
+    switch(settings.palette){
+      case "douce":
+        return nearestFloss([Math.min(94,Math.max(0,L*.65+25)),a*.6,b*.6]);
+      case "contrastee":
+        return nearestFloss([Math.min(98,Math.max(2,50+(L-50)*1.24)),a*1.1,b*1.1]);
+      case "complementaire":
+        // Preserve the dominant reference; propose complementary accents.
+        return idx===ranked[0][0] ? idx : nearestFloss([L,-a,-b]);
+      default:return idx;
+    }
+  };
+  const altered=["douce","contrastee","complementaire"].includes(settings.palette);
+  if(altered){
+    const weights=new Map<number,number>();
+    for(const [idx,n] of ranked){const mapped=harmony(idx);weights.set(mapped,(weights.get(mapped)??0)+n);}
+    keep=[...weights].sort((a,b)=>b[1]-a[1]).slice(0,quota).map(a=>a[0]);
+  }
+  for (const [idx] of ranked){
+    const transformed=harmony(idx);
+    map.set(idx,keep.includes(transformed)?transformed:nearestFloss(FLOSS[transformed].lab,keep));
+  }
   for (let i = 0; i < p.cross.length; i++) if (p.cross[i] >= 0) p.cross[i] = map.get(p.cross[i])!;
-  const apply = (idx: number) => idx >= 0 ? map.get(idx) ?? nearestFloss(FLOSS[idx].lab, keep) : -1;
+  const apply = (idx: number) => idx >= 0 ? map.get(idx) ?? nearestFloss(FLOSS[harmony(idx)].lab, keep) : -1;
   for (const arr of [p.fwd, p.bwd, ...p.q]) for (let i = 0; i < arr.length; i++) arr[i] = apply(arr[i]);
   p.back = p.back.map(x => ({ ...x, c: apply(x.c) }));
   p.long = p.long.map(x => ({ ...x, c: apply(x.c) }));
@@ -359,6 +382,8 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
   }
   const complexity=target.palette.length*.8 + (target.back.length/45) + (fractions/10);
   const estimatedDifficulty=complexity<8?"Débutant":complexity<19?"Intermédiaire":"Expert";
+  target.subjectScene=undefined; // Composing a new flattened variant must not retain stale editable subject positions.
+  if(original.subjectScene)warnings.push("Cette variante est aplatie ; conservez le projet précédent pour déplacer les sujets indépendamment.");
   target.name=original.name + " · " + ({simple:"Simple",equilibree:"Équilibré",precise:"Précis"} as const)[settings.detail];
   target.id=makeId();
   target.notes=[original.notes??"", "POINTZERO Composition (propositions automatiques)", "Détail : "+settings.detail, "Difficulté choisie : "+settings.difficulty, "Difficulté estimée (indicative) : "+estimatedDifficulty, "Points arrière ajoutés : "+outlines.count, "Points fractionnés ajoutés : "+fractions,
