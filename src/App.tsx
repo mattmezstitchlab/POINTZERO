@@ -279,7 +279,7 @@ export default function App() {
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     panel === "project" ? "settings" : categoryPanel === "compose" ? "edit" :
     categoryPanel === "threads" ? "prepare" : categoryPanel === "stitch" ? "follow" : "settings";
-  return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+  return <div className={`pz-atelier fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
       type="file"
