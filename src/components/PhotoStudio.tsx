@@ -106,7 +106,7 @@ export default function PhotoStudio({onBack,onUse}:Props) {
       </div>
     </header>
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <aside aria-label="Préréglages photo" className="thin-scroll shrink-0 border-b border-white/10 bg-[#09090b] p-3 lg:w-[235px] lg:overflow-y-auto lg:border-b-0 lg:border-r">
+      <aside aria-label="Préréglages photo" className="thin-scroll max-h-[25dvh] shrink-0 overflow-y-auto border-b border-white/10 bg-[#09090b] p-3 lg:max-h-none lg:w-[235px] lg:border-b-0 lg:border-r">
         <h2 className="mb-3 text-xs font-semibold">Préréglages</h2>
         <div className="flex gap-2 overflow-x-auto lg:flex-col">{PHOTO_PRESETS.map(p=>
           <button key={p.name} type="button" onClick={()=>update(p.patch)} disabled={!source}
@@ -121,7 +121,7 @@ export default function PhotoStudio({onBack,onUse}:Props) {
           </label>)}
         </div>
       </aside>
-      <main className="pz-design-stage flex min-h-[210px] min-w-0 flex-1 items-center justify-center overflow-auto p-5" aria-label="Prévisualisation photo">
+      <main className="pz-design-stage flex min-h-[165px] min-w-0 flex-1 items-center justify-center overflow-auto p-5 lg:min-h-[210px]" aria-label="Prévisualisation photo">
         {source?<div className="flex max-h-full max-w-full flex-col items-center gap-3">
           <canvas ref={canvas} className="block max-h-[64dvh] max-w-full object-contain shadow-[0_15px_55px_#0008]" aria-label="Photo retouchée"/>
           <p className="text-xs text-white/65">{source.width} × {source.height} px · sortie {rotations.width} × {rotations.height} px</p>
@@ -132,7 +132,7 @@ export default function PhotoStudio({onBack,onUse}:Props) {
           <button onClick={()=>picker.current?.click()} className="mt-2 rounded-[5px] bg-white px-5 py-3 text-sm font-semibold text-black">Choisir une photo</button>
         </div>}
       </main>
-      <aside aria-label="Réglages de retouche" className="thin-scroll max-h-[30dvh] shrink-0 overflow-y-auto border-t border-white/10 bg-[#09090b] p-4 lg:max-h-none lg:w-[245px] lg:border-l lg:border-t-0">
+      <aside aria-label="Réglages de retouche" className="thin-scroll max-h-[26dvh] shrink-0 overflow-y-auto border-t border-white/10 bg-[#09090b] p-4 lg:max-h-none lg:w-[245px] lg:border-l lg:border-t-0">
         <div className="flex items-center justify-between"><h2 className="flex items-center gap-2 text-xs font-semibold"><SlidersHorizontal size={15}/> Réglages</h2>
           <button type="button" title="Réinitialiser les réglages" aria-label="Réinitialiser les réglages" disabled={!source} className="text-xs text-white/70 hover:text-white" onClick={()=>setRecipe(DEFAULT_RECIPE)}>Réinitialiser</button></div>
         <div className="mt-3 grid grid-cols-2 gap-2">
