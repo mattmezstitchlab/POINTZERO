@@ -67,7 +67,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(view.querySelector('[aria-label="Bibliothèque de motifs"]')).toBeTruthy();
     expect(view.querySelector('button[aria-label="Ajouter Fleur rose"]')).toBeTruthy();
     expect(nav()?.querySelectorAll("button")).toHaveLength(4);
-    expect(view.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeNull();
+    expect(dialog("Créer")?.classList.contains("is-open")).toBe(false);
   });
   it("ne montre ni guide, ni démarrage automatique, même si l'ancien état subsiste", async () => {
     localStorage.setItem("point-zero:coach", JSON.stringify({ seen: false, dismissed: false }));
@@ -135,14 +135,16 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await click(button("Plus d'options"));
     expect(container?.querySelector('[aria-label="Options d\'affichage"]')?.classList.contains("pz-surface")).toBe(true);
   });
-  it("range les fonctions avancées en accordéons, sans les supprimer", async () => {
+  it("conserve les réglages techniques dans le menu avancé, pas dans la composition", async () => {
     await mount();
-    await click(category("Dessiner"));
-    const composer = dialog("Composer");
-    const blocks = Array.from(composer?.querySelectorAll("details") ?? []);
+    await click(button("Plus d'options"));
+    const advanced = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Options de composition"));
+    await click(advanced);
+    const panel = dialog("Composer");
+    const blocks = Array.from(panel?.querySelectorAll("details") ?? []);
+    expect(panel?.classList.contains("is-open")).toBe(true);
     expect(blocks.length).toBeGreaterThan(4);
     expect(blocks.some(b => b.textContent?.includes("Lettrage compté"))).toBe(true);
-    expect(blocks.some(b => b.textContent?.includes("Outils de conception") && b.open)).toBe(true);
   });
   it("autorise un import unique d'images, PDF, JSON et OXS", async () => {
     await mount();
