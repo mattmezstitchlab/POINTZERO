@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
@@ -58,10 +58,11 @@ interface Props {
   onMiniSite?: () => void;
   onPDF?: () => void;
   onGeneration?: () => void;
+  onMusic?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -242,7 +243,8 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               {name:"Admin / Documents",icon:<Files size={16}/>,onClick:onAdmin},
               {name:"Mini-site",icon:<Globe size={16}/>,onClick:onMiniSite},
               {name:"PDF",icon:<FileText size={16}/>,onClick:onPDF},
-              {name:"Génération",icon:<WandSparkles size={16}/>,onClick:onGeneration}
+              {name:"Génération",icon:<WandSparkles size={16}/>,onClick:onGeneration},
+              {name:"Musique inclusive",icon:<Music2 size={16}/>,onClick:onMusic}
             ]).filter(i=>!!i.onClick).map(item=>
               <button type="button" key={item.name} aria-label={"Ouvrir le studio "+item.name}
                 className="flex min-h-11 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs text-white/85 hover:bg-white/10 hover:text-white"
