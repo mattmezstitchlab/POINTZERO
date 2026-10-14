@@ -19,9 +19,9 @@ vi.mock("../lib/convert", () => ({
 vi.mock("../lib/dither", () => ({
   imageToDmc: vi.fn(() => {
     const cross = new Int16Array(44 * 44).fill(-1);
-    for (let i = 0; i < 200; i += 1) cross[i] = 0;
-    for (let i = 200; i < 300; i += 1) cross[i] = 1;
-    for (let i = 300; i < 360; i += 1) cross[i] = 2;
+    for (let i = 0; i < 200; i += 1) cross[i] = 80;
+    for (let i = 200; i < 300; i += 1) cross[i] = 81;
+    for (let i = 300; i < 360; i += 1) cross[i] = 82;
     return { cross, palette: [80, 81, 82] };
   }),
 }));
@@ -175,12 +175,17 @@ describe("Les voisines brodent en direct", () => {
     ).toBe(true);
   });
 
-  it("la palette DMC du motif brodé est visible en arrivant", async () => {
+  it("la palette DMC, c'est le rail de l'atelier : même moteur, mêmes symboles", async () => {
     await sleep(200);
-    const rail = container!.querySelector(".rail-dmc")!;
-    expect(rail).toBeTruthy();
-    expect(rail.querySelectorAll("li").length, "trois fils dans le motif mocké").toBe(3);
-    expect(rail.textContent).toContain(FLOSS[0].code);
+    const rail = container!.querySelector('aside[aria-label="Fils du motif"]');
+    expect(rail, "le vrai FlossRail officie sur la toile").toBeTruthy();
+    const swatches = [...rail!.querySelectorAll("button")].filter((b) => (b.getAttribute("aria-label") || "").startsWith("DMC"));
+    expect(swatches.length, "trois fils dans le motif mocké").toBe(3);
+    expect(swatches[0].getAttribute("aria-label")).toContain(FLOSS[80].code);
+    expect(swatches[0].querySelector("svg"), "le symbole du moteur, pas juste une pastille").toBeTruthy();
+    expect(rail!.querySelector('button[aria-label="Ajouter ou rechercher un fil DMC"]'), "le + du nuancier").toBeTruthy();
+    const cadre = container!.querySelector(".hero-cadre")!;
+    expect(cadre.getAttribute("data-tag"), "le cadre explique la zone protégée").toContain("zone de lecture");
   });
 
   it("l'outil zone serre les couleurs d'un rectangle de cases", async () => {
@@ -287,8 +292,10 @@ describe("Le hero : sobre, sur la feuille blanche", () => {
   it("décrit un motif : point zéro d'abord, puis les croix chargent, puis hop", async () => {
     await click(byText(/Poser ailleurs sur la toile/)!);
     expect(container!.querySelector(".motif-pose"), "le motif libéré reste sur la toile").toBeTruthy();
+    expect(container!.querySelector(".hero-cadre")!.getAttribute("data-tag")).toContain("point zéro");
     await click(byText(/Faire le point zéro/)!);
     expect(container!.querySelector(".grille-motif"), "la grille du hero est nue").toBeFalsy();
+    expect(container!.querySelector(".hero-cadre")!.getAttribute("data-tag")).toContain("grille nue");
 
     const field = container!.querySelector("#hero-jeu input") as HTMLInputElement;
     await act(async () => {

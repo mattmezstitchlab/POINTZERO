@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import ToileInfinie, { miniDesign, type MotifGrille, type PoseMotif } from "./ToileInfinie";
 import HeroPlayground from "./HeroPlayground";
+import FlossRail from "./FlossRail";
+import PaletteSheet from "./PaletteSheet";
 import { genererMotif, promptAmbiance } from "../lib/generation";
 import { appliquerZones, couleursZone, type RectZone, type ReglageZone } from "../lib/requant";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
-import type { Provenance } from "../lib/pattern";
 
 interface Props {
   onOpen: () => void;
@@ -36,6 +37,9 @@ export default function Landing({ onOpen, onMotif }: Props) {
   const [reglages, setReglages] = useState<ReglageZone[]>([]);
   const [poses, setPoses] = useState<PoseMotif[]>([]);
   const [pointZero, setPointZero] = useState(false);
+  const [railActif, setRailActif] = useState(-1);
+  const [railEdits, setRailEdits] = useState<Pattern | null>(null);
+  const [nuancier, setNuancier] = useState(false);
 
   /* Le motif affiché = le source, réglages de zone appliqués. */
   const motif = useMemo<MotifGrille | null>(() => {
@@ -43,6 +47,26 @@ export default function Landing({ onOpen, onMotif }: Props) {
     if (!reglages.length) return source;
     return { ...source, cross: appliquerZones(source.cross, source.w, source.h, reglages) };
   }, [source, reglages]);
+
+  /* Le motif de la grille, en vrai Pattern : le rail de fils de l'atelier
+     (computeStats, symboles, écheveaux) officie ici, pas un rail parallèle. */
+  const motifVersPattern = (m: MotifGrille): Pattern => {
+    const p = createPattern(m.nom.slice(0, 60) || "Motif de la toile", m.w, m.h, 14, 2);
+    p.cross = Int16Array.from(m.cross);
+    for (const v of m.palette) ensurePalette(p, v);
+    p.provenance = {
+      kind: "demo",
+      source: "Motif brodé sur la toile",
+      author: "",
+      license: "Démo hors ligne : génération locale ou service tiers selon le réseau",
+      personalOnly: false,
+    };
+    p.notes = `« ${m.nom} », ${m.w} × ${m.h} cases, brodé sur la toile.`;
+    return p;
+  };
+
+  const patternRail = useMemo(() => (motif ? (railEdits ?? motifVersPattern(motif)) : null), [motif, railEdits]);
+  useEffect(() => setRailEdits(null), [motif]);
 
   /* Le motif d'ambiance : toujours une génération différente. */
   useEffect(() => {
@@ -66,19 +90,7 @@ export default function Landing({ onOpen, onMotif }: Props) {
 
   const exporter = () => {
     if (!motif) return;
-    const p = createPattern(motif.nom.slice(0, 60) || "Motif de la toile", motif.w, motif.h, 14, 2);
-    p.cross = Int16Array.from(motif.cross);
-    for (const v of motif.palette) ensurePalette(p, v);
-    const prov: Provenance = {
-      kind: "demo",
-      source: "Motif brodé sur la toile, exporté depuis le hero",
-      author: "",
-      license: "Démo hors ligne : génération locale ou service tiers selon le réseau",
-      personalOnly: false,
-    };
-    p.provenance = prov;
-    p.notes = `Exporté depuis la toile : « ${motif.nom} », ${motif.w} × ${motif.h} cases, ${motif.palette.length} fils DMC.`;
-    onMotif(p);
+    onMotif(motifVersPattern(motif));
   };
 
   const poserAilleurs = () => {
@@ -105,6 +117,7 @@ export default function Landing({ onOpen, onMotif }: Props) {
   const nbCouleursSource = (rect: RectZone) => (source ? couleursZone(source.cross, source.w, source.h, rect).length : 0);
 
   return (
+    <>
     <ToileInfinie
       onOpen={onOpen}
       onMotif={onMotif}
@@ -114,6 +127,16 @@ export default function Landing({ onOpen, onMotif }: Props) {
       onReglage={onReglage}
       nbCouleursSource={nbCouleursSource}
     >
+      <div
+        className={`hero-cadre${etatZone === "libre" ? " libre" : ""}`}
+        data-tag={
+          etatZone === "occupee"
+            ? "zone de lecture — le motif se brode autour"
+            : etatZone === "libre"
+              ? "point zéro : la grille attend ici"
+              : "grille nue : décrivez votre motif"
+        }
+      >
       <h1
         className="hero-titre relative text-[clamp(34px,4.6vw,64px)] leading-[0.98] font-semibold tracking-[-0.05em] text-black"
         style={{ animation: "hero-in 1s cubic-bezier(0.22,1,0.36,1) both" }}
@@ -134,6 +157,32 @@ export default function Landing({ onOpen, onMotif }: Props) {
         prompt={promptText}
         setPrompt={setPromptText}
       />
+      </div>
     </ToileInfinie>
+    {patternRail && (
+      <>
+        <FlossRail
+          pattern={patternRail}
+          active={railActif}
+          onActive={setRailActif}
+          onPattern={setRailEdits}
+          onBrowse={() => setNuancier(true)}
+          stitching={false}
+        />
+        <PaletteSheet
+          open={nuancier}
+          onClose={() => setNuancier(false)}
+          pattern={patternRail}
+          color={railActif}
+          onPick={(idx) => {
+            const p = patternRail;
+            ensurePalette(p, idx);
+            setRailEdits({ ...p });
+            setNuancier(false);
+          }}
+        />
+      </>
+    )}
+    </>
   );
 }

@@ -481,16 +481,6 @@ export default function ToileInfinie({
     return () => window.clearInterval(id);
   }, []);
 
-  const compteDmc = useMemo(() => {
-    if (!motif) return [] as [number, number][];
-    const m = new Map<number, number>();
-    for (let i = 0; i < motif.cross.length; i += 1) {
-      const v = motif.cross[i];
-      if (v >= 0) m.set(v, (m.get(v) ?? 0) + 1);
-    }
-    return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [motif]);
-
   const nZone =
     zone && motif ? (reglageDe(zone, reglages)?.n ?? couleursZone(motif.cross, motif.w, motif.h, zone).length) : 0;
   const maxZone = zone ? nbCouleursSource(zone) : 0;
@@ -772,22 +762,7 @@ export default function ToileInfinie({
           </button>
         </div>
 
-        <aside className="rail-dmc" aria-label="Palette DMC du motif brodé sur la grille">
-          <p className="rail-titre">Palette DMC</p>
-          {compteDmc.length === 0 ? (
-            <p className="rail-vide">aucun motif sur la grille</p>
-          ) : (
-            <ul>
-              {compteDmc.map(([idx, c]) => (
-                <li key={idx} title={`${FLOSS[idx].code} · ${FLOSS[idx].name}`}>
-                  <span className="rail-pastille" style={{ background: FLOSS[idx].hex }} aria-hidden="true" />
-                  <span className="rail-code">{FLOSS[idx].code}</span>
-                  <span className="rail-nb">{c}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
+
 
         {zone && motif && (
           <div className="zone-panneau" data-zone role="group" aria-label="Réglage de la zone sélectionnée">
