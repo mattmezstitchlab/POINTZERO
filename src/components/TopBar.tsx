@@ -1,4 +1,4 @@
-import { ArrowDownToLine, BookOpen, FolderOpen, Layers, Maximize, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
+import { ArrowDownToLine, FolderOpen, Layers, Maximize, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
 import type { Pattern } from "../lib/pattern";
 import type { ViewMode } from "./Canvas";
 
