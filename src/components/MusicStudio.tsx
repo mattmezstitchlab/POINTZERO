@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { Accessibility, ArrowLeft, Check, Circle, Download, FileAudio, Heart, Mic, Music2, Pause, Play, Plus, RotateCcw, Save, SkipBack, Sparkles, Square, Star, Trash2, Upload, Users, Volume2, Waves } from "lucide-react";
+import { Accessibility, Download, Mic, Music2, Pause, Play, Plus, RotateCcw, Save, SkipBack, Sparkles, Trash2, Upload, Users, Volume2 } from "lucide-react";
 import { StudioFrame, saveStudioFile, studioButton, studioInput } from "./StudioFrame";
 import { MusicAudio } from "../lib/musicStudioAudio";
 import {
@@ -121,8 +121,7 @@ export default function MusicStudio({onBack}:Props){
   const transform=()=>{
     if(!intention.trim()){setStatus("Écrivez une intention avant de la transformer.");return;}
     if(score.notes.length>=150)return;
-    const n=intentionGesture(intention,position,position,participant); // replaced below with chosen emotion
-    const candidate={...n,emotion};
+    const candidate=intentionGesture(intention,emotion,position,participant);
     updateNotes(notes=>[...notes,candidate]);setSelected(candidate.id);
     setStatus("LUMI a proposé un geste par une règle locale. Vous pouvez le déplacer, modifier ou supprimer.");
   };
@@ -257,7 +256,7 @@ export default function MusicStudio({onBack}:Props){
       </section>
     </div>}
   >
-    <div className={"mx-auto max-w-[1320px] pb-32 "+(large?"text-[16px]":"")}>
+    <div className={"mx-auto max-w-[1320px] pb-32 "+(large?"text-[16px]":"")+(quiet?" motion-reduce:transition-none":"")}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-white/65">Partition sensible · expérience locale</p>
           <input aria-label="Titre de la partition" maxLength={150} value={score.title} onChange={e=>updateScore({title:e.target.value})}
