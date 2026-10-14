@@ -1,4 +1,4 @@
-import { CheckCircle2, Compass, FileJson, FolderOpen, Layers, Maximize, PencilLine, Redo2, SlidersHorizontal, Type, Undo2 } from "lucide-react";
+import { CheckCircle2, Compass, FileJson, FolderOpen, Layers, Maximize, PencilLine, Redo2, SlidersHorizontal, Sparkles, Type, Undo2 } from "lucide-react";
 import type { Pattern } from "../lib/pattern";
 import type { ViewMode } from "./Canvas";
 
@@ -21,6 +21,7 @@ interface Props {
   onLibrary: () => void;
   /** Importer directement un .pointzero.json depuis la barre supérieure. */
   onImportProject: () => void;
+  onCompose: () => void;
   /** Ouvre le guide pas à pas, et le champ de questions. */
   onGuide: () => void;
   guideOpen?: boolean;
@@ -127,6 +128,9 @@ export default function TopBar(p: Props) {
           style={p.projectOpen ? ON : undefined}
         >
           <SlidersHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
+        </button>
+        <button type="button" className="btn-icon" onClick={p.onCompose} aria-label="Composition intelligente" title="Composer le motif : régions, couleurs, détails">
+          <Sparkles size={18}/>
         </button>
         <button type="button" className="btn-icon" onClick={p.onImportProject} aria-label="Importer un projet POINTZERO JSON" title="Ouvrir un patron JSON ou OXS">
           <FileJson size={18} />
