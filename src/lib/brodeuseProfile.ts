@@ -1,5 +1,5 @@
 import { deltaE2000 } from "./colorScience";
-import { BASE_FLOSS, FLOSS, flossIndex } from "./dmc";
+import { FLOSS, flossIndex } from "./dmc";
 import { clonePattern, computeStats, ensurePalette, type Count, type Pattern } from "./pattern";
 
 export type BroderieStyle = "botanique" | "minimal" | "geometrique" | "vintage" | "realiste-doux";
