@@ -117,7 +117,7 @@ describe("Bouquet indépendant, profondeur brodable et stock",()=>{
     expect(variants).toHaveLength(6);
     expect(variants.map(v=>v.report.mode)).toEqual(["original","stock","debutant","expert","petit","reduite"]);
     expect(original.cross).toEqual(old);
-    expect(variants[4].report.warnings.join(" ")).toMatch(/dimensions/i);
+    expect(variants[4].report.warnings.join(" ")).toMatch(/réduction/i);
   });
   it("la variante stock exporte le même Pattern en JSON et PDF",async()=>{
     const source=recomposeSubjects(floralDemo());
