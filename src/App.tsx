@@ -23,6 +23,7 @@ import PDFStudio from "./components/PDFStudio";
 import GenerationStudio from "./components/GenerationStudio";
 import MusicStudio from "./components/MusicStudio";
 import MusicProductionStudio from "./components/MusicProductionStudio";
+import AccessibilityStudio from "./components/AccessibilityStudio";
 import ArtWorldStudio from "./components/ArtWorldStudio";
 import AimeLanding from "./components/AimeLanding";
 import type { MiniSite } from "./lib/miniSiteCore";
@@ -75,18 +76,18 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 export default function App() {
   const [boot] = useState(loadStored);
   // Existing embroidery projects resume untouched; newcomers open the multiformat studio.
-  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production">(() => {
+  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production" | "accessibility">(() => {
     try {
       const chosen = localStorage.getItem("pointzero:workspace");
       if(new URLSearchParams(window.location.search).get("site")==="le-monde-aime")return "aime-landing";
-      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" || chosen === "generation" || chosen === "music" || chosen === "art-world" || chosen === "aime-landing" || chosen === "music-production" ? chosen : boot ? "embroidery" : "design";
+      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" || chosen === "generation" || chosen === "music" || chosen === "art-world" || chosen === "aime-landing" || chosen === "music-production" || chosen === "accessibility" ? chosen : boot ? "embroidery" : "design";
     } catch { return "embroidery"; }
   });
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
   const [miniSiteHandoff,setMiniSiteHandoff] = useState<MiniSite|null>(null);
   const [openPrivateGallery,setOpenPrivateGallery]=useState(false);
   const [linkedProject,setLinkedProject] = useState<{id:string;name:string}|null>(null);
-  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production") => {
+  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation" | "music" | "art-world" | "aime-landing" | "music-production" | "accessibility") => {
     if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
     setStudioMode(mode);
     if(mode!=="aime-landing"&&new URLSearchParams(window.location.search).has("site")){
@@ -406,7 +407,7 @@ export default function App() {
         onPhoto={() => switchStudio("photo")} onFashion={() => switchStudio("fashion")}
         onBudget={() => switchStudio("budget")} onProgramme={() => switchStudio("programme")} onAdmin={() => switchStudio("admin")}
         onMiniSite={() => switchStudio("mini-site")} onPDF={() => switchStudio("pdf")}
-        onGeneration={() => switchStudio("generation")} onMusic={() => switchStudio("music")} onMusicProduction={() => switchStudio("music-production")}
+        onGeneration={() => switchStudio("generation")} onMusic={() => switchStudio("music")} onMusicProduction={() => switchStudio("music-production")} onAccessibility={() => switchStudio("accessibility")}
         onArtWorld={() => {setOpenPrivateGallery(false);switchStudio("art-world");}}
         onAimeLanding={() => switchStudio("aime-landing")}
         incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
@@ -440,6 +441,8 @@ export default function App() {
     ? <MusicStudio onBack={() => switchStudio("design")} />
     : studioMode === "music-production"
     ? <MusicProductionStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
+    : studioMode === "accessibility"
+    ? <AccessibilityStudio onBack={() => switchStudio("design")} />
     : studioMode === "aime-landing"
     ? <AimeLanding onBack={() => switchStudio("design")}
         onCreate={()=>{setOpenPrivateGallery(false);switchStudio("art-world");}}
