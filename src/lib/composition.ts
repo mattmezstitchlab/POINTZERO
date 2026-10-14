@@ -190,9 +190,10 @@ function remapPalette(p: Pattern, settings: ComposeSettings): number {
   p.back = p.back.map(x => ({ ...x, c: apply(x.c) }));
   p.long = p.long.map(x => ({ ...x, c: apply(x.c) }));
   p.knots = p.knots.map(x => ({ ...x, c: apply(x.c) }));
+  p.special = p.special?.map(x => ({ ...x, c: apply(x.c) }));
   p.palette = [];
   for (const idx of usedColors(p.cross).map(v => v[0])) ensurePalette(p, idx);
-  for (const i of [...p.fwd, ...p.bwd, ...p.q.flatMap(arr => [...arr]), ...p.back.map(x => x.c), ...p.knots.map(x => x.c)]) if (i >= 0 && !p.palette.includes(i)) ensurePalette(p, i);
+  for (const i of [...p.fwd, ...p.bwd, ...p.q.flatMap(arr => [...arr]), ...p.back.map(x => x.c), ...p.knots.map(x => x.c), ...(p.special??[]).map(x=>x.c)]) if (i >= 0 && !p.palette.includes(i)) ensurePalette(p, i);
   return ranked.length - usedColors(p.cross).length;
 }
 
@@ -218,6 +219,7 @@ function scalePattern(source: Pattern, targetW: number, targetH: number) {
   };
   p.back = source.back.map(mapSeg); p.long=source.long.map(mapSeg);
   p.knots=source.knots.map(k=>({...k,...mapNode(k.x,k.y)}));
+  p.special=source.special?.map(k=>({...k,...mapNode(k.x,k.y)}));
   return { ...source, ...p, id:source.id, provenance:source.provenance, notes:source.notes, fabric:source.fabric, layers:[] };
 }
 
@@ -226,34 +228,54 @@ function scalePattern(source: Pattern, targetW: number, targetH: number) {
  * components only, never tracing all DMC boundary transitions.
  */
 function selectiveContours(p: Pattern, detail: Detail, difficulty: Difficulty): { segments: Seg[]; count: number } {
-  if (detail === "simple" || difficulty === "debutant") return { segments: [], count: 0 };
-  const limit = detail === "precise" ? 100 : 35;
-  const maxRegion = detail === "precise" ? 25 : 10;
-  const components = segmentRegions(p).filter(r => r.color >= 0 && r.count >= 2 && r.count <= maxRegion).slice(0,6);
-  const segs: Seg[] = [];
-  const unique = new Set<string>();
-  for (const r of components) {
-    if (luma(r.color) > 55) continue;
-    const { x, y, w, h } = r.box;
-    for (let yy=y; yy<y+h; yy++) for(let xx=x;xx<x+w;xx++){
-      if (!inBounds(xx,yy,p.w,p.h) || p.cross[idxAt(xx,yy,p.w)] !== r.color) continue;
-      const neighbors: Array<[number,number,number,number,number,number]> = [
-        [0,-1,xx,yy,xx+1,yy],
-        [1,0,xx+1,yy,xx+1,yy+1],
-        [0,1,xx,yy+1,xx+1,yy+1],
-        [-1,0,xx,yy,xx,yy+1],
+  if (detail === "simple" || difficulty === "debutant") return {segments:[],count:0};
+  const maxSegments=detail==="precise"?120:40;
+  const maxComponent=detail==="precise"?28:12;
+  const visited=new Uint8Array(p.cross.length);
+  const candidates:{color:number;cells:number[];strength:number}[]=[];
+  // Important: this scan is not limited to the nine biggest display cards.
+  // Small accents such as eyes must be evaluated even if the UI groups them
+  // into "micro-details".
+  for(let i=0;i<p.cross.length;i++){
+    const color=p.cross[i];
+    if(color<0 || visited[i])continue;
+    const queue=[i];visited[i]=1;
+    let boundary=0,contrast=0;
+    for(let k=0;k<queue.length;k++){
+      const cell=queue[k],x=cell%p.w,y=Math.floor(cell/p.w);
+      for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]){
+        const xx=x+dx,yy=y+dy;
+        if(!inBounds(xx,yy,p.w,p.h)){boundary++;contrast+=20;continue;}
+        const next=idxAt(xx,yy,p.w),other=p.cross[next];
+        if(other===color){if(!visited[next]){visited[next]=1;queue.push(next);}}
+        else {boundary++;contrast+=other<0?12:distance(color,other);}
+      }
+    }
+    if(queue.length<2||queue.length>maxComponent||luma(color)>60)continue;
+    const average=contrast/Math.max(1,boundary);
+    if(average<12)continue;
+    candidates.push({color,cells:queue,strength:average});
+  }
+  candidates.sort((a,b)=>b.strength-a.strength || a.cells.length-b.cells.length);
+  const segments:Seg[]=[];
+  const keys=new Set<string>();
+  for(const candidate of candidates.slice(0,9)){
+    for(const i of candidate.cells){
+      const x=i%p.w,y=Math.floor(i/p.w),color=candidate.color;
+      const edges:Array<[number,number,number,number,number,number]>=[
+        [0,-1,x,y,x+1,y],[1,0,x+1,y,x+1,y+1],
+        [0,1,x,y+1,x+1,y+1],[-1,0,x,y,x,y+1]
       ];
-      for(const [dx,dy,x1,y1,x2,y2] of neighbors){
-        const bx=xx+dx, by=yy+dy;
-        const adjacent=inBounds(bx,by,p.w,p.h)?p.cross[idxAt(bx,by,p.w)]:-1;
-        if(adjacent===r.color || (adjacent>=0 && distance(r.color,adjacent)<13)) continue;
+      for(const [dx,dy,x1,y1,x2,y2] of edges){
+        const xx=x+dx,yy=y+dy,other=inBounds(xx,yy,p.w,p.h)?p.cross[idxAt(xx,yy,p.w)]:-1;
+        if(other===color || (other>=0 && distance(color,other)<12))continue;
         const key=x1+","+y1+":"+x2+","+y2;
-        if(!unique.has(key)){unique.add(key);segs.push({x1,y1,x2,y2,c:r.color});}
-        if(segs.length>=limit) return {segments:segs,count:segs.length};
+        if(!keys.has(key)){keys.add(key);segments.push({x1,y1,x2,y2,c:color});}
+        if(segments.length>=maxSegments)return {segments,count:segments.length};
       }
     }
   }
-  return {segments:segs,count:segs.length};
+  return {segments,count:segments.length};
 }
 
 function fractionalBridges(p: Pattern, detail: Detail, difficulty: Difficulty): number {
@@ -282,6 +304,10 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
   const regions=segmentRegions(original);
   const configured=new Map((cards??[]).map(r=>[r.id,r]));
   for(const r of regions){const saved=configured.get(r.id);if(saved){r.visible=saved.visible;r.name=saved.name;r.overrideCode=saved.overrideCode;}}
+  if(cards?.length){
+    const order=new Map(cards.map((c,i)=>[c.id,i]));
+    regions.sort((a,b)=>(order.get(a.id)??999)-(order.get(b.id)??999));
+  }
   const before=original.cross.reduce((n,v)=>n+ +(v>=0),0);
   const work=clonePattern(original);
   const invisible=new Set(regions.filter(r=>!r.visible).map(r=>r.id));
@@ -296,6 +322,17 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
         for(const q of work.q)q[i]=-1;
       } else if(recolor.has(id) && work.cross[i]>=0) work.cross[i]=recolor.get(id)!;
     }
+    // Geometric association for existing ornament strokes. Their original
+    // coordinates are preserved in the saved source recipe.
+    const midRegion=(x:number,y:number)=>{
+      const xx=Math.max(0,Math.min(original.w-1,Math.floor(x)));
+      const yy=Math.max(0,Math.min(original.h-1,Math.floor(y)));
+      return ids[idxAt(xx,yy,original.w)];
+    };
+    work.back=work.back.filter(v=>!invisible.has(midRegion((v.x1+v.x2)/2,(v.y1+v.y2)/2)));
+    work.long=work.long.filter(v=>!invisible.has(midRegion((v.x1+v.x2)/2,(v.y1+v.y2)/2)));
+    work.knots=work.knots.filter(v=>!invisible.has(midRegion(v.x,v.y)));
+    work.special=work.special?.filter(v=>!invisible.has(midRegion(v.x,v.y)));
   }
   const target = scalePattern(work,settings.width,settings.height);
   const warnings:string[]=[];
@@ -320,7 +357,7 @@ export function composePattern(source: Pattern, settings: ComposeSettings, cards
   target.notes=[original.notes??"", "POINTZERO Composition (propositions automatiques)", "Détail : "+settings.detail, "Difficulté : "+settings.difficulty, "Points arrière ajoutés : "+outlines.count, "Points fractionnés ajoutés : "+fractions,
     "Attention : segmentation basée sur les codes DMC, sans reconnaissance sémantique des yeux, ailes ou feuilles."].filter(Boolean).join("\n");
   target.palette=[];
-  const all=new Set<number>([...target.cross,...target.fwd,...target.bwd,...target.q.flatMap(arr=>[...arr]),...target.back.map(s=>s.c),...target.knots.map(s=>s.c)]);
+  const all=new Set<number>([...target.cross,...target.fwd,...target.bwd,...target.q.flatMap(arr=>[...arr]),...target.back.map(s=>s.c),...target.knots.map(s=>s.c),...(target.special??[]).map(s=>s.c)]);
   for(const i of all)if(i>=0 && FLOSS[i])ensurePalette(target,i);
   target.composition = {
     version:1,
