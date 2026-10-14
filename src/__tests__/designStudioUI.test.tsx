@@ -22,10 +22,10 @@ afterEach(() => {
   host?.remove();host=null;root=null;
   localStorage.clear();
 });
-function mount() {
+function mount(props?:{incomingPhoto?:{id:string;dataUrl:string};onPhotoConsumed?:()=>void}) {
   host=document.createElement("div");document.body.appendChild(host);
   root=createRoot(host);
-  act(()=>root?.render(<DesignStudio onEmbroidery={vi.fn()}/>));
+  act(()=>root?.render(<DesignStudio onEmbroidery={vi.fn()} {...props}/>));
   return host;
 }
 function click(el: Element | null | undefined) {
@@ -34,6 +34,18 @@ function click(el: Element | null | undefined) {
 }
 const buttonNamed = (host:Element,label:string) => Array.from(host.querySelectorAll("button")).find(b=>b.textContent?.trim().includes(label));
 describe("POINTZERO — studio universel", () => {
+  it("réintègre une photo ou un vêtement retouché dans la composition sans écraser l'original", () => {
+    const onPhotoConsumed=vi.fn();
+    const input={id:"picture-1",dataUrl:"data:image/png;base64,iVBORw0KGgo="};
+    const host=mount({incomingPhoto:input,onPhotoConsumed});
+    expect(onPhotoConsumed).toHaveBeenCalledOnce();
+    expect(host.querySelectorAll("[data-element-id]")).toHaveLength(5);
+    expect(host.textContent).toContain("Photo retouchée ajoutée");
+    const doc=JSON.parse(localStorage.getItem("pointzero:design-current:v1")??"{}") as {elements:Array<{kind:string}>};
+    expect(doc.elements.some(e=>e.kind==="image")).toBe(true);
+    expect(doc.elements.some(e=>e.kind==="motif")).toBe(true);
+  });
+
   it("ouvre l'éditeur multiformat et permet d'ajouter un vrai motif", () => {
     const host=mount();
     expect(host.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();

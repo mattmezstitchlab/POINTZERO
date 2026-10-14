@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { ArrowLeft, ChevronDown, Copy, Download, FolderOpen, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shapes, Trash2, Type, Undo2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, Camera, ChevronDown, Copy, Download, FolderOpen, ImagePlus, LayoutTemplate, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
@@ -48,8 +48,14 @@ function motifSVG(doc: DesignDocument, layer: Extract<DesignElement,{kind:"motif
   const fragment: DesignDocument = { ...doc, width: layer.w, height: layer.h, elements: [{ ...layer, x:0,y:0 }] };
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(designToSVG(fragment,true));
 }
-interface Props { onEmbroidery: () => void }
-export default function DesignStudio({ onEmbroidery }: Props) {
+interface Props {
+  onEmbroidery: () => void;
+  onPhoto?: () => void;
+  onFashion?: () => void;
+  incomingPhoto?: {id:string;dataUrl:string}|null;
+  onPhotoConsumed?: () => void;
+}
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -68,6 +74,7 @@ export default function DesignStudio({ onEmbroidery }: Props) {
   const imagePicker = useRef<HTMLInputElement>(null);
   const projectPicker = useRef<HTMLInputElement>(null);
   const dragRef = useRef<{id:string;x:number;y:number;startX:number;startY:number}|null>(null);
+  const receivedPhoto = useRef<string|null>(null);
   const element = doc.elements.find(e => e.id===selected) ?? null;
   const [patternPreviews] = useState(() => MOTIF_PRESETS.map(p => ({...p, pattern:p.make()})));
 
@@ -82,6 +89,20 @@ export default function DesignStudio({ onEmbroidery }: Props) {
     try { localStorage.setItem(CURRENT,JSON.stringify(doc)); }
     catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
   }, [doc]);
+  useEffect(() => {
+    if(!incomingPhoto || incomingPhoto.id===receivedPhoto.current)return;
+    receivedPhoto.current=incomingPhoto.id;
+    if(!validDataImage(incomingPhoto.dataUrl)){setNotice("Photo incompatible avec le studio de création.");onPhotoConsumed?.();return;}
+    const id=globalThis.crypto?.randomUUID?.()??String(Date.now());
+    setDoc(current=>{
+      const w=current.width*.68,h=current.height*.5;
+      const next:DesignElement={id,kind:"image",x:Math.round((current.width-w)/2),y:Math.round((current.height-h)/2),w,h,dataUrl:incomingPhoto.dataUrl};
+      setPast(history=>[...history.slice(-39),current]);
+      return {...current,elements:[...current.elements,next]};
+    });
+    setFuture([]);setSelected(id);setNotice("Photo retouchée ajoutée à votre composition.");
+    onPhotoConsumed?.();
+  },[incomingPhoto,onPhotoConsumed]);
   const change = (next: DesignDocument) => {
     setPast(history => [...history.slice(-39),doc]);
     setFuture([]);
@@ -196,10 +217,12 @@ export default function DesignStudio({ onEmbroidery }: Props) {
   return <div className="pz-design fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#151517] text-white">
     <header className="z-20 flex h-[58px] shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#09090b] px-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <span className="text-[13px] font-bold tracking-tight">× POINTZERO</span>
+        <span className="shrink-0 text-[13px] font-bold tracking-tight">× <span className="hidden sm:inline">POINTZERO</span></span>
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
+        {onPhoto&&<button onClick={onPhoto} className={action+" hidden min-[760px]:inline-flex"} aria-label="Ouvrir le studio Photo"><Camera size={15}/><span className="hidden min-[950px]:inline">Photo</span></button>}
+        {onFashion&&<button onClick={onFashion} className={action+" hidden min-[760px]:inline-flex"} aria-label="Ouvrir le studio Stylisme"><Shirt size={15}/><span className="hidden min-[950px]:inline">Stylisme</span></button>}
       </div>
       <div className="flex min-w-0 items-center gap-1">
         <button type="button" onClick={undo} disabled={!past.length} className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30" aria-label="Annuler"><Undo2 size={16}/></button>
@@ -213,7 +236,7 @@ export default function DesignStudio({ onEmbroidery }: Props) {
           </div>}
         </div>
         <div className="relative">
-          <button onClick={()=>setShowExport(!showExport)} disabled={busy} className="flex min-h-9 items-center gap-1 rounded-[5px] bg-white px-3 text-xs font-semibold text-black disabled:opacity-40"><Download size={15}/> Exporter</button>
+          <button onClick={()=>setShowExport(!showExport)} disabled={busy} className="flex min-h-9 items-center gap-1 rounded-[5px] bg-white px-3 text-xs font-semibold text-black disabled:opacity-40"><Download size={15}/><span className="hidden sm:inline">Exporter</span></button>
           {showExport&&<div className="pz-design-menu absolute right-0 top-[calc(100%+8px)] z-50 w-[170px] p-2">
             {(["png","svg","pdf","json",...(doc.format==="mini-site"||doc.format==="maquette"?["html"]:[])] as Array<"png"|"svg"|"pdf"|"json"|"html">).map(kind=>
               <button key={kind} className="block w-full rounded-[5px] px-2 py-2 text-left text-xs uppercase hover:bg-white/10" onClick={()=>void exportKind(kind)}>{kind==="html"?"HTML statique":kind==="json"?"Projet JSON":kind}</button>)}
@@ -263,6 +286,10 @@ export default function DesignStudio({ onEmbroidery }: Props) {
             {!drafts.length&&<p className="text-xs text-white/60">Aucun projet enregistré dans la bibliothèque.</p>}
           </>}
         </div>
+        {(onPhoto||onFashion)&&<div className="grid grid-cols-2 gap-2 border-t border-white/10 p-2 min-[760px]:hidden">
+          {onPhoto&&<button className={action} onClick={onPhoto}><Camera size={15}/> Photo</button>}
+          {onFashion&&<button className={action} onClick={onFashion}><Shirt size={15}/> Stylisme</button>}
+        </div>}
       </aside>
       <main ref={stage} aria-label="Canevas de création universel" className="pz-design-stage min-w-0 flex-1 overflow-auto p-4 pt-16 lg:p-5" onClick={()=>setSelected(null)}>
         <div className="mx-auto flex min-h-full w-fit flex-col items-center justify-center">
