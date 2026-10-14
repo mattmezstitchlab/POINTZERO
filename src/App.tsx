@@ -415,7 +415,7 @@ export default function App() {
     : studioMode === "admin"
     ? <AdminStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
     : studioMode === "mini-site"
-    ? <MiniSiteStudio onBack={() => switchStudio("design")} incomingDraft={miniSiteHandoff} />
+    ? <MiniSiteStudio onBack={() => {setMiniSiteHandoff(null);switchStudio("design");}} incomingDraft={miniSiteHandoff} />
     : studioMode === "pdf"
     ? <PDFStudio onBack={() => switchStudio("design")} onConvertToPattern={file => {
         setPdfFile(file);switchStudio("embroidery");
