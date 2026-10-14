@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
-import { Contrast, Download, Eye, FileCheck2, FileDown, Focus, Glasses, LockKeyhole, Palette, RotateCcw, ScanSearch, Shield, Sparkles, Type, Upload } from "lucide-react";
+import { Contrast, Download, Eye, FileCheck2, FileDown, LockKeyhole, Palette, RotateCcw, ScanSearch, Shield, Sparkles, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import {
  ACCESS_KEY, ACCENTS, DEFAULT_ACCESS, auditMarkup, bestInk, contrastGrade, parsePrefs, ratio,
