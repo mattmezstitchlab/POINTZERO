@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it} from "vitest";
 import {
- WORLD_KEY,emptyWorld,newSpace,newPerson,newMoment,newSignal,readWorld,writeWorld,
+ emptyWorld,newSpace,newPerson,newMoment,newSignal,readWorld,writeWorld,
  safeWorld,selectedWorld,downstreamMoments,previewImpact,validateSignal,journeySteps,linkedModuleInfo
 } from "../lib/oneSpaceCore";
 import {ACADEMY_KEY,makeAcademyProject} from "../lib/academyCore";
