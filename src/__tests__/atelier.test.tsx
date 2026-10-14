@@ -51,6 +51,7 @@ const dialog = (name: string) => container?.querySelector(`[role="dialog"][aria-
 const button = (label: string) => container?.querySelector(`button[aria-label="${label}"]`);
 beforeEach(() => {
   localStorage.clear();
+  localStorage.setItem("pointzero:workspace","embroidery");
   window.history.replaceState(null, "", "/");
 });
 afterEach(async () => {
@@ -61,6 +62,17 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("permet de revenir au Studio multiformat sans altérer la broderie", async () => {
+    await mount();
+    expect(button("Créer des supports graphiques")).toBeTruthy();
+    await click(button("Créer des supports graphiques"));
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+    expect(localStorage.getItem("pointzero:workspace")).toBe("design");
+    await click(button("Ouvrir l'atelier broderie"));
+    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+    expect(localStorage.getItem("pointzero:workspace")).toBe("embroidery");
+  });
+
   it("ouvre directement la grille et la bibliothèque de motifs, sans écran d'accueil", async () => {
     const view = await mount();
     expect(view.querySelector('canvas[role="application"]')).toBeTruthy();
