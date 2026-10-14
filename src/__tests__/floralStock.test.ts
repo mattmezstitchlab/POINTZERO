@@ -71,6 +71,17 @@ describe("Bouquet indépendant, profondeur brodable et stock",()=>{
     expect(partial.back).toEqual(full.back);
     expect(partial.palette).toEqual(full.palette);
   });
+  it("en mode profondeur renforcée le recalcul local garde exactement tous les contours",()=>{
+    const initial={...floralDemo(),depth:"renforcee" as const};
+    const before=recomposeSubjects(initial);
+    const flower=initial.layers.find(l=>l.name==="Rose centrale")!;
+    const next=changeSubject(initial,flower.id,{x:flower.x+3});
+    const relocated=next.layers.find(l=>l.id===flower.id)!;
+    const local=recomposeSubjects(next,before,affectedBounds(flower,relocated));
+    const whole=recomposeSubjects(next);
+    expect(local.cross).toEqual(whole.cross);
+    expect(local.back).toEqual(whole.back);
+  });
   it("l'ordre avant/arrière transforme visiblement les points aux zones de chevauchement",()=>{
     let scene=floralDemo();
     const original=recomposeSubjects(scene);
