@@ -222,7 +222,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, incomin
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
         {onPhoto&&<button onClick={onPhoto} className={action} aria-label="Ouvrir le studio Photo"><Camera size={15}/><span className="hidden min-[950px]:inline">Photo</span></button>}
-        {onFashion&&<button onClick={onFashion} className={action} aria-label="Ouvrir le studio Stylisme"><Shirt size={15}/><span className="hidden min-[950px]:inline">Stylisme</span></button> 
+        {onFashion&&<button onClick={onFashion} className={action} aria-label="Ouvrir le studio Stylisme"><Shirt size={15}/><span className="hidden min-[950px]:inline">Stylisme</span></button>}
       </div>
       <div className="flex min-w-0 items-center gap-1">
         <button type="button" onClick={undo} disabled={!past.length} className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30" aria-label="Annuler"><Undo2 size={16}/></button>
