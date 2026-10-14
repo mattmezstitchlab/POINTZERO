@@ -24,6 +24,7 @@ export interface SubjectScene {
   backdrop: string;
   layers: SubjectLayer[];
   warnings: string[];
+  depth?: "naturelle" | "renforcee";
 }
 export interface SubjectAnalysis {
   scene: SubjectScene;
@@ -257,6 +258,7 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
   // Negative index = immutable backdrop; nonnegative = last visible
   // foreground sprite at this stitch cell.
   const topOwner=new Int16Array(base.w*base.h).fill(-1);
+  const overlaps=new Int16Array(base.w*base.h).fill(-1);
   const backOwners=new Array<number>(out.back.length).fill(-1);
   const longOwners=new Array<number>(out.long.length).fill(-1);
   const knotOwners=new Array<number>(out.knots.length).fill(-1);
@@ -273,6 +275,10 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
       const a=at(sx,sy,sprite),b=at(x,y,out);
       const painted=sprite.cross[a]>=0||sprite.fwd[a]>=0||sprite.bwd[a]>=0||sprite.q.some(q=>q[a]>=0);
       if(!painted)continue;
+      if(!partial || (x>=dirty!.x&&y>=dirty!.y&&x<dirty!.x+dirty!.w&&y<dirty!.y+dirty!.h)){
+        if(out.cross[b]>=0 || out.fwd[b]>=0 || out.bwd[b]>=0 || out.q.some(q=>q[b]>=0))
+          overlaps[b]=layerIndex;
+      }
       topOwner[b]=layerIndex;
       if(partial && (x<dirty!.x || y<dirty!.y || x>=dirty!.x+dirty!.w || y>=dirty!.y+dirty!.h))continue;
       // An opaque embroidery stitch covers ALL channels from a lower object.
@@ -336,6 +342,36 @@ export function recomposeSubjects(scene:SubjectScene, previous?:Pattern, dirty?:
   out.long=clipSegments(out.long,longOwners);
   out.knots=out.knots.filter((k,i)=>!hidden(k.x,k.y,knotOwners[i]));
   out.special=out.special?.filter((k,i)=>!hidden(k.x,k.y,specialOwners[i]));
+  // Discreet depth accent only at actual foreground/background collisions.
+  // Optional by design. It is a geometric proposal, not a detected shadow.
+  if(scene.depth==="renforcee"){
+    const accents:Seg[]=[];
+    for(let i=0;i<overlaps.length&&accents.length<90;i++){
+      const owner=overlaps[i];
+      if(owner<0 || owner!==topOwner[i])continue;
+      const x=i%out.w,y=Math.floor(i/out.w);
+      const stitch=out.cross[i]>=0?out.cross[i]:out.fwd[i]>=0?out.fwd[i]:out.bwd[i];
+      if(stitch<0)continue;
+      const ink=FLOSS[stitch]?.lab[0]<44?stitch:flossIndex("801");
+      if(ink<0)continue;
+      const edges:Array<[number,number,number,number,number]>=[
+        [x-1,y,x,y,x,y+1],[x+1,y,x+1,y,x+1,y+1],
+        [x,y-1,x,y,x+1,y],[x,y+1,x,y+1,x+1,y+1],
+      ] as unknown as Array<[number,number,number,number,number]>;
+      // Four ordered neighbor checks avoid outlining every color shift.
+      for(const [dx,dy,ax,ay,bx,by] of [
+        [x-1,y,x,y,x,y+1],[x+1,y,x+1,y,x+1,y+1],
+        [x,y-1,x,y,x+1,y],[x,y+1,x,y+1,x+1,y+1],
+      ]){
+        if(dx<0||dy<0||dx>=out.w||dy>=out.h||topOwner[dy*out.w+dx]!==owner)
+          accents.push({x1:ax,y1:ay,x2:bx,y2:by,c:ink});
+        if(accents.length>=90)break;
+      }
+      void edges;
+    }
+    out.back.push(...accents);
+    if(accents.length)warningSet.add(accents.length+" segments de profondeur proposés aux chevauchements ; vérifier à l'aperçu.");
+  }
   out.palette=[];
   const all=[...out.cross,...out.fwd,...out.bwd,...out.q.flatMap(a=>Array.from(a)),
     ...out.back.map(a=>a.c),...out.long.map(a=>a.c),...out.knots.map(a=>a.c),...(out.special??[]).map(a=>a.c)];
