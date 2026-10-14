@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDownToLine, Ellipsis, FolderOpen, Layers, Maximize, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
+import { ArrowDownToLine, Ellipsis, FolderOpen, Layers, Maximize, Pencil, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
 import type { Pattern } from "../lib/pattern";
 import type { ViewMode } from "./Canvas";
 
@@ -20,6 +20,8 @@ interface Props {
   onView: (value: ViewMode) => void;
   onFit: () => void;
   saving: string;
+  onDrawing?: () => void;
+  drawing?: boolean;
 }
 const views: ViewMode[] = ["real", "flat", "pattern"];
 const iconButton = "grid size-10 shrink-0 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 hover:text-white disabled:opacity-25";
@@ -40,6 +42,7 @@ export default function TopBar(p: Props) {
       <button type="button" className={iconButton} aria-label="Réglages et aide" title="Réglages" onClick={p.onSettings}><Settings2 size={17}/></button>
       <button type="button" className={iconButton} aria-label="Plus d'options" aria-expanded={more} onClick={() => setMore(v => !v)}><Ellipsis size={19}/></button>
       {more && <div className="pz-surface absolute right-0 top-[calc(100%+8px)] grid w-[205px] gap-1 p-2 text-sm text-white" aria-label="Options d'affichage">
+        {p.onDrawing && <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onDrawing?.(); setMore(false); }} aria-pressed={!!p.drawing}><Pencil size={16}/> {p.drawing ? "Masquer les outils" : "Outils de dessin"}</button>}
         <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { cycle(); setMore(false); }}><Layers size={16}/> Affichage · {p.view}</button>
         <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onSymbols(); setMore(false); }} aria-pressed={p.symbols}><Type size={16}/> Symboles</button>
         <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 hover:text-white" onClick={() => { p.onFit(); setMore(false); }}><Maximize size={16}/> Recentrer</button>
