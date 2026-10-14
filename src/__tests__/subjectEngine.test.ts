@@ -1,5 +1,7 @@
 import {describe,it,expect} from "vitest";
-import {flossIndex} from "../lib/dmc";
+import {FLOSS,flossIndex} from "../lib/dmc";
+import {quantizePixels} from "../lib/quantize";
+import {buildPdf} from "../lib/pdf";
 import {createPattern,ensurePalette,fromObject,toObject} from "../lib/pattern";
 import {multiSubjectDemo} from "../lib/subjectDemo";
 import {
@@ -22,6 +24,28 @@ describe("Moteur sujets POINTZERO · scène multi-sujets",()=>{
     expect(recomposed.w).toBe(120);expect(recomposed.h).toBe(75);
     expect(recomposed.provenance).toEqual(source.provenance);
     expect(source.cross).toEqual(old);
+  });
+  it("part de pixels RGBA multi-sujets, convertit en DMC et extrait 3 composants",()=>{
+    const sample=multiSubjectDemo();
+    const pixels=new Uint8ClampedArray(sample.w*sample.h*4);
+    for(let i=0;i<sample.cross.length;i++){
+      const color=FLOSS[sample.cross[i]]?.rgb??[255,255,255];
+      pixels.set([...color,255],i*4);
+    }
+    const converted=quantizePixels(pixels,sample.w,sample.h,{maxColors:36,dropWhite:true,confetti:false});
+    const imported=createPattern("Image RGBA importée",sample.w,sample.h);
+    imported.cross=converted.cross;imported.palette=converted.palette;
+    const found=detectSubjects(imported);
+    expect(found.detected).toBe(3);
+    expect(recomposeSubjects(found.scene).cross).toEqual(imported.cross);
+  });
+  it("les drapeaux de progression sont conservés dans les sprites recomposés",()=>{
+    const source=multiSubjectDemo();
+    const index=43*source.w+24;
+    source.done[index]=1;
+    const scene=detectSubjects(source).scene;
+    const reassembled=recomposeSubjects(scene);
+    expect(reassembled.done[index]).toBe(1);
   });
   it("déplacement réellement recomposé : efface ancienne position et pose la nouvelle",()=>{
     const source=multiSubjectDemo(),scene=detectSubjects(source).scene;
@@ -133,6 +157,13 @@ describe("Moteur sujets POINTZERO · scène multi-sujets",()=>{
     expect(moved.fwd).not.toEqual(original.fwd);
     expect(moved.q[0]).not.toEqual(original.q[0]);
     expect(moved.back).not.toEqual(original.back);
+  });
+  it("produit un PDF natif sur la scène composée sans moteur d'export secondaire",async()=>{
+    const output=recomposeSubjects(detectSubjects(multiSubjectDemo()).scene);
+    const pdf=await buildPdf(output,{bw:false,paper:"a4"});
+    expect(pdf.type).toBe("application/pdf");
+    expect(pdf.size).toBeGreaterThan(5000);
+    expect(output.subjectScene?.layers).toHaveLength(3);
   });
   it("refuse un projet hors limites sans altérer l'existant",()=>{
     const p=multiSubjectDemo(),before=p.cross.slice(),scene=detectSubjects(p).scene;
