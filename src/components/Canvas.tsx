@@ -226,7 +226,7 @@ export default function Canvas(props: Props) {
 
     ctx.setTransform(v.dpr, 0, 0, v.dpr, 0, 0);
     ctx.clearRect(0, 0, v.w, v.h);
-    ctx.fillStyle = "#0b0b0d";
+    ctx.fillStyle = "#f1f0ec";
     ctx.fillRect(0, 0, v.w, v.h);
 
     ctx.save();

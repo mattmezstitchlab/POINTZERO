@@ -1,5 +1,6 @@
 import { computeStats, fromObject, makeId, toObject, type Pattern, type Supply } from "./pattern";
 import { FLOSS, flossIndex } from "./dmc";
+import { loadBrodeuseProfile, saveBrodeuseProfile } from "./brodeuseProfile";
 
 export interface ProjectRecord { id: string; name: string; folder: string; updated: number; w: number; h: number; progress: number; data: string; versions: { date: number; data: string }[] }
 const DB = "point-zero-library";
@@ -32,9 +33,21 @@ export async function saveLibrary(p: Pattern, checkpoint = false): Promise<void>
   await request("readwrite", (s) => s.put({ id, name: p.name, folder: p.folder ?? "", updated: now, w: p.w, h: p.h, progress: totals.units ? totals.doneUnits / totals.units : 0, data, versions: versions.slice(0, 8) } satisfies ProjectRecord));
 }
 export function readInventory(): Record<string, Supply> {
-  try { return JSON.parse(localStorage.getItem("point-zero:inventory") ?? "{}"); } catch { return {}; }
+  try {
+    const saved = JSON.parse(localStorage.getItem("point-zero:inventory") ?? "null") as Record<string, Supply> | null;
+    if (saved && typeof saved === "object") return Object.fromEntries(Object.entries(saved).map(([code, q]) =>
+      [code, { whole: Number(q?.whole ?? 0), partialMeters: Number(q?.partialMeters ?? 0), lot: q?.lot ?? "" }]));
+    const profile = loadBrodeuseProfile();
+    return Object.fromEntries(Object.entries(profile.stock).map(([code, q]) =>
+      [code, { whole: q.skeins, partialMeters: q.remainingMeters, lot: "" }]));
+  } catch { return {}; }
 }
-export function writeInventory(value: Record<string, Supply>) { localStorage.setItem("point-zero:inventory", JSON.stringify(value)); }
+/** Stock canonique commun au rail, à la liste d'achats et à l'adaptation du profil. */
+export function writeInventory(value: Record<string, Supply>) {
+  const p = loadBrodeuseProfile();
+  saveBrodeuseProfile({ ...p, stock: Object.fromEntries(Object.entries(value).map(([code, q]) =>
+    [code, { skeins: q.whole ?? 0, remainingMeters: q.partialMeters ?? 0 }])) });
+}
 
 export function shoppingList(projects: Pattern[], inventory: Record<string, Supply>) {
   const sums = new Map<string, { code: string; name: string; meters: number; buy: number }>();

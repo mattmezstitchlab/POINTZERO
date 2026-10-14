@@ -1,91 +1,56 @@
 /**
- * L'atelier monté pour de vrai.
- *
- * Les autres suites testent des composants isolés : elles prouvent que le dock
- * sait animer un outil et que le guide sait afficher une réponse, mais pas que
- * les deux sont branchés l'un sur l'autre. C'est pourtant là que le guide peut
- * échouer sans bruit — un effet qui ne se déclenche jamais, une étape qui ne se
- * valide pas, un pictogramme qui pulse dans un groupe replié. Ces tests montent
- * App entier et suivent le parcours de bout en bout.
- *
- * jsdom n'a ni matchMedia, ni ResizeObserver, ni taille d'écran : les polyfills
- * ci-dessous sont le minimum pour que l'atelier démarre. Ce qui reste non
- * couvert — le rendu du canevas, le stylet, l'animation réelle — est consigné
- * dans docs/INTEGRATION-CONTINUE.md.
+ * Intégration de l'atelier unique.
+ * jsdom ne rend pas le trait Canvas : ici nous vérifions navigation, outils,
+ * absence du guide et continuité des parcours. Le rendu réel exige une recette navigateur.
  */
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import App from "../App";
 
-const saved = { matchMedia: globalThis.matchMedia, ResizeObserver: globalThis.ResizeObserver };
-
+const saved = {
+  matchMedia: globalThis.matchMedia,
+  ResizeObserver: globalThis.ResizeObserver,
+  getContext: HTMLCanvasElement.prototype.getContext,
+};
 beforeAll(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   globalThis.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    matches: false, media: query, onchange: null,
+    addListener: vi.fn(), removeListener: vi.fn(),
+    addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
   })) as unknown as typeof globalThis.matchMedia;
   globalThis.ResizeObserver = class {
     observe() {}
     unobserve() {}
     disconnect() {}
   } as unknown as typeof globalThis.ResizeObserver;
+  HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 });
-
 afterAll(() => {
   globalThis.matchMedia = saved.matchMedia;
   globalThis.ResizeObserver = saved.ResizeObserver;
+  HTMLCanvasElement.prototype.getContext = saved.getContext;
 });
-
 let root: Root | null = null;
 let container: HTMLElement | null = null;
-
-/** Un clic, et les effets qui en découlent. */
-const click = async (el: Element) => {
-  await act(async () => {
-    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-};
-
-const byText = (re: RegExp) =>
-  [...(container?.querySelectorAll("button, a") ?? [])].find((b) => re.test(b.textContent || "")) ?? null;
-
-const byLabel = (label: string) => container?.querySelector(`[aria-label="${label}"]`) ?? null;
-
-/** Le mémo flottant. La boussole de la barre du haut porte le même libellé :
- *  on distingue par la balise. */
-const hud = () => container?.querySelector(".coach-in") ?? null;
-const compass = () => container?.querySelector('button[aria-label="Guide de l\'atelier"]') ?? null;
-const lit = () => [...(container?.querySelectorAll('[data-coach="on"]') ?? [])];
-const étape = () => (container?.textContent || "").match(/Étape \d+ \/ \d+/)?.[0] ?? "";
-const progrès = () => JSON.parse(localStorage.getItem("point-zero:coach") || "null");
-
-/** Monte l'atelier et entre dans l'écran de travail. */
-async function openAtelier() {
+async function mount() {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  await act(async () => {
-    root!.render(<App />);
-  });
-  // Les libellés de l'accueil contiennent des espaces insécables.
-  const entrer = byText(/Ouvrir l.atelier/);
-  expect(entrer, "le hero propose d'entrer dans l'atelier").toBeTruthy();
-  await click(entrer!);
-  expect(compass(), "la boussole est dans la barre du haut").toBeTruthy();
+  await act(async () => { root!.render(<App />); });
+  return container;
 }
-
+async function click(el: Element | null | undefined) {
+  expect(el, "commande de l'atelier présente").toBeTruthy();
+  await act(async () => { el!.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+}
+const nav = () => container?.querySelector('nav[aria-label="Catégories de l\'atelier"]');
+const category = (name: string) => [...(nav()?.querySelectorAll("button") ?? [])].find((b) => b.textContent?.includes(name));
+const dialog = (name: string) => container?.querySelector(`[role="dialog"][aria-label="${name}"]`);
+const button = (label: string) => container?.querySelector(`button[aria-label="${label}"]`);
 beforeEach(() => {
   localStorage.clear();
-  // Entrer dans l'atelier écrit #atelier dans l'URL, et jsdom la conserve d'un
-  // test à l'autre : sans ça, le deuxième test démarrerait déjà dans l'atelier.
   window.history.replaceState(null, "", "/");
 });
 afterEach(async () => {
@@ -95,130 +60,78 @@ afterEach(async () => {
   container = null;
   localStorage.clear();
 });
-
-describe("Atelier : le guide est branché sur les vrais outils", () => {
-  it("démarre seul à la première ouverture, sur une seule étape", async () => {
-    await openAtelier();
-    expect(hud(), "le guide s'est ouvert tout seul").toBeTruthy();
-    expect(étape()).toBe("Étape 1 / 7");
-    expect(container!.textContent).toContain("Deux gestes, un seul projet");
-    // Une étape, une cible : la première vise la barre des modes, pas un outil.
-    expect(lit()).toHaveLength(0);
-    expect(document.querySelector('[data-guide="workspace"].coach-zone'), "la zone est marquée").toBeTruthy();
+describe("POINTZERO : atelier unique sans assistant", () => {
+  it("entre immédiatement sur la véritable grille, avec le champ de création central", async () => {
+    const view = await mount();
+    expect(view.querySelector("canvas")).toBeTruthy();
+    expect(view.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
+    expect(nav()?.querySelectorAll("button")).toHaveLength(5);
+    expect(view.textContent).toContain("De l'idée au dernier point");
   });
-
-  it("n'insiste pas quand l'atelier a déjà été visité", async () => {
-    localStorage.setItem(
-      "point-zero:coach",
-      JSON.stringify({ track: "create", stepId: null, done: [], seen: true, dismissed: true }),
-    );
-    await openAtelier();
-    expect(hud(), "un atelier déjà visité s'ouvre sans guide").toBeFalsy();
-    expect(compass(), "mais le guide reste à un toucher").toBeTruthy();
+  it("ne montre ni guide, ni démarrage automatique, même si l'ancien état subsiste", async () => {
+    localStorage.setItem("point-zero:coach", JSON.stringify({ seen: false, dismissed: false }));
+    await mount();
+    expect(container?.querySelector(".coach-in")).toBeNull();
+    expect(button("Guide de l'atelier")).toBeNull();
+    expect(container?.querySelector('[data-coach="on"]')).toBeNull();
   });
-
-  it("anime le pictogramme visé par l'étape", async () => {
-    await openAtelier();
-    await click(byText(/^Suivant$/)!);
-    expect(étape()).toBe("Étape 2 / 7");
-    expect(lit()).toHaveLength(1);
-    expect(lit()[0].getAttribute("data-tool")).toBe("cross");
+  it("ouvre les outils Composer dans un unique panneau contextuel", async () => {
+    await mount();
+    await click(category("Composer"));
+    expect(dialog("Composer")?.classList.contains("is-open")).toBe(true);
+    expect(dialog("Composer")?.textContent).toContain("Lettrage compté");
+    expect(dialog("Composer")?.textContent).toContain("Composition intelligente");
   });
-
-  it("ouvre le groupe « plus » quand l'étape vise un outil qui y est caché", async () => {
-    await openAtelier();
-    await click(byText(/^Suivant$/)!);
-    await click(byText(/^Suivant$/)!);
-    await click(byText(/^Suivant$/)!);
-    expect(étape()).toBe("Étape 4 / 7");
-    expect(byLabel("Masquer les outils moins fréquents"), "le groupe s'est ouvert").toBeTruthy();
-    expect(lit()[0].getAttribute("data-tool")).toBe("threeQuarter");
+  it("réunit fils, toile et profil dans le même panneau", async () => {
+    await mount();
+    await click(category("Fils & toile"));
+    expect(dialog("Fils & toile")?.classList.contains("is-open")).toBe(true);
+    expect(dialog("Fils & toile")?.textContent).toContain("Mon profil brodeuse");
+    expect(dialog("Fils & toile")?.textContent).toContain("Tissu, comptage et dimensions");
   });
-
-  it("valide l'étape quand l'outil montré est touché, même s'il était déjà pris", async () => {
-    await openAtelier();
-    await click(byText(/^Suivant$/)!); // → étape 2, qui attend l'outil croix
-    expect(étape()).toBe("Étape 2 / 7");
-    // Le point de croix est l'outil par défaut : attendre un changement d'état
-    // ferait patienter cette étape pour rien. C'est le geste qui compte.
-    await click(byLabel("Point de croix (X)")!);
-    expect(étape(), "le geste a validé l'étape").toBe("Étape 3 / 7");
-    expect(progrès().done).toContain("c-cross");
-    expect(progrès().stepId).toBe("c-first");
+  it("donne accès au suivi Broder sans changer de page", async () => {
+    await mount();
+    await click(category("Broder"));
+    expect(dialog("Broder")?.classList.contains("is-open")).toBe(true);
+    expect(dialog("Broder")?.textContent).toContain("Journal du projet");
+    expect(window.location.hash).toBe("");
   });
-
-  it("valide l'étape quand un panneau est ouvert pour de vrai", async () => {
-    await openAtelier();
-    for (let i = 0; i < 4; i += 1) await click(byText(/^Suivant$/)!); // → étape 5, le rail des fils
-    expect(étape()).toBe("Étape 5 / 7");
-    await click(byText(/^Suivant$/)!); // → étape 6, le panneau Projet
-    expect(étape()).toBe("Étape 6 / 7");
-    await click(byLabel("Projet, réglages et export")!);
-    expect(étape(), "ouvrir le panneau valide l'étape").toBe("Étape 7 / 7");
-    expect(progrès().done).toContain("c-project");
+  it("garde Bibliothèque, Exporter et Réglages dans l'en-tête", async () => {
+    await mount();
+    expect(button("Bibliothèque")).toBeTruthy();
+    expect(button("Exporter et partager")).toBeTruthy();
+    await click(button("Réglages et aide"));
+    expect(dialog("Réglages & aide")?.classList.contains("is-open")).toBe(true);
+    expect(dialog("Réglages & aide")?.textContent).not.toContain("Guide pas à pas et questions");
   });
-
-  it("n'avance pas tout seul quand rien n'a bougé", async () => {
-    await openAtelier();
-    await click(byText(/^Suivant$/)!);
-    const avant = étape();
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-    expect(étape()).toBe(avant);
-    // « Suivant » marque l'étape passée — c'est ce qui permet de reprendre plus
-    // tard là où l'on s'est arrêté — mais rien d'autre ne bouge tout seul.
-    expect(progrès().done).toEqual(["c-workspace"]);
+  it("ouvre Créer dans un panneau lorsque l'utilisateur le demande", async () => {
+    await mount();
+    await click(button("POINTZERO : créer un motif"));
+    expect(dialog("Créer")?.classList.contains("is-open")).toBe(true);
+    expect(dialog("Créer")?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
   });
-
-  it("répond à une question posée dans le champ, sans quitter l'atelier", async () => {
-    await openAtelier();
-    const field = hud()!.querySelector("input") as HTMLInputElement;
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, "comment activer la symétrie");
-      field.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    await act(async () => {
-      hud()!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    });
-    expect(container!.textContent).toContain("L'atelier répond");
-    expect(container!.textContent).toContain("symétrie");
-    expect(étape(), "une réponse remplace le pas à pas, une chose à la fois").toBe("");
-    expect(hud(), "et l'atelier reste ouvert autour").toBeTruthy();
+  it("autorise un import unique d'images, PDF, JSON et OXS", async () => {
+    await mount();
+    const picker = container?.querySelector('input[aria-label="Importer image, PDF ou projet JSON/OXS"]') as HTMLInputElement;
+    expect(picker).toBeTruthy();
+    expect(picker.accept).toContain("application/pdf");
+    expect(picker.accept).toContain(".oxs");
+    expect(picker.accept).toContain(".json");
+    expect(picker.accept).toContain("image/png");
   });
-
-  it("Échappe masque le mémo sans rien effacer, la boussole le rouvre", async () => {
-    await openAtelier();
-    await act(async () => {
-      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-    expect(hud()).toBeFalsy();
-    expect(progrès().stepId, "Échappe masque, il ne réinitialise rien").toBe("c-workspace");
-    expect(progrès().dismissed).toBe(false);
-    await click(compass()!);
-    expect(hud()).toBeTruthy();
-    expect(étape()).toBe("Étape 1 / 7");
+  it("accède à la musique et revient sans créer de route SLÂME", async () => {
+    await mount();
+    await click(category("Musique & parole"));
+    const back = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent === "Retour à la grille");
+    expect(back).toBeTruthy();
+    await click(back);
+    expect(nav()).toBeTruthy();
+    expect(window.location.hash).toBe("");
   });
-
-  it("suit le mode : passer en Broderie change le parcours, sans l'imposer", async () => {
-    await openAtelier();
-    expect(étape()).toBe("Étape 1 / 7");
-    await click(container!.querySelector('button[aria-label^="Mode actuel"]')!);
-    expect(étape(), "le guide suit le geste").toBe("Étape 1 / 8");
-    expect(container!.textContent).toContain("Passer en mode Broder");
-    expect(container!.textContent).toContain("Broder");
-  });
-
-  it("rejoue une étape précise depuis le début du parcours", async () => {
-    localStorage.setItem(
-      "point-zero:coach",
-      JSON.stringify({ track: "create", stepId: null, done: ["c-workspace", "c-cross", "c-first", "c-fractions", "c-floss", "c-project", "c-export"], seen: true, dismissed: false }),
-    );
-    await openAtelier();
-    await click(compass()!);
-    // Un parcours terminé repart de la première étape, et rend la main.
-    expect(étape()).toBe("Étape 1 / 7");
-    expect(progrès().done).toEqual([]);
-    expect(container!.textContent).toContain("Suivant");
+  it("redirige les anciens fragments vers la page atelier unique", async () => {
+    window.history.replaceState(null, "", "/#slame");
+    await mount();
+    expect(window.location.hash).toBe("");
+    expect(nav()).toBeTruthy();
   });
 });

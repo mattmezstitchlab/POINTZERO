@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
 import { blankPattern, initState, loadStored, reducer, saveStored } from "./lib/store";
-import { buildTemplate } from "./lib/convert";
 import { clonePattern, compositePattern, computeStats, createPattern, ensurePalette, type Pattern, type Supply } from "./lib/pattern";
 import { readProjectFile, readTextFile, saveProjectFile } from "./lib/io";
 import { fromOxs } from "./lib/oxs";
@@ -13,9 +12,11 @@ import { runChecks } from "./lib/checks";
 import Canvas, { type Insets, type ViewMode } from "./components/Canvas";
 import Dock from "./components/Dock";
 import TopBar from "./components/TopBar";
+import AtelierCreate from "./components/AtelierCreate";
+import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
+import Sheet from "./components/Sheet";
 import PaletteSheet from "./components/PaletteSheet";
 import FlossRail from "./components/FlossRail";
-import Landing from "./components/Landing";
 import WorkspacePanel, { DEFAULT_PREFS, type Preferences } from "./components/WorkspacePanel";
 import LibrarySheet from "./components/LibrarySheet";
 import SelectionBar from "./components/SelectionBar";
@@ -26,10 +27,8 @@ import CompositionStudio from "./components/CompositionStudio";
 import AutomaticImageImport from "./components/AutomaticImageImport";
 import ExportStudio from "./components/ExportStudio";
 import ErrorBoundary from "./components/ErrorBoundary";
-import Coach, { type Ask } from "./components/Coach";
 import PeerShare from "./components/PeerShare";
 import SlameStudio from "./components/SlameStudio";
-import { TRACKS, answerQuery, entryById, loadCoach, resolveStep, saveCoach, stepIndex, type CoachProgress, type CoachTarget } from "./lib/coach";
 
 type Panel = "palette" | "project" | "library" | "share" | "export" | null;
 type Workspace = "create" | "stitch";
@@ -56,32 +55,27 @@ function initialPreferences(): Preferences {
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 export default function App() {
-  const [screen, setScreen] = useState<"landing" | "editor" | "slame">(() => window.location.hash === "#atelier" ? "editor" : window.location.hash === "#slame" ? "slame" : "landing");
   const [boot] = useState(loadStored);
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
+  const [activeCategory, setActiveCategory] = useState<AtelierCategory>("create");
+  const [categoryPanel, setCategoryPanel] = useState<AtelierCategory | null>(null);
+  const [showWelcome, setShowWelcome] = useState(() => !boot || (boot.cross.every((c) => c < 0) && boot.back.length === 0 && boot.long.length === 0));
+  const [promptText, setPromptText] = useState("");
+  const [musicMounted, setMusicMounted] = useState(false);
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
   const [autoImage, setAutoImage] = useState<File | null>(null);
   const P = remote ?? store.present;
   const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>("real"), [workspace, setWorkspace] = useState<Workspace>("create");
   const [symbols, setSymbols] = useState(false), [panel, setPanel] = useState<Panel>(null), [file, setFile] = useState<File | null>(null), [pdfFile, setPdfFile] = useState<File | null>(null), [promptOpen, setPromptOpen] = useState(false), [selection, setSelection] = useState<Selection | null>(null), [clipboard, setClipboard] = useState<Pattern | null>(null);
-  const [prefs, setPrefs] = useState(initialPreferences), [inventory, setInventory] = useState(readInventory), [saving, setSaving] = useState("Sauvegarde locale"), [busy, setBusy] = useState(""), [toast, setToast] = useState("");
+  const [prefs, setPrefs] = useState(initialPreferences), [inventory, setInventory] = useState(readInventory), [saving, setSaving] = useState("Sauvegarde locale"), [toast, setToast] = useState("");
   const [fitKey, setFitKey] = useState(0), desktop = useMedia("(min-width: 1024px)");
-  /* -------- Le guide : un pas à la fois, validé par le geste -------- */
-  const [coach, setCoach] = useState<CoachProgress>(loadCoach);
-  const [coachOpen, setCoachOpen] = useState(false);
-  const [ask, setAsk] = useState<Ask | null>(null);
-  // Nombre de traits ayant réellement posé ou retiré du fil : c'est le signal
-  // qui valide une étape « posez un point », pas un simple déplacement de vue.
-  const [strokes, setStrokes] = useState(0);
-  const autoStarted = useRef(false);
-  const stepStart = useRef({ step: "", color: -1, strokes: -1, panel: null as Panel });
-  const ready = useRef(!!boot), templatePromise = useRef<Promise<Pattern> | null>(null), prevTool = useRef<Tool>("cross"), lastViews = useRef<{ create: ViewMode; stitch: ViewMode }>({ create: "real", stitch: "pattern" });
-  const snapshot = useRef({ P, remote, prefs, workspace, store, coach, coachOpen, ask }); snapshot.current = { P, remote, prefs, workspace, store, coach, coachOpen, ask };
+  const ready = useRef(true), prevTool = useRef<Tool>("cross"), lastViews = useRef<{ create: ViewMode; stitch: ViewMode }>({ create: "real", stitch: "pattern" });
+  const snapshot = useRef({ P, remote, prefs, workspace, store }); snapshot.current = { P, remote, prefs, workspace, store };
   const checked = useRef(false);
   const notify = useCallback((msg: string) => setToast(msg), []);
   const closePanel = useCallback(() => setPanel(null), []);
-  const insets: Insets = desktop ? { top: 76, right: 0, bottom: 86, left: 90 } : { top: 72, right: 0, bottom: 158, left: 0 };
+  const insets: Insets = desktop ? { top: 116, right: 0, bottom: 86, left: 90 } : { top: 118, right: 0, bottom: 158, left: 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -89,11 +83,11 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (screen !== "editor" || checked.current) return;
+    if (checked.current) return;
     checked.current = true;
     const failures = runChecks().filter((v) => !v.ok);
     if (failures.length) notify(`Vérification du moteur : ${failures.length} anomalie(s). Consultez Réglages avant de travailler.`);
-  }, [screen, notify]);
+  }, [notify]);
 
   const setPattern = useCallback((p: Pattern, quiet = false) => {
     if (snapshot.current.remote) notify("Lecture partagée : seul l’hôte modifie ce projet.");
@@ -109,18 +103,9 @@ export default function App() {
   const chooseTool = useCallback((next: Tool) => {
     if (snapshot.current.remote && next !== "hand") { notify("Le patron partagé est en lecture seule."); return; }
     if (snapshot.current.workspace === "stitch" && !STITCH_TOOLS.has(next)) { notify("Passez en mode Créer pour modifier le dessin."); return; }
-    if (["mark", "details", "block", "row", "park", "unpick"].includes(next) && snapshot.current.workspace === "create") { setWorkspace("stitch"); setView("pattern"); }
+    if (["mark", "details", "block", "row", "park", "unpick"].includes(next) && snapshot.current.workspace === "create") { setWorkspace("stitch"); setView("pattern"); setActiveCategory("stitch"); }
     if (next !== "pick") prevTool.current = next;
     setTool(next);
-    /* Toucher le pictogramme montré valide l'étape. C'est ici et non dans un
-       effet sur l'outil : le point de croix est l'outil par défaut, donc
-       attendre un changement d'état ferait patienter l'étape 2 pour rien. Le
-       geste, c'est d'aller le chercher — pas que l'atelier change d'avis. */
-    const s = snapshot.current;
-    if (s.coachOpen && !s.ask) {
-      const shown = resolveStep(s.coach, s.workspace);
-      if (shown?.gesture === "tool" && shown.expect === next) coachNext();
-    }
   }, [notify]);
   const pickColor = (idx: number) => {
     setColor(idx);
@@ -138,31 +123,21 @@ export default function App() {
     if (!remote) { try { await saveLibrary(store.present, true); } catch { /* The explicit file backup remains available. */ } }
     const next = { ...p, supplies: { ...p.supplies, ...inventory } };
     setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
-    setSelection(null); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null);
+    setSelection(null); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setCategoryPanel(null); setShowWelcome(false);
   };
 
   useEffect(() => {
-    const sync = () => setScreen(window.location.hash === "#atelier" ? "editor" : window.location.hash === "#slame" ? "slame" : "landing");
-    window.addEventListener("hashchange", sync); window.addEventListener("popstate", sync);
-    return () => { window.removeEventListener("hashchange", sync); window.removeEventListener("popstate", sync); };
-  }, []);
-  useEffect(() => {
-    document.title = screen === "landing" ? "Point Zéro | De l’image au dernier point" : `${P.name} | Point Zéro B`;
-  }, [P.name, screen]);
+    // Les anciens liens #atelier / #slame pointent désormais vers l'unique atelier.
+    if (window.location.hash === "#atelier" || window.location.hash === "#slame") {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    document.title = `${P.name} | POINTZERO · Atelier`;
+  }, [P.name]);
   useEffect(() => {
     try { localStorage.setItem("point-zero:preferences", JSON.stringify(prefs)); } catch { /* Optional preferences do not block the editor. */ }
   }, [prefs]);
-  useEffect(() => {
-    if (screen !== "editor" || ready.current) return;
-    let live = true; setBusy("Préparation du modèle…");
-    if (!templatePromise.current) templatePromise.current = buildTemplate("roses");
-    templatePromise.current.then((p) => {
-      if (!live || ready.current) return;
-      ready.current = true; p.provenance = { kind: "demo", source: "Illustration originale générée, convertie en points", author: "Point Zéro", license: "Modèle de démonstration", personalOnly: false };
-      dispatch({ type: "load", pattern: { ...p, supplies: inventory } }); setColor(p.palette[0] ?? color); setFitKey((k) => k + 1);
-    }).catch(() => { if (live) { ready.current = true; notify("Modèle indisponible. Une grille vide reste utilisable."); } }).finally(() => { if (live) setBusy(""); });
-    return () => { live = false; };
-  }, [screen]);
+  // Aucun motif de démonstration n'est chargé sur la grille initiale.
+  // La véritable toile Canvas est visible sous la saisie de création.
   useEffect(() => {
     if (!ready.current || remote) return;
     const timer = window.setTimeout(() => {
@@ -177,9 +152,14 @@ export default function App() {
     window.addEventListener("pagehide", flush); return () => window.removeEventListener("pagehide", flush);
   }, []);
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(""), 4000); return () => clearTimeout(t); } }, [toast]);
+  useEffect(() => {
+    const syncInventory = () => setInventory(readInventory());
+    window.addEventListener("pointzero:inventory-changed", syncInventory);
+    return () => window.removeEventListener("pointzero:inventory-changed", syncInventory);
+  }, []);
 
   useEffect(() => {
-    if (workspace !== "stitch" || screen !== "editor" || remote) return;
+    if (workspace !== "stitch" || remote) return;
     let start = performance.now(), lastDone = computeStats(snapshot.current.P).totals.doneCells;
     const accrue = () => {
       if (document.hidden) { start = performance.now(); return; }
@@ -194,14 +174,14 @@ export default function App() {
     const timer = setInterval(accrue, 30000); const visible = () => { if (!document.hidden) start = performance.now(); };
     document.addEventListener("visibilitychange", visible);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
-  }, [workspace, screen, !!remote]);
+  }, [workspace, !!remote]);
   useEffect(() => {
-    if (workspace !== "stitch" || screen !== "editor" || !prefs.keepAwake || !navigator.wakeLock) return;
+    if (workspace !== "stitch" || !prefs.keepAwake || !navigator.wakeLock) return;
     let lock: WakeLockSentinel | null = null, stopped = false;
     const request = async () => { if (document.hidden) return; try { const result = await navigator.wakeLock.request("screen"); if (stopped) void result.release(); else lock = result; } catch { /* Power-saving policies can deny the request. */ } };
     void request(); document.addEventListener("visibilitychange", request);
     return () => { stopped = true; void lock?.release(); document.removeEventListener("visibilitychange", request); };
-  }, [workspace, screen, prefs.keepAwake]);
+  }, [workspace, prefs.keepAwake]);
 
   const selectionAction = (action: string) => {
     if (!selection) return;
@@ -218,7 +198,6 @@ export default function App() {
   };
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
-      if (screen !== "editor") return;
       // Rien ne doit passer pendant qu'on écrit : un raccourci déclenché dans un
       // champ mange des lettres. La cible peut ne pas être un Element.
       const cible = e.target;
@@ -230,13 +209,13 @@ export default function App() {
       else if (key === "p") { if (workspace === "stitch") chooseTool("park"); else setPanel("palette"); }
       else if (key === "f") setPanel("palette");
       else if (key === "t") setView((v) => v === "real" ? "flat" : v === "flat" ? "pattern" : "real");
-      else if (key === "escape") { closePanel(); setSelection(null); setCoachOpen(false); setAsk(null); }
+      else if (key === "escape") { closePanel(); setSelection(null); setCategoryPanel(null); }
     };
     window.addEventListener("keydown", keys); return () => window.removeEventListener("keydown", keys);
-  }, [screen, chooseTool, remote, workspace, closePanel]);
+  }, [chooseTool, remote, workspace, closePanel]);
 
-  /** Même décodeur, quel que soit le point d'entrée : accueil, atelier, panneau Projet. */
-  const openProjectFromFile = async (f: File, navigateToEditor = false): Promise<string | null> => {
+  /** Même décodeur pour tous les fichiers de projet, depuis le même atelier. */
+  const openProjectFromFile = async (f: File): Promise<string | null> => {
     try {
       if (!/\.(json|oxs)$/i.test(f.name)) throw new Error("Choisissez un fichier .pointzero.json, .json ou .oxs.");
       if (f.size > 25 * 1024 * 1024) throw new Error("Ce projet dépasse 25 Mo.");
@@ -246,7 +225,6 @@ export default function App() {
       setWorkspace("create");
       setView("pattern");
       setTool("cross");
-      if (navigateToEditor) { window.location.hash = "atelier"; setScreen("editor"); }
       notify(`« ${p.name} » ouvert · ${p.w} × ${p.h} points · ${p.palette.length} couleurs DMC`);
       return null;
     } catch (e) {
@@ -266,143 +244,44 @@ export default function App() {
     openFile: (f: File) => { void openProjectFromFile(f); },
     export: () => setPanel("export" as Panel), save: () => { saveProjectFile(P); notify("Fichier projet téléchargé"); },
     new: (w: number, h: number) => { try { const next = createPattern("Nouveau motif", w, h, P.count, P.strands); next.fabric = P.fabric; void loadPattern(next); } catch (e) { notify(e instanceof Error ? e.message : "Dimensions invalides"); } },
-    library: () => setPanel("library" as Panel), guide: () => openCoach(), share: () => setPanel("share" as Panel), prompt: () => { closePanel(); setPromptOpen(true); }, notify,
+    library: () => setPanel("library" as Panel), share: () => setPanel("share" as Panel), prompt: () => { closePanel(); setPromptOpen(true); }, notify,
   };
-
-  /* ------------------------------ Le guide ------------------------------ */
-  /**
-   * La piste suit le geste en cours : on ne guide pas « Broder » pendant qu'on
-   * crée. Le pas à pas et le champ de questions partagent la même cible — un
-   * seul pictogramme animé à la fois, sinon plus rien n'est lisible.
-   */
-  const coachStep = coachOpen ? resolveStep(coach, workspace) : null;
-  const coachSteps = TRACKS[workspace];
-  const coachIndex = coachStep ? stepIndex(workspace, coachStep.id) : coachSteps.length;
-  const coachTarget: CoachTarget | null = ask?.hits[0]?.entry.target ?? coachStep?.target ?? null;
-  const coachTool = coachTarget?.kind === "tool" ? coachTarget.tool : null;
-  const coachZone = coachTarget?.kind === "zone" ? coachTarget.zone : "";
-
-  const commitCoach = (next: CoachProgress) => { setCoach(next); saveCoach(next); };
-  const applyStep = () => {
-    setAsk(null);
-    setPanel(null); // la cible doit être visible, pas derrière un panneau
-    // Pas de recadrage : recentrer la grille à chaque étape fait perdre le point
-    // où l'on dessinait, et le guide n'a pas besoin de déplacer la vue.
-  };
-  const coachNext = useCallback(() => {
-    const steps = TRACKS[snapshot.current.workspace];
-    const step = resolveStep(snapshot.current.coach, snapshot.current.workspace);
-    const at = step ? steps.findIndex((v) => v.id === step.id) : -1;
-    const done = step && !snapshot.current.coach.done.includes(step.id) ? [...snapshot.current.coach.done, step.id] : snapshot.current.coach.done;
-    const following = steps[at + 1];
-    const next = { ...snapshot.current.coach, track: snapshot.current.workspace, done, stepId: following ? following.id : null, seen: true };
-    commitCoach(next);
-    applyStep();
-  }, []);
-  const coachPrev = () => {
-    const steps = TRACKS[workspace];
-    const at = coachStep ? steps.findIndex((v) => v.id === coachStep.id) : steps.length;
-    const previous = steps[Math.max(0, at - 1)];
-    commitCoach({ ...coach, track: workspace, stepId: previous.id, seen: true });
-    applyStep();
-  };
-  const openCoach = () => {
-    // Rouvrir reprend l'étape en cours ; un parcours terminé repart du début.
-    const steps = TRACKS[workspace];
-    const current = resolveStep(coach, workspace);
-    const stepId = current?.id ?? steps[0].id;
-    commitCoach({ ...coach, track: workspace, stepId, done: current ? coach.done : [], seen: true, dismissed: false });
-    setCoachOpen(true);
-    applyStep();
-  };
-  const hideCoach = () => { setCoachOpen(false); setAsk(null); };
-  const closeCoach = () => { hideCoach(); commitCoach({ ...coach, track: workspace, dismissed: true }); };
-  const coachAsk = (query: string) => setAsk({ query, hits: answerQuery(query) });
-  const coachPick = (id: string) => { const entry = entryById(id); if (entry) setAsk({ query: entry.ask, hits: [{ entry, score: 1 }] }); };
-
-  /* Une seule cible animée à la fois, outil ou zone. Les zones sont marquées
-     dans le DOM plutôt que par props : elles vivent dans cinq composants
-     différents, et le guide n'a pas à les connaître. */
-  useEffect(() => {
-    document.querySelectorAll(".coach-zone").forEach((e) => e.classList.remove("coach-zone"));
-    if (!coachZone) return;
-    const el = document.querySelector(`[data-guide="${coachZone}"]`)
-      ?? (coachZone === "project" || coachZone === "export" ? document.querySelector('[data-guide="project-button"]') : null);
-    el?.classList.add("coach-zone");
-    return () => el?.classList.remove("coach-zone");
-  }, [coachZone]);
-
-  /* Démarrage unique, à la première ouverture de l'atelier : jamais en lecture
-     partagée, jamais après une visite déjà vue ou fermée. */
-  useEffect(() => {
-    if (autoStarted.current || screen !== "editor") return;
-    autoStarted.current = true;
-    if (coach.seen || coach.dismissed || remote) return;
-    const started = { ...coach, track: workspace, stepId: TRACKS[workspace][0].id, seen: true };
-    commitCoach(started);
-    setCoachOpen(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen]);
-
-  /* L'étape mémorise son point de départ : un geste valide l'étape, pas un état
-     qui préexistait. Sans ça, « choisissez un fil » serait validé par le fil
-     déjà actif à l'ouverture. */
-  useEffect(() => {
-    if (!coachStep || stepStart.current.step === coachStep.id) return;
-    stepStart.current = { step: coachStep.id, color, strokes, panel };
-  }, [coachStep, color, strokes, panel]);
-
-  /* Validation par le geste réel. « Suivant » reste toujours disponible : un
-     guide qui bloque est pire que pas de guide du tout. */
-  useEffect(() => {
-    if (!coachOpen || !coachStep || ask) return;
-    const start = stepStart.current;
-    if (start.step !== coachStep.id) return;
-    const gesture = coachStep.gesture;
-    const done =
-      (gesture === "color" && color !== start.color) ||
-      (gesture === "stitch" && strokes > start.strokes) ||
-      (gesture === "panel" && panel === coachStep.expectPanel && panel !== start.panel);
-    if (done) coachNext();
-    // Les étapes « outil » se valident dans chooseTool, au toucher.
-  }, [coachOpen, coachStep, ask, color, strokes, panel, coachNext]);
 
   const projectInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const openEditor = () => { window.location.hash = "atelier"; setScreen("editor"); };
-  const openComposition = () => { if (!remote) { closePanel(); setCompositionInput(P); } };
-  const openSlame = () => { window.location.hash = "slame"; setScreen("slame"); };
-  const openLanding = () => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); closePanel(); history.pushState(null, "", window.location.pathname + window.location.search); setScreen("landing"); window.scrollTo(0, 0); };
-  const onRemote = useCallback((p: Pattern | null) => { setRemote(p); if (p) { setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); } }, []);
-
-  if (screen === "slame")
-    return <SlameStudio pattern={P} onHome={openLanding} onEditor={openEditor} />;
-
-  if (screen === "landing")
-    return (
-      <Landing
-        onOpen={openEditor}
-        onSlame={openSlame}
-        onImage={(image) => { setAutoImage(image); setWorkspace("create"); setView("pattern"); openEditor(); }}
-        onProjectFile={(file) => openProjectFromFile(file, true)}
-        onPdf={(file) => {
-          // Le fichier n'est jamais rendu sur la landing. Le calage, le puzzle
-          // et la livraison dans la grille DMC appartiennent à l'atelier.
-          setPdfFile(file);
-          setWorkspace("create");
-          setView("pattern");
-          openEditor();
-        }}
-        onMotif={(motif) => {
-          // Charger le patron en tant que vrai projet, sans laisser
-          // l'initialisation de l'exemple d'atelier l'écraser ensuite.
-          void loadPattern(motif).then(openEditor).catch(() => {
-            notify("Impossible d’ouvrir ce patron. Vérifiez la bibliothèque locale.");
-          });
-        }}
-      />
-    );
-  return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-black ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+  const openComposition = () => { if (!remote) { closePanel(); setCategoryPanel(null); setCompositionInput(P); } };
+  const onRemote = useCallback((p: Pattern | null) => {
+    setRemote(p);
+    if (p) { setShowWelcome(false); setCategoryPanel(null); setActiveCategory("stitch"); setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); }
+  }, []);
+  const importAnyFile = (chosen: File) => {
+    if (/\.(json|oxs)$/i.test(chosen.name)) { void openProjectFromFile(chosen); }
+    else if (/\.pdf$/i.test(chosen.name) || chosen.type === "application/pdf") { setPdfFile(chosen); }
+    else if (chosen.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(chosen.name)) { setAutoImage(chosen); }
+    else { notify("Format non reconnu : image, PDF, JSON ou OXS."); return; }
+    setShowWelcome(false); setCategoryPanel(null);
+  };
+  const openCategory = (next: AtelierCategory) => {
+    setActiveCategory(next);
+    setPanel(null);
+    if (next === "music") { setShowWelcome(false); setCategoryPanel(null); setMusicMounted(true); return; }
+    if (next === "stitch") chooseWorkspace("stitch");
+    else if (next === "compose" || next === "threads") chooseWorkspace("create");
+    if (next === "create" && showWelcome) { setCategoryPanel(null); return; }
+    setShowWelcome(false);
+    setCategoryPanel((v) => v === next ? null : next);
+  };
+  const createActions = {
+    prompt: promptText, onPrompt: setPromptText,
+    onGenerate: () => setPromptOpen(true),
+    onImport: importAnyFile,
+    onBlank: () => { panelActions.new(80, 80); setActiveCategory("compose"); },
+    onLibrary: () => { setShowWelcome(false); setCategoryPanel(null); setPanel("library"); },
+  };
+  const contextSection: "prepare" | "edit" | "follow" | "settings" =
+    panel === "project" ? "settings" : categoryPanel === "compose" ? "edit" :
+    categoryPanel === "threads" ? "prepare" : categoryPanel === "stitch" ? "follow" : "settings";
+  return <div className={`fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#f1f0ec] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
       type="file"
@@ -426,15 +305,32 @@ export default function App() {
     <Canvas pattern={P} tool={remote ? "hand" : tool} color={color} view={view} symbols={symbols} highlightActive={workspace === "stitch"} insets={insets} fitKey={fitKey} onlyActive={prefs.onlyActive} highContrast={prefs.highContrast} pencilOnly={prefs.pencilOnly} symmetry={prefs.symmetry} annotation={prefs.annotation} readOnly={!!remote} selection={selection} halfDirection={prefs.halfDirection}
       onSelection={setSelection} onBegin={() => { if (!remote) dispatch({ type: "begin" }); }}
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
-      onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); if (changed) setStrokes((n) => n + 1); }}
+      onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); }}
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }} />
-    <button type="button" onClick={openSlame} className="fixed right-4 top-[78px] z-40 rounded-xl border border-[#baa5ff] bg-[#473677] px-4 py-2 text-sm font-semibold text-white shadow-lg" aria-label="Ouvrir SLÂME : broder la musique et parler">♫ SLÂME</button>
-    <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onImportProject={() => projectInputRef.current?.click()} onCompose={openComposition} onImportImage={() => imageInputRef.current?.click()} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
-    <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} coachTool={coachOpen ? coachTool : null} />
+    <TopBar pattern={P} onCreate={() => { setPanel(null); setActiveCategory("create"); setCategoryPanel("create"); setShowWelcome(false); }}
+      canUndo={!remote && store.past.length > 0 && !store.pending}
+      canRedo={!remote && store.future.length > 0 && !store.pending}
+      onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })}
+      symbols={symbols} onSymbols={() => setSymbols((v) => !v)}
+      view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)}
+      onLibrary={() => { setCategoryPanel(null); setPanel("library"); }}
+      onExport={() => { setCategoryPanel(null); setPanel("export"); }}
+      onSettings={() => { setCategoryPanel(null); setPanel("project"); }}
+      onShare={() => { setCategoryPanel(null); setPanel("share"); }}
+      saving={saving} />
+    <CategoryBar active={activeCategory} onChoose={openCategory} />
+    {showWelcome && !remote && <div className="pointer-events-none fixed inset-0 z-[28] flex items-center justify-center px-3 pb-16 pt-28"><div className="pointer-events-auto"><AtelierCreate {...createActions} /></div></div>}
+    <Sheet open={categoryPanel === "create"} onClose={() => setCategoryPanel(null)} title="Créer" subtitle="Une seule création, directement dans la grille"><AtelierCreate {...createActions} compact /></Sheet>
+    <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />
     {selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
-    <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || !!file} />
+    <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || categoryPanel !== null || showWelcome || activeCategory === "music" || !!file} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
-    <WorkspacePanel open={panel === "project"} onClose={closePanel} pattern={P} onSet={setPattern} actions={panelActions} prefs={prefs} onPrefs={setPrefs} onTool={chooseTool} tool={tool} color={color} onColor={(idx) => setColor(idx)} workspace={workspace} />
+    <WorkspacePanel open={panel === "project" || categoryPanel === "compose" || categoryPanel === "threads" || categoryPanel === "stitch"}
+      onClose={() => { setCategoryPanel(null); closePanel(); }} pattern={P} onSet={setPattern}
+      actions={panelActions} prefs={prefs} onPrefs={setPrefs} onTool={chooseTool} tool={tool} color={color}
+      onColor={setColor} workspace={workspace} section={contextSection}
+      extraActions={categoryPanel === "compose" ? <button className="btn-tinted" onClick={openComposition}>Composition intelligente · aperçu</button> :
+      categoryPanel === "threads" ? <button className="btn-tinted" onClick={() => { setCategoryPanel(null); setPanel("palette"); }}>Palette et stock DMC</button> : undefined} />
     <LibrarySheet open={panel === "library"} onClose={closePanel} onLoad={(p) => void loadPattern(p)} onNew={() => panelActions.new(80, 80)} inventory={inventory} />
     {autoImage && <AutomaticImageImport file={autoImage}
       onCancel={() => setAutoImage(null)}
@@ -453,13 +349,13 @@ export default function App() {
             setPdfFile(null);
             setWorkspace("create");
             setView("pattern");
-            setCompositionInput(p);
-            notify("Patron PDF reconstitué. Les couleurs source sont conservées et la composition reste facultative.");
+            void loadPattern(p);
+            notify("Patron PDF ouvert directement dans la grille. La composition reste facultative.");
           }}
         />
       </ErrorBoundary>
     )}
-    {promptOpen && <PromptStudio initialPrompt="" onClose={() => setPromptOpen(false)} onImport={(p) => {
+    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={(p) => {
       setPromptOpen(false); setWorkspace("create"); setView("pattern");
       setCompositionInput(p);
       notify("Image générée. Choisissez le niveau de composition avant d'utiliser le motif.");
@@ -479,24 +375,10 @@ export default function App() {
       </ErrorBoundary>
     )}
     {panel === "export" && <ExportStudio pattern={P} onClose={closePanel} />}
-    <Coach
-      open={coachOpen && !remote}
-      track={workspace}
-      step={coachStep}
-      index={coachIndex}
-      total={coachSteps.length}
-      ask={ask}
-      onAsk={coachAsk}
-      onPick={coachPick}
-      onBackToStep={() => setAsk(null)}
-      onNext={coachNext}
-      onPrev={coachPrev}
-      onClose={closeCoach}
-    />
     <PeerShare open={panel === "share"} onClose={closePanel} pattern={store.present} onView={onRemote} />
+    {musicMounted && <div className={activeCategory === "music" ? "" : "hidden"}><SlameStudio pattern={P} active={activeCategory === "music"} onEditor={() => { chooseWorkspace("create"); setActiveCategory("create"); setCategoryPanel(null); }} /></div>}
     {remote && <button onClick={() => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); }} className="glass fixed left-1/2 top-[78px] z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12px] text-accent-2">Lecture partagée · revenir à mon projet</button>}
     {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: desktop ? 92 : 164 }}>{toast}</div>}
-    {busy && <div className="fixed inset-0 z-[90] grid place-items-center bg-black/35" role="status" aria-busy="true"><div className="glass-strong flex items-center gap-3 rounded-[20px] px-5 py-4 text-[15px]"><span className="spinner" />{busy}</div></div>}
     <span className="sr-only">Direction B. {BASE_FLOSS.length} références DMC documentées. {FLOSS[color]?.name}.</span>
   </div>;
 }
