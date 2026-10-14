@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { ArrowDown, ArrowUp, Check, Copy, Download, Eye, EyeOff, FileJson, GitMerge, Lock, LockOpen, Scissors, Save, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Download, Eye, EyeOff, FileJson, GitMerge, Lock, LockOpen, ScanSearch, Scissors, Save, Trash2, X, ZoomIn, ZoomOut } from "lucide-react";
+import StitchMagnifier, { clampFocus, type StitchFocus } from "./StitchMagnifier";
 import { FLOSS, flossIndex } from "../lib/dmc";
 import { downloadBlob, saveProjectFile } from "../lib/io";
 import { buildPdf, pdfFileName } from "../lib/pdf";
@@ -16,9 +17,10 @@ import { adaptPatternToProfile, loadBrodeuseProfile, type AdaptationMode } from 
 import BrodeuseProfilePanel from "./BrodeuseProfilePanel";
 
 const inkColor=(idx:number)=>FLOSS[idx]?.hex??"#555";
-function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
+function SubjectPreview({pattern,scene,selected,onChoose,onMove,zoom=1,onInspect}:{
   pattern:Pattern;scene:SubjectScene;selected:string|null;
   onChoose:(id:string)=>void;onMove:(id:string,x:number,y:number)=>void;
+  zoom?:number;onInspect?:(point:StitchFocus)=>void;
 }) {
   const canvas=useRef<HTMLCanvasElement>(null);
   const dragging=useRef<{id:string;startX:number;startY:number;x:number;y:number}|null>(null);
@@ -79,9 +81,10 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
       y:(e.clientY-box.top)/Math.max(1,box.height)*pattern.h,
     };
   };
+  const scale=Math.max(2,Math.min(9,720/Math.max(pattern.w,pattern.h)));
   return <canvas ref={canvas} role="img" aria-label="Grille de sujets : cliquer ou faire glisser pour sélectionner et déplacer"
-    className="mx-auto block w-full max-w-[720px] cursor-move touch-none rounded-[5px] border border-black/15 bg-white"
-    style={{aspectRatio:pattern.w+"/"+pattern.h,imageRendering:"pixelated"}}
+    className={`mx-auto block cursor-move touch-none rounded-[5px] border border-black/15 bg-white ${zoom===1?"w-full max-w-[720px]":"max-w-none"}`}
+    style={{aspectRatio:pattern.w+"/"+pattern.h,imageRendering:"pixelated",width:zoom>1?Math.ceil(pattern.w*scale*zoom):undefined}}
     onPointerDown={e=>{
       const p=point(e);
       const target=[...scene.layers].reverse().find(l=>{
@@ -95,8 +98,9 @@ function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
       e.currentTarget.setPointerCapture?.(e.pointerId);
     }}
     onPointerMove={e=>{
-      const d=dragging.current;if(!d)return;
       const p=point(e);
+      onInspect?.(clampFocus(pattern,p));
+      const d=dragging.current;if(!d)return;
       onMove(d.id,d.x+Math.round(p.x-d.startX),d.y+Math.round(p.y-d.startY));
     }}
     onPointerUp={()=>{dragging.current=null;}}
@@ -110,6 +114,9 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   const [scene,setScene]=useState<SubjectScene>(()=>sceneFromPattern(pattern)??detectSubjects(pattern).scene);
   const [selectedId,setSelectedId]=useState<string|null>(()=>scene.layers[0]?.id??null);
   const [message,setMessage]=useState("");
+  const [zoom,setZoom]=useState(1);
+  const [loupe,setLoupe]=useState(true);
+  const [focus,setFocus]=useState<StitchFocus>(()=>({x:Math.floor(pattern.w/2),y:Math.floor(pattern.h/2)}));
   const [busy,setBusy]=useState(false);
   const [library,setLibrary]=useState(loadSubjectLibrary);
   const [split,setSplit]=useState({x:0,y:0,w:10,h:10});
@@ -266,9 +273,28 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
               className={"rounded-[5px] border px-2 py-1.5 capitalize "+(mode===m?"border-white bg-white text-black":"border-white/25 bg-white/[.04] text-white/80 hover:bg-white/10")}
               onClick={()=>{setMode(m);setConfirmed(false);}}>{m==="stock"?"Mes fils":m==="debutant"?"Débutant":m==="reduite"?"Peu de couleurs":m==="petit"?"Petit format":m==="expert"?"Expert":"Original"}</button>)}
         </div>
-        <div className="rounded-[6px] border border-white/15 bg-[#f8f4ee] p-3">
-          {output&&<SubjectPreview pattern={output} scene={scene} selected={selectedId} onChoose={setSelectedId} onMove={(id,x,y)=>adjust(id,{x,y})}/>}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[5px] border border-white/15 bg-[#09090b] p-2" role="group" aria-label="Contrôle du zoom des sujets">
+          <span className="text-[11px] text-white/65">Inspecter les points</span>
+          <div className="flex items-center gap-1">
+            <button type="button" aria-label="Zoom arrière sujets" disabled={zoom===1} onClick={()=>setZoom(v=>Math.max(1,v/2))}
+              className="grid size-9 place-items-center rounded-[4px] text-white/80 hover:bg-white/10 disabled:opacity-25"><ZoomOut size={16}/></button>
+            <span className="w-[35px] text-center font-mono text-xs">{zoom}×</span>
+            <button type="button" aria-label="Zoom avant sujets" disabled={zoom===8} onClick={()=>setZoom(v=>Math.min(8,v*2))}
+              className="grid size-9 place-items-center rounded-[4px] text-white/80 hover:bg-white/10 disabled:opacity-25"><ZoomIn size={16}/></button>
+            <button type="button" aria-label="Activer la loupe des sujets" aria-pressed={loupe} onClick={()=>setLoupe(v=>!v)}
+              className={`ml-2 flex min-h-9 items-center gap-1 rounded-[4px] px-2 text-xs ${loupe?"bg-white text-black":"text-white/75 hover:bg-white/10"}`}><ScanSearch size={15}/> Loupe</button>
+          </div>
         </div>
+        <div className="relative rounded-[6px] border border-white/15 bg-[#f8f4ee]">
+          <div className="thin-scroll max-h-[65dvh] min-h-[260px] overflow-auto p-3" aria-label="Zone de zoom des sujets">
+            {output&&<div className="flex min-w-max items-center justify-center"><SubjectPreview pattern={output} scene={scene} selected={selectedId}
+              onChoose={setSelectedId} onMove={(id,x,y)=>adjust(id,{x,y})} zoom={zoom} onInspect={setFocus}/></div>}
+          </div>
+          {loupe&&output&&<div className="pointer-events-none absolute right-2 top-2 z-10 max-w-[min(252px,70%)]">
+            <StitchMagnifier pattern={output} focus={focus}/>
+          </div>}
+        </div>
+        <p className="text-[11px] text-white/55">Déplacez les sujets directement sur la grille, zoom 1×–8× et loupe de contrôle des points. Le patron source reste intact.</p>
         {adapted&&<div className="space-y-1 text-xs text-white/70">
           <p>{adapted.report.afterColors} références DMC · {adapted.report.substitutions.length} substitutions · {adapted.report.estimatedMeters} m de brin simple estimés</p>
           {adapted.report.substitutions.length>0&&<details className="rounded-md border border-white/10 p-2">
