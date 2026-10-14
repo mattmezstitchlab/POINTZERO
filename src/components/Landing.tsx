@@ -8,6 +8,7 @@ import { appliquerZones, couleursZone, type RectZone, type ReglageZone } from ".
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 import { appendWaypoint, type Point } from "../lib/slame";
 import HomeSlamePanel, { type GrilleMode } from "./HomeSlamePanel";
+import BoutiquePatrons from "./BoutiquePatrons";
 
 interface Props {
   onOpen: () => void;
@@ -44,6 +45,7 @@ export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
   const [railEdits, setRailEdits] = useState<Pattern | null>(null);
   const [nuancier, setNuancier] = useState(false);
   const [modeGrille, setModeGrille] = useState<GrilleMode>("toile");
+  const [boutique, setBoutique] = useState(false);
   const [musicTrail, setMusicTrail] = useState<Point[]>([]);
   const addMusicPoint = useCallback((point: Point) => {
     setMusicTrail(trail => appendWaypoint(trail, point));
@@ -175,8 +177,10 @@ export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
       <button type="button" onClick={() => setModeGrille("toile")} aria-pressed={modeGrille === "toile"} className={modeGrille === "toile" ? "rounded-md bg-[#1d1d21] px-4 py-2.5 text-sm font-semibold text-white" : "rounded-md px-4 py-2.5 text-sm hover:bg-black/5"}>Créer</button>
       <button type="button" onClick={() => setModeGrille("musique")} aria-pressed={modeGrille === "musique"} className={modeGrille === "musique" ? "rounded-md bg-[#1d1d21] px-4 py-2.5 text-sm font-semibold text-white" : "rounded-md px-4 py-2.5 text-sm hover:bg-black/5"}>♫ Musique</button>
       <button type="button" onClick={() => setModeGrille("parole")} aria-pressed={modeGrille === "parole"} className={modeGrille === "parole" ? "rounded-md bg-[#1d1d21] px-4 py-2.5 text-sm font-semibold text-white" : "rounded-md px-4 py-2.5 text-sm hover:bg-black/5"}>Parole</button>
+      <button type="button" onClick={() => setBoutique(true)} className="rounded-md bg-[#efe9d9] px-4 py-2.5 text-sm font-semibold hover:bg-[#e6dec9]">Boutique · patrons</button>
       <button type="button" onClick={onOpen} className="rounded-md px-4 py-2.5 text-sm hover:bg-black/5">Broder · outils précis ↗</button>
     </nav>
+    {boutique && <BoutiquePatrons onClose={() => setBoutique(false)} onOpenPattern={onMotif} />}
     <HomeSlamePanel
       mode={modeGrille}
       pattern={patternRail}
