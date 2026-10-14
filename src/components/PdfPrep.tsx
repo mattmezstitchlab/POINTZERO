@@ -527,10 +527,8 @@ export default function PdfPrep({
             </p>
             <p className="mt-2 text-[12px] text-label-2" role="status">
               {vector?.ok
-                ? `Lecture fiable de ${vector.cells.size} cases par leur code DMC exact, sans approximation RGB.`
+                ? `Lecture vectorielle de ${vector.cells.size} cases avec codes DMC du PDF, à vérifier dans l’aperçu.`
                 : `Légende image : ${analysis.legend.length} correspondance(s) détectée(s). Les codes absents ne peuvent pas être devinés depuis des symboles noirs et blancs.`}
-            </p>
-            <p className="sr-only">
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {analysis.pages.map((p) => (
@@ -629,7 +627,7 @@ export default function PdfPrep({
                 <button className="btn-quiet flex-1" onClick={() => setStage(0)}>
                   Retour
                 </button>
-                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => setStage(2)}>
+                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => { setCenterTab(mode === "vecteur" ? "preview" : "puzzle"); setStage(2); }}>
                   Monter le puzzle →
                 </button>
               </div>
@@ -871,7 +869,7 @@ export default function PdfPrep({
                 <h3 className="mb-2 text-[13px] font-semibold">Lecture des points</h3>
                 <div className="seg mb-2">
                   {vector?.ok && (
-                    <button type="button" aria-pressed={mode === "vecteur"} onClick={() => setMode("vecteur")}>
+                    <button type="button" aria-pressed={mode === "vecteur"} onClick={() => { setMode("vecteur"); setCenterTab("preview"); }}>
                       DMC exacts
                     </button>
                   )}
@@ -884,7 +882,7 @@ export default function PdfPrep({
                 </div>
                 <p className="text-[11.5px] leading-relaxed text-label-3">
                   {mode === "vecteur"
-                    ? "Codes DMC exacts lus dans la légende et liés aux symboles vectoriels. Les symboles non associés restent vides."
+                    ? "Codes DMC de la légende associés aux symboles vectoriels. L’assemblage suit les axes du PDF (pas le déplacement manuel des tuiles). Les symboles inconnus restent vides."
                     : mode === "auto"
                       ? "Associe les symboles lisibles à la légende DMC ; pour les cases visiblement colorées, propose le fil le plus proche."
                       : "Photographie couleur : estimation des références DMC à partir des pixels imprimés. À vérifier avant de broder."}
