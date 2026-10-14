@@ -19,7 +19,6 @@ const sectionNames:{kind:SectionKind;label:string;description:string}[]=[
 ];
 const localToday=()=>new Date().toISOString().slice(0,10);
 const studioTxt="text-xs text-white/70";
-const schoolSelector="w-full rounded-[5px] border border-white/25 bg-[#1b1b20] px-3 py-2 text-xs text-white";
 const bounded=(value:string,n:number)=>value.slice(0,n);
 export default function AcademyStudio({onBack,onAccessibility}:{onBack:()=>void;onAccessibility:()=>void}){
  const [project,setProject]=useState<SiteProject>(readAcademy);
