@@ -400,6 +400,12 @@ export default function PdfPrep({
       setSnapGuides(null);
     }
 
+    // The exact vector parser fixes coordinates to their source pages.
+    // Switch to symbol/image reconciliation only when a card truly moves,
+    // otherwise a magnetic adjustment would be silently ignored on export.
+    if ((newX !== drag.startTileX || newY !== drag.startTileY) && mode === "vecteur") {
+      setMode("auto");
+    }
     setManualPositions((prev) => ({
       ...prev,
       [drag.id]: { x: Math.max(0, newX), y: Math.max(0, newY) },
@@ -421,6 +427,7 @@ export default function PdfPrep({
   const arrangeMosaic = (cols: number) => {
     setPerRow(cols);
     setManualPositions(positionsPuzzle(effective, cols, uniformSizes, uniformDim));
+    if (mode === "vecteur") setMode("auto");
   };
 
   const moveCard = (index: number, delta: number) => {
@@ -433,6 +440,7 @@ export default function PdfPrep({
     });
     // Les positions suivent le nouvel ordre.
     setManualPositions({});
+    if (mode === "vecteur") setMode("auto");
   };
 
   const resetToDefault = () => {
@@ -741,7 +749,7 @@ export default function PdfPrep({
                 <button className="btn-quiet flex-1" onClick={() => setStage(0)}>
                   Retour
                 </button>
-                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => { setCenterTab(mode === "vecteur" ? "preview" : "puzzle"); setStage(2); }}>
+                <button className="btn-primary flex-1" disabled={!effective.length} onClick={() => { setCenterTab(studioEmbedded ? "puzzle" : (mode === "vecteur" ? "preview" : "puzzle")); setStage(2); }}>
                   Monter le puzzle →
                 </button>
               </div>
@@ -1025,7 +1033,7 @@ export default function PdfPrep({
                 </div>
                 <p className="text-[11.5px] leading-relaxed text-label-3">
                   {mode === "vecteur"
-                    ? "Codes DMC de la légende associés aux symboles vectoriels. L’assemblage suit les axes du PDF (pas le déplacement manuel des tuiles). Les symboles inconnus restent vides."
+                    ? "Codes DMC de la légende et symboles vectoriels. Dès qu’une carte est déplacée, la lecture automatique prend le relais pour respecter les positions magnétiques. Vérifiez les codes obtenus."
                     : mode === "auto"
                       ? "Associe les symboles lisibles à la légende DMC ; pour les cases visiblement colorées, propose le fil le plus proche."
                       : "Photographie couleur : estimation des références DMC à partir des pixels imprimés. À vérifier avant de broder."}
