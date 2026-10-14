@@ -31,7 +31,7 @@ export function createAdminDocument(kind:AdminDocKind,projectId=""):AdminDocumen
   };
 }
 export function documentTotals(doc:AdminDocument){
-  const subtotal=doc.items.reduce((sum,i)=>sum+i.quantity*i.unitCents,0);
+  const subtotal=Math.round(doc.items.reduce((sum,i)=>sum+i.quantity*i.unitCents,0));
   const vat=Math.round(subtotal*doc.vatRate/100);
   return {subtotal,vat,total:subtotal+vat};
 }
@@ -80,7 +80,7 @@ export function docToHTML(d:AdminDocument):string{
     'table{border-collapse:collapse;width:100%;margin:28px 0}th,td{text-align:left;padding:9px 5px;border-bottom:1px solid #ddd}th{font-size:12px}'+
     '.totals{text-align:right;margin:10px 0 25px;line-height:2}.body{white-space:pre-wrap;overflow-wrap:anywhere;margin:30px 0;min-height:80px}footer{border-top:1px solid #ddd;'+
     'padding-top:12px;color:#666;font-size:11px;margin-top:55px;white-space:pre-wrap}</style></head><body><header><div><small>POINTZERO · Administration</small><h1>'+
-    esc(d.title||docKinds.find(k=>k.id===d.kind)?.label??"Document")+'</h1><div class="meta">'+esc(d.reference)+'</div></div><div class="meta">Émis le '+esc(d.issueDate)+
+    esc(d.title||(docKinds.find(k=>k.id===d.kind)?.label??"Document"))+'</h1><div class="meta">'+esc(d.reference)+'</div></div><div class="meta">Émis le '+esc(d.issueDate)+
     (monetary?'<div>Échéance : '+esc(d.dueDate)+'</div>':"")+'</div></header><div class="parties"><div><h2>Émetteur</h2><div class="pre">'+esc(d.issuer)+
     '\n'+esc(d.issuerAddress)+'\n'+esc(d.issuerContact)+'</div></div><div><h2>Destinataire</h2><div class="pre">'+esc(d.recipient)+'\n'+esc(d.recipientAddress)+
     '</div></div></div><h2>'+esc(d.subject)+'</h2>'+lines+'<div class="body">'+esc(d.body)+'</div>'+
