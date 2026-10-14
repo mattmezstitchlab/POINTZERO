@@ -12,7 +12,7 @@ export interface SpaceMoment {id:string;title:string;time:string;personIds:strin
 export interface SpaceTile {id:string;kind:TileKind;title:string;visible:boolean;refId:string}
 export interface CausalSignal {
  id:string;momentId:string;authorId:string;kind:SignalKind;delayMinutes:number;message:string;
- status:"brouillon"|"validé";created:string;acknowledgedRecipientIds:string[]
+ status:"brouillon"|"validé";created:string;plannedRecipientIds:string[]
 }
 export interface WorldSpace {
  id:string;kind:SpaceKind;title:string;description:string;created:string;
@@ -54,7 +54,7 @@ export function newMoment(title:string,time=""):SpaceMoment{
  return {id:ids(),title:title.trim(),time,personIds:[],followsMomentIds:[]};
 }
 export function newSignal(momentId:string,authorId:string,kind:SignalKind,delayMinutes:number,message:string):CausalSignal{
- return {id:ids(),momentId,authorId,kind,delayMinutes,message:message.trim(),status:"brouillon",created:now(),acknowledgedRecipientIds:[]};
+ return {id:ids(),momentId,authorId,kind,delayMinutes,message:message.trim(),status:"brouillon",created:now(),plannedRecipientIds:[]};
 }
 export function safeWorld(raw:unknown):WorldStore|null{
  if(!raw||typeof raw!=="object")return null;
@@ -93,12 +93,13 @@ export function safeWorld(raw:unknown):WorldStore|null{
     (sig.authorId!==""&&!personIds.has(sig.authorId))||
     !["retard","changement","information"].includes(sig.kind)||!Number.isInteger(sig.delayMinutes)||sig.delayMinutes<0||sig.delayMinutes>240||
     !bounded(sig.message,500)||!["brouillon","validé"].includes(sig.status)||!bounded(sig.created,40)||
-    !Array.isArray(sig.acknowledgedRecipientIds)||!uniq(sig.acknowledgedRecipientIds)||
-    sig.acknowledgedRecipientIds.some(v=>!personIds.has(v)))return null;
+    !Array.isArray(sig.plannedRecipientIds)||!uniq(sig.plannedRecipientIds)||
+    sig.plannedRecipientIds.some(v=>!personIds.has(v)))return null;
    signalIds.add(sig.id);
   }
  }
- if(w.selectedSpaceId!==""&&!spaceIds.has(w.selectedSpaceId))return null;
+ const selectedId=w.selectedSpaceId??"";
+ if(selectedId!==""&&!spaceIds.has(selectedId))return null;
  return w as WorldStore;
 }
 export function readWorld():WorldStore{
@@ -153,7 +154,7 @@ export function validateSignal(space:WorldSpace,signalId:string):WorldSpace{
  if(!signal||signal.status!=="brouillon")return space;
  const impacted=previewImpact(space,signal);
  return {...space,signals:space.signals.map(s=>s.id===signalId?
-   {...s,status:"validé",acknowledgedRecipientIds:impacted.recipients.map(p=>p.id)}:s)};
+   {...s,status:"validé",plannedRecipientIds:impacted.recipients.map(p=>p.id)}:s)};
 }
 export type TrainingStep={id:string;title:string;description:string;passed:boolean};
 export function journeySteps(space:WorldSpace|null):TrainingStep[]{
@@ -163,26 +164,29 @@ export function journeySteps(space:WorldSpace|null):TrainingStep[]{
   {id:"people",title:"Relier les personnes",description:"Ajouter deux personnes et définir leurs rôles.",passed:!!space&&space.people.length>=2},
   {id:"moments",title:"Préparer les moments",description:"Prévoir deux moments de l'événement ou du projet.",passed:!!space&&space.moments.length>=2},
   {id:"choice",title:"Consentement",description:"Enregistrer au moins un accord explicite de réception pour un moment.",passed:!!space&&space.people.some(p=>p.notificationsOptIn&&p.subscribedMomentIds.length>0)},
+  {id:"branch",title:"Relier une création",description:"Brancher volontairement un projet Academy, Programme ou Music.",passed:!!space&&space.tiles.some(t=>t.refId.length>0)},
   {id:"causal",title:"Comprendre les impacts",description:"Créer un signal, vérifier l'onde et valider son plan sans envoi réel.",passed:!!space&&space.signals.some(s=>s.status==="validé")}
  ];
 }
-/** Read an existing record by its canonical identifier, without copying the document. */
-export function linkedModuleInfo(tile:SpaceTile):{label:string;id:string}|null{
+/** Read original records by canonical IDs: never copy or silently switch resources. */
+export function sourcesForTile(kind:TileKind):{label:string;id:string}[]{
  try{
-  if(tile.kind==="academy"){
+  if(kind==="academy"){
    const p=validProject(JSON.parse(localStorage.getItem(ACADEMY_KEY)??"null"));
-   return p?{label:p.siteTitle,id:p.id}:null;
+   return p?[{label:p.siteTitle,id:p.id}]:[];
   }
-  if(tile.kind==="programme"){
+  if(kind==="programme"){
    const p=safeProgrammeStore(JSON.parse(localStorage.getItem(PROGRAMME_STORAGE)??"null"));
-   const hit=tile.refId?p?.programmes.find(v=>v.id===tile.refId):p?.programmes[0];
-   return hit?{label:hit.title,id:hit.id}:null;
+   return p?.programmes.map(v=>({id:v.id,label:v.title}))??[];
   }
-  if(tile.kind==="musique"){
+  if(kind==="musique"){
    const music=safeMusicLabel(JSON.parse(localStorage.getItem(MUSIC_LABEL_KEY)??"null"));
-   const event=tile.refId?music?.events.find(e=>e.id===tile.refId):music?.events[0];
-   return event?{label:event.title,id:event.id}:null;
+   return music?.events.map(v=>({id:v.id,label:v.title}))??[];
   }
  }catch{/* Invalid cross-studio data is not imported. */}
- return null;
+ return [];
+}
+export function linkedModuleInfo(tile:SpaceTile):{label:string;id:string}|null{
+ if(!tile.refId)return null;
+ return sourcesForTile(tile.kind).find(v=>v.id===tile.refId)??null;
 }
