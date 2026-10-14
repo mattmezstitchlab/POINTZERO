@@ -258,9 +258,9 @@ export default function App() {
     if (p) { setShowWelcome(false); setCategoryPanel(null); setActiveCategory("stitch"); setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); }
   }, []);
   const importAnyFile = (chosen: File) => {
-    if (/\\.(json|oxs)$/i.test(chosen.name)) { void openProjectFromFile(chosen); }
-    else if (/\\.pdf$/i.test(chosen.name) || chosen.type === "application/pdf") { setPdfFile(chosen); }
-    else if (chosen.type.startsWith("image/") || /\\.(png|jpe?g|webp)$/i.test(chosen.name)) { setAutoImage(chosen); }
+    if (/\.(json|oxs)$/i.test(chosen.name)) { void openProjectFromFile(chosen); }
+    else if (/\.pdf$/i.test(chosen.name) || chosen.type === "application/pdf") { setPdfFile(chosen); }
+    else if (chosen.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(chosen.name)) { setAutoImage(chosen); }
     else { notify("Format non reconnu : image, PDF, JSON ou OXS."); return; }
     setShowWelcome(false); setCategoryPanel(null);
   };
