@@ -9,6 +9,7 @@ import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 
 interface Props {
   onOpen: () => void;
+  onSlame?: () => void;
   onMotif: (p: Pattern) => void;
 }
 
@@ -31,7 +32,7 @@ const SLOTS_POSE = [
  * palette DMC vivent sur la toile, et l'outil zone serre ou desserre les
  * couleurs d'un rectangle de cases, selon la toile qu'on a chez soi.
  */
-export default function Landing({ onOpen, onMotif }: Props) {
+export default function Landing({ onOpen, onMotif, onSlame = onOpen }: Props) {
   const [promptText, setPromptText] = useState("");
   const [source, setSource] = useState<MotifGrille | null>(null);
   const [reglages, setReglages] = useState<ReglageZone[]>([]);
@@ -159,6 +160,7 @@ export default function Landing({ onOpen, onMotif }: Props) {
       />
       </div>
     </ToileInfinie>
+    <button type="button" onClick={onSlame} style={{position:"fixed",top:83,right:18,zIndex:70,background:"#39305c",border:"1px solid #aa90f2",borderRadius:10,padding:"12px 18px",fontSize:14,color:"#fff",fontWeight:700,boxShadow:"0 7px 30px #0005"}} aria-label="Découvrir SLÂME, composer de la musique et des paroles à partir de la grille">♫ SLÂME · Écouter la grille</button>
     {patternRail && (
       <>
         <FlossRail

@@ -26,6 +26,7 @@ import ExportStudio from "./components/ExportStudio";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Coach, { type Ask } from "./components/Coach";
 import PeerShare from "./components/PeerShare";
+import SlameStudio from "./components/SlameStudio";
 import { TRACKS, answerQuery, entryById, loadCoach, resolveStep, saveCoach, stepIndex, type CoachProgress, type CoachTarget } from "./lib/coach";
 
 type Panel = "palette" | "project" | "library" | "share" | "export" | null;
@@ -53,7 +54,7 @@ function initialPreferences(): Preferences {
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 export default function App() {
-  const [screen, setScreen] = useState<"landing" | "editor">(() => window.location.hash === "#atelier" ? "editor" : "landing");
+  const [screen, setScreen] = useState<"landing" | "editor" | "slame">(() => window.location.hash === "#atelier" ? "editor" : window.location.hash === "#slame" ? "slame" : "landing");
   const [boot] = useState(loadStored);
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
@@ -137,7 +138,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const sync = () => setScreen(window.location.hash === "#atelier" ? "editor" : "landing");
+    const sync = () => setScreen(window.location.hash === "#atelier" ? "editor" : window.location.hash === "#slame" ? "slame" : "landing");
     window.addEventListener("hashchange", sync); window.addEventListener("popstate", sync);
     return () => { window.removeEventListener("hashchange", sync); window.removeEventListener("popstate", sync); };
   }, []);
@@ -343,13 +344,18 @@ export default function App() {
   }, [coachOpen, coachStep, ask, color, strokes, panel, coachNext]);
 
   const openEditor = () => { window.location.hash = "atelier"; setScreen("editor"); };
+  const openSlame = () => { window.location.hash = "slame"; setScreen("slame"); };
   const openLanding = () => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); closePanel(); history.pushState(null, "", window.location.pathname + window.location.search); setScreen("landing"); window.scrollTo(0, 0); };
   const onRemote = useCallback((p: Pattern | null) => { setRemote(p); if (p) { setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); } }, []);
+
+  if (screen === "slame")
+    return <SlameStudio pattern={P} onHome={openLanding} onEditor={openEditor} />;
 
   if (screen === "landing")
     return (
       <Landing
         onOpen={openEditor}
+        onSlame={openSlame}
         onMotif={(motif) => {
           setPattern(motif);
           openEditor();
@@ -362,6 +368,7 @@ export default function App() {
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
       onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); if (changed) setStrokes((n) => n + 1); }}
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }} />
+    <button type="button" onClick={openSlame} className="fixed right-4 top-[78px] z-40 rounded-xl border border-[#baa5ff] bg-[#473677] px-4 py-2 text-sm font-semibold text-white shadow-lg" aria-label="Ouvrir SLÂME : broder la musique et parler">♫ SLÂME</button>
     <TopBar pattern={P} onHome={openLanding} workspace={workspace} onWorkspace={chooseWorkspace} canUndo={!remote && store.past.length > 0 && !store.pending} canRedo={!remote && store.future.length > 0 && !store.pending} onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })} symbols={symbols} onSymbols={() => setSymbols((v) => !v)} view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)} projectOpen={panel === "project"} onProject={() => setPanel(panel === "project" ? null : "project")} onLibrary={() => setPanel("library")} onGuide={openCoach} guideOpen={coachOpen} saving={saving} />
     <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} coachTool={coachOpen ? coachTool : null} />
     {selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
