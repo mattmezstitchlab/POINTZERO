@@ -62,6 +62,24 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre Budget, Programme et Admin depuis le même menu de studios, puis revient aux créations", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    for (const [name,region] of [
+      ["Budget","Espace Budget"],
+      ["Programme","Espace Programme"],
+      ["Admin / Documents","Espace Admin / Documents"]
+    ]) {
+      await click(button("Ouvrir le menu des studios"));
+      await click(button("Ouvrir le studio "+name));
+      expect(container?.querySelector('[aria-label="'+region+'"]')).toBeTruthy();
+      await click(button("Retour au studio universel"));
+      expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+    }
+    await click(button("Ouvrir l'atelier broderie"));
+    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+  });
+
   it("ouvre Photo et Stylisme depuis les supports sans changer le patron de broderie", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
