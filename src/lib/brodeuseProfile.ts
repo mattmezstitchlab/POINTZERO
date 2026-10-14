@@ -50,7 +50,7 @@ export function validatedProfile(value:unknown):BrodeuseProfile {
       const i=item as Record<string,unknown>,skeins=Number(i.skeins),remainingMeters=Number(i.remainingMeters);
       if(!Number.isFinite(skeins)||!Number.isFinite(remainingMeters))continue;
       if(skeins<0||remainingMeters<0)continue;
-      stock[code]={skeins:clamp(Math.floor(skeins),0,1000),remainingMeters:clamp(remainingMeters,0,8)};
+      stock[FLOSS[flossIndex(code)].code]={skeins:clamp(Math.floor(skeins),0,1000),remainingMeters:clamp(remainingMeters,0,8)};
     }
   }
   const skill=["debutant","intermediaire","expert"].includes(String(v.skill))?v.skill as SkillLevel:def.skill;
@@ -111,6 +111,7 @@ export function adaptPatternToProfile(source:Pattern,profileInput:BrodeuseProfil
  if(pattern.w*pattern.h>250000)throw new Error("Adaptation limitée à 250 000 cases.");
  if(profile.brand.toLowerCase()!=="dmc")warnings.push("Stock renseigné dans une autre marque : aucune correspondance intermarques certifiée. Seules les références DMC identiques peuvent être vérifiées.");
  const originalColors=usedColors(pattern);
+ if(mode!=="original")pattern.count=profile.count;
  const caps=mode==="debutant"?Math.min(profile.maxColors,8):mode==="expert"?Math.max(profile.maxColors,32):mode==="reduite"?Math.min(6,profile.maxColors):profile.maxColors;
  const stockMode=mode==="stock";
  const available=Object.keys(profile.stock).filter(c=>ownedMeters(profile,c)>0).map(flossIndex).filter(i=>i>=0);
@@ -139,8 +140,14 @@ export function adaptPatternToProfile(source:Pattern,profileInput:BrodeuseProfil
  // No impossible resampling or automated deletion: reduced sizes are offered
  // as explicit future preview requirements, never silently cropped.
  if(mode==="petit"){
-   warnings.push("Petit format : adaptation de palette uniquement. Réduction de grille à valider dans le réglage Dimensions pour éviter les pertes.");
+   const targetW=Math.min(profile.maxWidth,pattern.w),targetH=Math.min(profile.maxHeight,pattern.h);
+   warnings.push("Petit format : grille actuelle "+pattern.w+" × "+pattern.h+" ; objectif "+targetW+" × "+targetH+
+     ". Réduction de grille à valider dans le réglage Dimensions pour préserver les détails. Aucun recadrage silencieux.");
  }
+ if(mode!=="original" && (pattern.w>profile.maxWidth || pattern.h>profile.maxHeight))
+   warnings.push("La grille dépasse le format préféré ("+profile.maxWidth+" × "+profile.maxHeight+"). Ajustement manuel nécessaire avant impression.");
+ if(mode!=="original" && profile.minutes!==null)
+   warnings.push("Temps disponible annoncé : "+profile.minutes+" min. Durée de broderie non estimée faute de cadence personnelle mesurée.");
  if(mode==="debutant"){
    warnings.push("Débutant : palette réduite ; points arrière et fractionnés source conservés pour ne pas effacer de détails utiles.");
  }
