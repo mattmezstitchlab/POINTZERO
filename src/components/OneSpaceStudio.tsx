@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, BookOpen, Check, CheckCircle2, ChevronRight, CircleHelp, Clock3, Download, GitBranch, GraduationCap, LayoutGrid, Link2, Plus, Radio, Shield, Trash2, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { ArrowDown, ArrowRight, ArrowUp, BookOpen, Check, CheckCircle2, ChevronRight, CircleHelp, Clock3, Download, GitBranch, GraduationCap, LayoutGrid, Plus, Shield, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import {
  KINDS,ROLES,TILES,readWorld,writeWorld,newSpace,newPerson,newMoment,newSignal,selectedWorld,setSpace,
- linkedModuleInfo,previewImpact,validateSignal,journeySteps,ids,type WorldSpace,type SpaceKind,type TileKind,type RelationRole,
- type SignalKind,type CausalSignal
+ linkedModuleInfo,sourcesForTile,previewImpact,validateSignal,journeySteps,ids,safeWorld,type WorldSpace,type SpaceKind,type TileKind,type RelationRole,
+ type SignalKind
 } from "../lib/oneSpaceCore";
 type Screen="espace"|"causal"|"formation";
 interface Props {initialScreen?:"espace"|"causal";onBack:()=>void;onStudio:(target:string)=>void}
@@ -27,6 +27,7 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
  const [delay,setDelay]=useState(20),[message,setMessage]=useState("");
  const [activeSignalId,setActiveSignalId]=useState("");
  const [notice,setNotice]=useState("");
+ const spaceImport=useRef<HTMLInputElement>(null);
  const space=selectedWorld(db);
  const training=journeySteps(space);
  const done=training.filter(s=>s.passed).length;
@@ -44,7 +45,28 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
   if(db.spaces.length>=30)return setNotice("Limite de 30 espaces atteinte.");
   const next=newSpace(kind,truncate(title.trim(),180));
   setDb(s=>({...s,spaces:[...s.spaces,next],selectedSpaceId:next.id}));
-  setTitle("");setNotice("Espace privé créé sur cet appareil.");
+  setTitle("");setMomentId("");setAuthorId("");setActiveSignalId("");setNotice("Espace privé créé sur cet appareil.");
+ };
+ const importSpace=async(e:ChangeEvent<HTMLInputElement>)=>{
+  const file=e.target.files?.[0];e.target.value="";
+  if(!file)return;
+  if(file.size>350_000)return setNotice("Fichier trop volumineux (350 Ko maximum).");
+  try{
+    const parsed=safeWorld(JSON.parse(await file.text()));
+    if(!parsed||parsed.spaces.length!==1)throw Error("Fichier invalide : une seule page est attendue.");
+    if(db.spaces.length>=30)throw Error("Limite de 30 espaces atteinte.");
+    if(!window.confirm("Importer cette page et ses personnes dans votre navigateur ? Vérifiez que le partage est autorisé."))return;
+    const source=parsed.spaces[0];
+    const copy={...source,id:ids(),title:truncate(source.title+" (copie)",180)};
+    setDb(d=>({...d,spaces:[...d.spaces,copy],selectedSpaceId:copy.id}));
+    setMomentId("");setAuthorId("");setActiveSignalId("");
+    setNotice("Copie importée localement. Aucune synchronisation avec la page d'origine.");
+  }catch(err){setNotice(err instanceof Error?err.message:"Fichier illisible.");}
+ };
+ const exportSpace=()=>{
+  if(!space)return;
+  if(space.people.length>0&&!window.confirm("Ce fichier comporte des noms, moments et décisions. Partagez-le seulement avec leur accord. Continuer ?"))return;
+  saveStudioFile("pointzero-espace-prive.json",JSON.stringify({version:1,spaces:[space],selectedSpaceId:space.id},null,2));
  };
  const makeExample=()=>{
   if(db.spaces.length>=30)return setNotice("Limite de 30 espaces atteinte.");
@@ -98,7 +120,7 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
  const left=<div className="space-y-4 pb-24">
    <h2 className="flex items-center gap-2 text-sm font-semibold"><LayoutGrid size={18}/> Mes espaces</h2>
    <div className="space-y-1">{db.spaces.map(s=><button key={s.id} type="button" aria-label={"Choisir espace "+s.title} aria-pressed={space?.id===s.id}
-     onClick={()=>{setDb(d=>({...d,selectedSpaceId:s.id}));setMomentId("");setActiveSignalId("");}}
+     onClick={()=>{setDb(d=>({...d,selectedSpaceId:s.id}));setMomentId("");setAuthorId("");setActiveSignalId("");}}
      className={"w-full rounded-[5px] border p-3 text-left text-xs "+(space?.id===s.id?"border-white bg-white text-black":"border-white/15 hover:bg-white/10")}>
      <strong>{s.title}</strong><span className="mt-1 block text-[10px] opacity-70">{titles.find(k=>k.kind===s.kind)?.label}</span></button>)}</div>
    <div className="space-y-2 border-t border-white/15 pt-4">
@@ -117,7 +139,8 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
      <p className="text-[11px] text-white/55">{done}/{training.length} étapes préparées · valable pour les familles, mariages et associations.</p>
      <button aria-label="Ouvrir la formation Jour J" onClick={()=>setScreen("formation")} className={studioButton+" w-full"}><BookOpen size={14}/> Formation Jour J</button>
    </div>
-   {space&&<button type="button" aria-label="Exporter cet espace JSON" onClick={()=>saveStudioFile("pointzero-espace.json",JSON.stringify({version:1,spaces:[space],selectedSpaceId:space.id},null,2))} className={studioButton+" w-full"}><Download size={14}/> Exporter mon espace</button>}
+   {space&&<button type="button" aria-label="Exporter cet espace JSON" onClick={exportSpace} className={studioButton+" w-full"}><Download size={14}/> Exporter une copie privée</button>}
+   <button type="button" aria-label="Importer un espace partagé" onClick={()=>spaceImport.current?.click()} className={studioButton+" w-full"}><Upload size={14}/> Importer une copie</button>
  </div>;
  const right=<div className="space-y-4 pb-28">
    <h2 className="text-sm font-semibold">Relations et moments</h2>
@@ -230,7 +253,7 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
            <span className="text-[10px] text-white/55">{stamp(s.created)} · {s.status}</span></div>
          <p className="mt-1 text-white/70">{space.moments.find(m=>m.id===s.momentId)?.title} · {s.message||"Sans précision"}</p>
          {s.status==="brouillon"?<button aria-label={"Sélectionner brouillon "+s.id} onClick={()=>setActiveSignalId(s.id)} className={studioButton+" mt-2"}>Examiner ce brouillon <ChevronRight size={14}/></button>:
-           <p className="mt-2 text-[11px] text-[#b9e7ce]">Plan validé localement · {s.acknowledgedRecipientIds.length} destinataire(s) potentiels figés · aucun envoi</p>}
+           <p className="mt-2 text-[11px] text-[#b9e7ce]">Plan validé localement · {s.plannedRecipientIds.length} destinataire(s) potentiels figés · aucun envoi</p>}
        </div>)}
        {!space.signals.length&&<p className="text-xs text-white/50">Aucun signal. Enregistrez une simulation ci-dessus.</p>}
        {activeSignal?.status==="brouillon"&&<div className="rounded-[6px] border border-[#a9dcce]/45 bg-[#162a26] p-3">
@@ -251,10 +274,18 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
    </div>:<>
      <div className="grid gap-3 sm:grid-cols-2">
        {space.tiles.filter(t=>t.visible).map(t=>{
-         const info=TILES.find(v=>v.id===t.kind)!;const linked=linkedModuleInfo(t);
+         const info=TILES.find(v=>v.id===t.kind)!;const linked=linkedModuleInfo(t);const sources=sourcesForTile(t.kind);
          return <article key={t.id} className="flex min-h-[155px] flex-col justify-between rounded-[8px] border border-white/15 bg-white/5 p-4 hover:bg-white/10">
            <div><span className="text-2xl" aria-hidden="true">{icons[t.kind]}</span><h3 className="mt-2 text-sm font-semibold">{t.title}</h3>
              <p className="mt-1 text-[11px] text-white/55">{linked?"Source liée : "+linked.label:info.description}</p></div>
+           {sources.length>0&&<label className="mt-3 block text-[11px] text-white/65">Brancher un projet existant
+             <select aria-label={"Relier le module "+t.title} className={studioInput+" mt-1"} value={t.refId}
+               onChange={e=>patch(s=>({...s,tiles:s.tiles.map(v=>v.id===t.id?{...v,refId:e.target.value}:v)}))}>
+               <option value="">Non relié</option>
+               {sources.map(source=><option key={source.id} value={source.id}>{source.label}</option>)}
+             </select>
+           </label>}
+           {t.refId&&!linked&&<p className="mt-2 text-[11px] text-[#ffd2a7]">Cette source n'est plus disponible sur l'appareil.</p>}
            <div className="mt-4 flex items-center justify-between gap-2"><button aria-label={"Ouvrir le module "+t.title} className="inline-flex items-center gap-1.5 text-xs font-semibold text-white underline underline-offset-2"
                onClick={()=>onStudio(info.studio)}>Ouvrir <ArrowRight size={13}/></button>
              <button aria-label={"Masquer le module "+t.title} onClick={()=>patch(s=>({...s,tiles:s.tiles.map(v=>v.id===t.id?{...v,visible:false}:v)}))}
@@ -312,5 +343,6 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
      {notice&&<div role="status" className="rounded-[6px] border border-white/20 bg-[#09090b] p-3 text-xs text-white">{notice}</div>}
      <p className="flex items-start gap-2 text-[11px] leading-relaxed text-white/45"><Shield size={14} className="shrink-0"/> Aucune mise en ligne ni transmission réelle de notifications. Les espaces et les consentements sont uniquement conservés sur cet appareil jusqu'à l'activation d'une authentification et de contrôles d'accès.</p>
    </div>
+   <input type="file" className="sr-only" ref={spaceImport} accept=".json,application/json" aria-label="Fichier d’espace partagé" onChange={e=>void importSpace(e)}/>
  </StudioFrame>;
 }
