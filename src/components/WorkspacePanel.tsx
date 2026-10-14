@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Circle, FileUp, FolderOpen, ImagePlus, Layers, Lock, Plus, Radio, ShieldCheck, Unlock, X } from "lucide-react";
 import { COUNTS, ensurePalette, fabricInfo, type Pattern } from "../lib/pattern";
 import { addLayer, replaceColor, resizePattern, stampText, switchLayer } from "../lib/editing";
@@ -12,6 +12,8 @@ import { activityGrid, bestDay, sessionSummary } from "../lib/sessionStats";
 import type { Session } from "../lib/pattern";
 import type { Tool } from "../lib/stitch";
 import Sheet from "./Sheet";
+import BrodeuseProfilePanel from "./BrodeuseProfilePanel";
+import { loadBrodeuseProfile } from "../lib/brodeuseProfile";
 
 export interface Preferences {
   highContrast: boolean; largeText: boolean; pencilOnly: boolean; onlyActive: boolean; keepAwake: boolean;
@@ -30,6 +32,12 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
 }) {
   const importRef = useRef<HTMLInputElement>(null), manualRef = useRef<HTMLInputElement>(null), pdfRef = useRef<HTMLInputElement>(null), fileRef = useRef<HTMLInputElement>(null);
   const [w, setW] = useState(80), [h, setH] = useState(80), [text, setText] = useState("BONJOUR"), [scale, setScale] = useState(1), [to, setTo] = useState(""), [mixA, setMixA] = useState("321"), [mixB, setMixB] = useState("Blanc"), [aStrands, setAStrands] = useState(1), [bStrands, setBStrands] = useState(1), [tests, setTests] = useState<CheckResult[] | null>(null);
+  const [brodeuseProfile, setBrodeuseProfile] = useState(loadBrodeuseProfile);
+  useEffect(() => {
+    const refresh = () => setBrodeuseProfile(loadBrodeuseProfile());
+    window.addEventListener("pointzero:inventory-changed", refresh);
+    return () => window.removeEventListener("pointzero:inventory-changed", refresh);
+  }, []);
   const tab = section;
   const f = p.fabric ?? { type: "aida", over: 1, color: "#f7f2e8", margin: 7.5, units: "cm" };
   const fab = fabricInfo(p), dim = (v: number) => (f.units === "in" ? v / 2.54 : v).toFixed(2) + (f.units === "in" ? " in" : " cm");
@@ -57,6 +65,7 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
     <datalist id="all-floss">{BASE_FLOSS.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</datalist>
     <div className="space-y-5">
       {tab === "prepare" && <>
+        <Block title="Mon stock de fils et préférences"><BrodeuseProfilePanel profile={brodeuseProfile} onChange={setBrodeuseProfile} /></Block>
         <Block title="Tissu, comptage et dimensions"><div className="grid grid-cols-2 gap-3"><Label title="Tissu"><select className="field" value={f.type} onChange={(e) => onSet({ ...p, fabric: { ...f, type: e.target.value as typeof f.type, over: e.target.value === "aida" ? 1 : f.over } })}><option value="aida">Aida / Binca</option><option value="linen">Lin</option><option value="evenweave">Evenweave</option></select></Label><Label title="Comptage réel"><select className="field" value={p.count} onChange={(e) => onSet({ ...p, count: +e.target.value as Pattern["count"] })}>{COUNTS.map((c) => <option key={c} value={c}>{c} ct</option>)}</select></Label><Label title="Sur combien de fils"><select className="field" value={f.over} disabled={f.type === "aida"} onChange={(e) => onSet({ ...p, fabric: { ...f, over: +e.target.value as 1 | 2 } })}><option value={1}>Sur 1</option><option value={2}>Sur 2</option></select></Label><Label title="Unités"><select className="field" value={f.units} onChange={(e) => onSet({ ...p, fabric: { ...f, units: e.target.value as "cm" | "in" } })}><option value="cm">Centimètres</option><option value="in">Pouces</option></select></Label><NumberField title="Brins croix (1–6)" value={p.strands} min={1} max={6} onChange={(v) => onSet({ ...p, strands: v })} /><NumberField title="Brins arrière" value={p.backStrands ?? 1} min={1} max={6} onChange={(v) => onSet({ ...p, backStrands: v })} /><NumberField title="Marge par côté (cm)" value={f.margin} min={0} max={30} step={.5} onChange={(v) => onSet({ ...p, fabric: { ...f, margin: v } })} /><Label title="Couleur de toile"><input type="color" className="field p-1" value={f.color} onChange={(e) => onSet({ ...p, fabric: { ...f, color: e.target.value } })} /></Label></div>
           <p className="mt-4 text-[13px] leading-relaxed text-label-2">Grille : {p.w} × {p.h}. Taille finie : {dim(fab.fw)} × {dim(fab.fh)}.<br />Toile minimum : {dim(fab.mw)} × {dim(fab.mh)}. Pas : {fab.pitchMm.toFixed(2)} mm.</p>
           <NumberField title="Marge de fil estimée (%)" min={0} max={100} value={Math.round(((p.waste ?? 1.15) - 1) * 100)} onChange={(v) => onSet({ ...p, waste: 1 + v / 100 })} />
