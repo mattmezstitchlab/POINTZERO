@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ArrowLeft, Check, Download, FlipHorizontal2, ImagePlus, RotateCcw, RotateCw, SlidersHorizontal, Sparkles, X } from "lucide-react";
-import { autoLight, cropRect, DEFAULT_RECIPE, PHOTO_PRESETS, photoDimensions, renderPhoto, type CropRatio, type PhotoRecipe } from "../lib/photoRecipe";
+import { autoLight, DEFAULT_RECIPE, PHOTO_PRESETS, photoDimensions, renderPhoto, type CropRatio, type PhotoRecipe } from "../lib/photoRecipe";
 
-const field="w-full rounded-[5px] border border-white/20 bg-[#202023] px-3 py-2 text-xs text-white outline-none focus:border-white/60";
 const button="flex min-h-9 items-center justify-center gap-2 rounded-[5px] border border-white/20 bg-white/[.06] px-3 text-xs font-medium text-white hover:bg-white/15 disabled:opacity-35";
 const name = (fileName: string) => fileName.replace(/\.[^.]+$/,"").slice(0,110).replace(/[^a-zA-Z0-9 _-]/g,"") || "photo";
 async function blobFromCanvas(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
@@ -80,6 +79,20 @@ export default function PhotoStudio({onBack,onUse}:Props) {
     }catch(e){setMessage(e instanceof Error?e.message:"Export indisponible.");}
     finally{setBusy(false);}
   };
+  const exportPack=async()=>{
+    if(!image.current||!source)return;
+    setBusy(true);setMessage("");
+    try {
+      for(const crop of ["1:1","4:5","9:16","16:9"] as CropRatio[]){
+        const canvas=document.createElement("canvas");
+        renderPhoto(canvas,image.current,source.width,source.height,{...recipe,crop},1800);
+        const blob=await blobFromCanvas(canvas,"image/jpeg",.9);
+        save(blob,source.name+"-"+crop.replace(":","x")+".jpg");
+      }
+      setMessage("4 cadrages exportés. Si un fichier manque, autorisez les téléchargements multiples dans le navigateur.");
+    }catch(error){setMessage(error instanceof Error?error.message:"Export du pack impossible.");}
+    finally{setBusy(false);}
+  };
   const rotations=photoDimensions(source?.width??100,source?.height??100,recipe,2200);
   return <div className="pz-photo fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#151517] text-white">
     <header className="flex h-[58px] shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#09090b] px-3">
@@ -138,6 +151,7 @@ export default function PhotoStudio({onBack,onUse}:Props) {
           <button onClick={()=>void output("image/png")} disabled={!source||busy} className={button+" flex-1"}><Download size={14}/> PNG</button>
           <button onClick={()=>void output("image/jpeg")} disabled={!source||busy} className={button+" flex-1"}><Download size={14}/> JPEG</button>
         </div>
+        <button onClick={()=>void exportPack()} disabled={!source||busy} className={button+" mt-2 w-full"}><Sparkles size={14}/> Exporter le pack 4 formats</button>
         <p className="mt-3 text-[11px] leading-relaxed text-white/55">Auto lumière : correction déterministe de la luminosité moyenne, sans reconnaissance IA ni retouche du visage.</p>
       </aside>
     </div>
