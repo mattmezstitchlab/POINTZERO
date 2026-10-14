@@ -67,11 +67,8 @@ interface Stroke {
   changed: boolean;
 }
 
-const RT = 26; // règle haute
-const RL = 44; // règle gauche
 const MAX_S = 64;
 const FABRIC_A = "#f7f2e8";
-const FABRIC_B = "#eadfc9";
 const PAPER = "#fbfaf7";
 const AXIS = "#ff453a";
 const ACCENT = "#0a84ff";
@@ -137,9 +134,8 @@ export default function Canvas(props: Props) {
   };
 
   const content = () => {
-    const i = latest.current.insets;
     const v = view.current;
-    return { x0: i.left + RL, y0: i.top + RT, x1: v.w - i.right, y1: v.h - i.bottom };
+    return { x0: 0, y0: 0, x1: v.w, y1: v.h };
   };
 
   const minScale = () => Math.max(3, view.current.fit * 0.6);
@@ -211,7 +207,7 @@ export default function Canvas(props: Props) {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const v = view.current;
-    const { view: mode, symbols, highlightActive, highContrast, color: activeColor, tool: activeTool, insets: ins } = latest.current;
+    const { view: mode, symbols, highlightActive, highContrast, color: activeColor, tool: activeTool } = latest.current;
     // Pendant un trait, le brouillon est mutable : la composition doit être
     // refaite à chaque image. En dehors, le motif ne change que par identité,
     // et la mémoire ci-dessus évite de recomposer au moindre survol.
@@ -220,39 +216,53 @@ export default function Canvas(props: Props) {
     const c = content();
     const { s, ox, oy } = v;
     const { w, h } = P;
-    const gw = w * s;
-    const gh = h * s;
     const isPattern = mode === "pattern";
 
+    // La grille se prolonge jusqu'aux quatre bords de l'écran : aucun
+    // cadre, ombre ou séparation entre le patron et la toile de travail.
     ctx.setTransform(v.dpr, 0, 0, v.dpr, 0, 0);
     ctx.clearRect(0, 0, v.w, v.h);
-    ctx.fillStyle = "#f1f0ec";
+    const cloth = isPattern ? PAPER : (P.fabric?.color ?? FABRIC_A);
+    ctx.fillStyle = cloth;
     ctx.fillRect(0, 0, v.w, v.h);
-
+    if (s >= 4) {
+      const firstCol = Math.floor(-ox / s);
+      const lastCol = Math.ceil((v.w - ox) / s);
+      const firstRow = Math.floor(-oy / s);
+      const lastRow = Math.ceil((v.h - oy) / s);
+      const minor = highContrast ? "rgba(0,0,0,.38)" : "rgba(38,35,30,.16)";
+      const major = highContrast ? "rgba(0,0,0,.55)" : "rgba(38,35,30,.32)";
+      for (const strong of [false, true]) {
+        ctx.beginPath();
+        for (let k = firstCol; k <= lastCol; k++) {
+          if ((k % 10 === 0) !== strong) continue;
+          const x = Math.round(ox + k * s) + 0.5;
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, v.h);
+        }
+        for (let k = firstRow; k <= lastRow; k++) {
+          if ((k % 10 === 0) !== strong) continue;
+          const y = Math.round(oy + k * s) + 0.5;
+          ctx.moveTo(0, y);
+          ctx.lineTo(v.w, y);
+        }
+        ctx.lineWidth = strong ? 1.2 : 1;
+        ctx.strokeStyle = strong ? major : minor;
+        ctx.stroke();
+      }
+    }
+    // Un repère discret indique le centre du motif, sans bordure.
+    ctx.beginPath();
+    const axisX = Math.round(ox + w * s / 2) + .5;
+    const axisY = Math.round(oy + h * s / 2) + .5;
+    ctx.moveTo(axisX, 0); ctx.lineTo(axisX, v.h);
+    ctx.moveTo(0, axisY); ctx.lineTo(v.w, axisY);
+    ctx.strokeStyle = AXIS; ctx.globalAlpha = .5; ctx.lineWidth = 1;
+    ctx.stroke(); ctx.globalAlpha = 1;
     ctx.save();
     ctx.beginPath();
     ctx.rect(c.x0, c.y0, c.x1 - c.x0, c.y1 - c.y0);
     ctx.clip();
-
-    // Fond : toile Aida ou papier de patron
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.6)";
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 16;
-    const cloth = P.fabric?.color ?? FABRIC_A;
-    ctx.fillStyle = isPattern ? PAPER : cloth;
-    ctx.fillRect(ox, oy, gw, gh);
-    ctx.restore();
-    if (isPattern) {
-      ctx.fillStyle = PAPER;
-      ctx.fillRect(ox, oy, gw, gh);
-    } else {
-      const g = ctx.createLinearGradient(ox, oy, ox + gw, oy + gh);
-      g.addColorStop(0, cloth);
-      g.addColorStop(1, P.fabric?.color ? cloth : FABRIC_B);
-      ctx.fillStyle = g;
-      ctx.fillRect(ox, oy, gw, gh);
-    }
 
     const c0 = clamp(Math.floor((c.x0 - ox) / s), 0, w);
     const c1 = clamp(Math.ceil((c.x1 - ox) / s), 0, w);
@@ -260,59 +270,6 @@ export default function Canvas(props: Props) {
     const r1 = clamp(Math.ceil((c.y1 - oy) / s), 0, h);
 
     if (c1 > c0 && r1 > r0) {
-      const minor = highContrast ? "rgba(0,0,0,0.38)" : isPattern ? "rgba(40,40,40,0.14)" : "rgba(92,70,48,0.16)";
-      const major = isPattern ? "rgba(20,20,20,0.5)" : "rgba(92,70,48,0.42)";
-
-      if (s >= 4) {
-        ctx.beginPath();
-        for (let k = c0; k <= c1; k++) {
-          if (k % 10 === 0) continue;
-          const x = Math.round(ox + k * s) + 0.5;
-          ctx.moveTo(x, c.y0);
-          ctx.lineTo(x, c.y1);
-        }
-        for (let k = r0; k <= r1; k++) {
-          if (k % 10 === 0) continue;
-          const y = Math.round(oy + k * s) + 0.5;
-          ctx.moveTo(c.x0, y);
-          ctx.lineTo(c.x1, y);
-        }
-        ctx.strokeStyle = minor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.beginPath();
-        for (let k = c0; k <= c1; k++) {
-          if (k % 10 !== 0) continue;
-          const x = Math.round(ox + k * s) + 0.5;
-          ctx.moveTo(x, c.y0);
-          ctx.lineTo(x, c.y1);
-        }
-        for (let k = r0; k <= r1; k++) {
-          if (k % 10 !== 0) continue;
-          const y = Math.round(oy + k * s) + 0.5;
-          ctx.moveTo(c.x0, y);
-          ctx.lineTo(c.x1, y);
-        }
-        ctx.strokeStyle = major;
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-      }
-
-      // Axes du point zéro
-      const ax = Math.round(ox + (w / 2) * s) + 0.5;
-      const ay = Math.round(oy + (h / 2) * s) + 0.5;
-      ctx.beginPath();
-      ctx.moveTo(ax, c.y0);
-      ctx.lineTo(ax, c.y1);
-      ctx.moveTo(c.x0, ay);
-      ctx.lineTo(c.x1, ay);
-      ctx.strokeStyle = AXIS;
-      ctx.globalAlpha = 0.85;
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
       const symPos = new Map<number, number>();
       P.palette.forEach((idx) => symPos.set(idx, assignedSymbol(P, idx)));
 
@@ -654,47 +611,6 @@ export default function Canvas(props: Props) {
     }
     ctx.restore();
 
-    drawRulers(ctx, c, P, ins);
-  }
-
-  function drawRulers(ctx: CanvasRenderingContext2D, c: { x0: number; y0: number; x1: number; y1: number }, P: Pattern, ins: Insets) {
-    const v = view.current;
-    const { s, ox, oy } = v;
-    const { w, h } = P;
-    ctx.fillStyle = "rgba(14,14,16,0.9)";
-    ctx.fillRect(c.x0, ins.top, c.x1 - c.x0, RT);
-    ctx.fillRect(ins.left, c.y0, RL, c.y1 - c.y0);
-    ctx.fillRect(ins.left, ins.top, RL, RT);
-    ctx.font = `500 10px ${MONO}`;
-    ctx.textBaseline = "middle";
-
-    ctx.textAlign = "center";
-    for (let k = 0; k <= w; k += 5) {
-      const x = ox + k * s;
-      if (x < c.x0 - 1 || x > c.x1 + 1) continue;
-      const major = k % 10 === 0;
-      if (!major && s < 7) continue;
-      ctx.fillStyle = `rgba(245,245,247,${major ? 0.7 : 0.3})`;
-      ctx.fillRect(Math.round(x), ins.top + RT - (major ? 8 : 5), 1, major ? 8 : 5);
-      if (major) {
-        ctx.fillStyle = k === w / 2 ? AXIS : "rgba(235,235,245,0.6)";
-        ctx.fillText(fmt(k - w / 2), x, ins.top + RT / 2 - 2);
-      }
-    }
-
-    ctx.textAlign = "right";
-    for (let k = 0; k <= h; k += 5) {
-      const y = oy + k * s;
-      if (y < c.y0 - 1 || y > c.y1 + 1) continue;
-      const major = k % 10 === 0;
-      if (!major && s < 7) continue;
-      ctx.fillStyle = `rgba(245,245,247,${major ? 0.7 : 0.3})`;
-      ctx.fillRect(ins.left + RL - (major ? 8 : 5), Math.round(y), major ? 8 : 5, 1);
-      if (major) {
-        ctx.fillStyle = k === h / 2 ? AXIS : "rgba(235,235,245,0.6)";
-        ctx.fillText(fmt(k - h / 2), ins.left + RL - 10, y);
-      }
-    }
   }
 
   /* ---------------------------- Tracé ---------------------------- */
@@ -1040,7 +956,7 @@ export default function Canvas(props: Props) {
     tool === "hand" ? (ptrs.current.size ? "grabbing" : "grab") : tool === "pick" ? "copy" : tool === "erase" ? "cell" : "crosshair";
 
   return (
-    <div ref={wrapRef} data-guide="canvas" className="absolute inset-0 overflow-hidden bg-[#0b0b0d]">
+    <div ref={wrapRef} data-guide="canvas" className="absolute inset-0 overflow-hidden bg-[#faf9f7]">
       <canvas
         ref={canvasRef}
         role="application"

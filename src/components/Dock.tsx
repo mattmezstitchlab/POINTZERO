@@ -199,14 +199,14 @@ interface Props {
   onTool: (t: Tool) => void;
   color: number;
   workspace: "create" | "stitch";
-  /** Outil que le guide est en train de montrer : un seul à la fois. */
+  /** Compatibilité avec les anciens tests de raccourcis. */
   coachTool?: Tool | null;
 }
 
 /** Dock flottant : vertical à gauche sur iPad paysage, horizontal en bas en portrait. */
 export default function Dock({ tool, onTool, color, workspace, coachTool }: Props) {
   const hex = FLOSS[color]?.hex ?? "#000";
-  const extra = workspace === "create" ? EXTRA_CREATE : EXTRA_STITCH;
+  const extra = workspace === "create" ? [...TOOLS[1].slice(1), ...EXTRA_CREATE] : EXTRA_STITCH;
   const [open, setOpen] = useState(false);
   // Un outil choisi depuis le panneau Projet doit devenir visible dans le dock,
   // sinon l'outil actif n'est nulle part à l'écran. Même exigence pour l'outil
@@ -218,25 +218,35 @@ export default function Dock({ tool, onTool, color, workspace, coachTool }: Prop
     if (activeIsExtra || coachIsExtra) setOpen(true);
   }, [activeIsExtra, coachIsExtra]);
 
-  const groups: ToolDef[][] =
-    workspace === "create"
-      ? [
-          TOOLS[0],
-          [...TOOLS[1], { id: "select" as Tool, label: "Sélection", key: "S", icon: <Scan size={20} /> }],
-          TOOLS[2].filter((t) => t.id !== "mark"),
-        ]
-      : [
-          TOOLS[0],
-          [
-            TOOLS[2][0],
-            TOOLS[2][3],
-            { id: "block" as Tool, label: "Bloc 10 × 10", key: "B", icon: <Grid2x2 size={20} /> },
-            { id: "row" as Tool, label: "Ligne", key: "H", icon: <Rows3 size={20} /> },
-            { id: "park" as Tool, label: "Garer un fil", key: "P", icon: <ParkingCircle size={20} /> },
-            { id: "unpick" as Tool, label: "À défaire", key: "U", icon: <Scissors size={20} /> },
-          ],
-        ];
-  if (open) groups.push(extra);
+  // Seulement les gestes les plus utilisés restent visibles.
+  // Tous les autres outils restent accessibles sous « … ».
+  const groups: ToolDef[][] = workspace === "create"
+    ? [
+        TOOLS[0],
+        [
+          TOOLS[1][0], // Point de croix
+          TOOLS[2][1], // Remplissage
+          TOOLS[2][2], // Gomme
+          TOOLS[2][0], // Pipette
+          { id: "select" as Tool, label: "Sélection", key: "S", icon: <Scan size={20} /> },
+        ],
+      ]
+    : [
+        TOOLS[0],
+        [
+          TOOLS[2][3], // Marquer
+          { id: "block" as Tool, label: "Bloc 10 × 10", key: "B", icon: <Grid2x2 size={20} /> },
+        ],
+      ];
+  if (open) groups.push(workspace === "create"
+    ? [...TOOLS[1].slice(1), ...EXTRA_CREATE]
+    : [
+        TOOLS[2][0],
+        { id: "row" as Tool, label: "Ligne", key: "H", icon: <Rows3 size={20} /> },
+        { id: "park" as Tool, label: "Garer un fil", key: "P", icon: <ParkingCircle size={20} /> },
+        { id: "unpick" as Tool, label: "À défaire", key: "U", icon: <Scissors size={20} /> },
+        ...EXTRA_STITCH,
+      ]);
 
   const button = (t: ToolDef) => (
     <div key={t.id} className="group relative">
@@ -265,8 +275,7 @@ export default function Dock({ tool, onTool, color, workspace, coachTool }: Prop
   return (
     <nav
       aria-label="Outils de broderie"
-      data-guide="tools"
-      className="glass no-scrollbar fixed bottom-[92px] left-1/2 z-30 flex max-w-[calc(100vw-20px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-[22px] p-1.5 lg:top-1/2 lg:bottom-auto lg:left-4 lg:max-h-[calc(100dvh-170px)] lg:max-w-none lg:translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:overflow-y-auto lg:p-2"
+            className="glass no-scrollbar fixed bottom-[90px] left-1/2 z-30 flex max-w-[calc(100vw-20px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-md p-1 lg:top-1/2 lg:bottom-auto lg:left-4 lg:max-h-[calc(100dvh-190px)] lg:max-w-none lg:translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:overflow-y-auto lg:p-1"
     >
       {groups.map((group, gi) => (
         <div key={gi} className="flex items-center gap-1 lg:flex-col">

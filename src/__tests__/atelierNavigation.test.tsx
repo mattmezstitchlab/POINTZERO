@@ -21,11 +21,11 @@ afterEach(() => {
   node = null;
 });
 describe("Atelier unique", () => {
-  it("présente exactement cinq catégories et un seul choix actif", () => {
+  it("présente exactement quatre catégories et un seul choix actif", () => {
     const onChoose = vi.fn();
     const view = render(<CategoryBar active="create" onChoose={onChoose} />);
     const buttons = Array.from(view.querySelectorAll("nav button"));
-    expect(buttons.map((b) => b.textContent)).toEqual(["Créer","Composer","Fils & toile","Broder","Musique & parole"]);
+    expect(buttons.map((b) => b.textContent)).toEqual(["Créer","Dessiner","Fils","Broder"]);
     expect(buttons.filter((b) => b.getAttribute("aria-pressed") === "true")).toHaveLength(1);
     act(() => buttons[2].dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(onChoose).toHaveBeenCalledWith("threads");
@@ -37,7 +37,7 @@ describe("Atelier unique", () => {
     const generate = Array.from(view.querySelectorAll("button")).find((b) => b.textContent?.includes("Générer"));
     expect(generate?.disabled).toBe(true);
     const blank = Array.from(view.querySelectorAll("button")).find((b) => b.textContent?.includes("Grille vierge"));
-    const library = Array.from(view.querySelectorAll("button")).find((b) => b.textContent?.includes("Reprendre un projet"));
+    const library = Array.from(view.querySelectorAll("button")).find((b) => b.textContent?.includes("Mes projets"));
     act(() => blank?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     act(() => library?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(onBlank).toHaveBeenCalledOnce();

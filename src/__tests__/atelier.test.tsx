@@ -65,8 +65,8 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const view = await mount();
     expect(view.querySelector("canvas")).toBeTruthy();
     expect(view.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
-    expect(nav()?.querySelectorAll("button")).toHaveLength(5);
-    expect(view.textContent).toContain("De l'idée au dernier point");
+    expect(nav()?.querySelectorAll("button")).toHaveLength(4);
+    expect(view.textContent).toContain("Que voulez-vous broder ?");
   });
   it("ne montre ni guide, ni démarrage automatique, même si l'ancien état subsiste", async () => {
     localStorage.setItem("point-zero:coach", JSON.stringify({ seen: false, dismissed: false }));
@@ -77,14 +77,14 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   });
   it("ouvre les outils Composer dans un unique panneau contextuel", async () => {
     await mount();
-    await click(category("Composer"));
+    await click(category("Dessiner"));
     expect(dialog("Composer")?.classList.contains("is-open")).toBe(true);
     expect(dialog("Composer")?.textContent).toContain("Lettrage compté");
     expect(dialog("Composer")?.textContent).toContain("Composition intelligente");
   });
   it("réunit fils, toile et profil dans le même panneau", async () => {
     await mount();
-    await click(category("Fils & toile"));
+    await click(category("Fils"));
     expect(dialog("Fils & toile")?.classList.contains("is-open")).toBe(true);
     expect(dialog("Fils & toile")?.textContent).toContain("Mon profil brodeuse");
     expect(dialog("Fils & toile")?.textContent).toContain("Tissu, comptage et dimensions");
@@ -119,13 +119,10 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(picker.accept).toContain(".json");
     expect(picker.accept).toContain("image/png");
   });
-  it("accède à la musique et revient sans créer de route SLÂME", async () => {
+  it("ne propose plus de page ni de catégorie SLÂME", async () => {
     await mount();
-    await click(category("Musique & parole"));
-    const back = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent === "Retour à la grille");
-    expect(back).toBeTruthy();
-    await click(back);
-    expect(nav()).toBeTruthy();
+    expect(category("Musique & parole")).toBeUndefined();
+    expect(container?.textContent).not.toContain("Retour à la grille");
     expect(window.location.hash).toBe("");
   });
   it("redirige les anciens fragments vers la page atelier unique", async () => {
