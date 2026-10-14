@@ -8,7 +8,7 @@ import { PROGRAMME_STORAGE, safeProgrammeStore } from "../lib/programmeCore";
 import {
  addRequest,eventPlaylist,guestEnvelope,guestToRequest,labelCSV,loadLabel,matchTrack,musicCSV,
  MUSIC_MOMENTS,newArtist,newMusicEvent,newMusicRequest,newTrack,safeGuestEnvelope,
- type MusicEvent,type MusicLabelStore,type MusicMoment,type MusicRight
+ type MusicLabelStore,type MusicMoment,type MusicRight
 } from "../lib/musicLabelCore";
 
 type Page="radio"|"playlist"|"master"|"label"|"sacem";
