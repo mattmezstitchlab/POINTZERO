@@ -192,7 +192,7 @@ export default function MusicStudio({onBack}:Props){
         <label className="mt-3 block text-[11px] text-white/70">Prénom ou pseudonyme (facultatif)
           <input aria-label="Participant à la partition" className={studioInput+" mt-1"} value={participant} maxLength={70} onChange={e=>setParticipant(e.target.value)}/>
         </label>
-        <button type="button" onClick={()=>addNote(activeGesture,position,1)} className={studioButton+" mt-3 w-full"}>
+        <button type="button" aria-label="Ajouter un geste musical au curseur" onClick={()=>addNote(activeGesture,position,1)} className={studioButton+" mt-3 w-full"}>
           <Plus size={15}/> Ajouter au curseur (sans glisser)
         </button>
       </div>
