@@ -140,8 +140,11 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   const operation=(fn:()=>void)=>{try{fn();setMessage("");setConfirmed(false);}catch(e){setMessage(e instanceof Error?e.message:"Modification impossible.");}};
   const resetDemo=()=>{
     const p=multiSubjectDemo(),next=detectSubjects(p).scene;
-    const names=["Oiseau","Fleur","Maisonnette"];
-    next.layers=next.layers.map((l,i)=>({...l,name:names[i]??l.name}));
+    // Labels are fixture annotations based on known positions, never claimed
+    // as the output of semantic recognition.
+    next.layers=next.layers.map(l=>({
+      ...l,name:l.x<45?"Oiseau":l.x<85?"Fleur":"Maisonnette"
+    }));
     setScene(next);setSelectedId(next.layers[0]?.id??null);setMessage("Démo originale : les noms sont fournis par le scénario, non détectés par une IA.");setConfirmed(false);
   };
   const saveSelected=()=>{
