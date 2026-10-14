@@ -68,7 +68,21 @@ export interface Knot {
  * - done : marquage d'avancement (points déjà brodés)
  * Les points arrière, lancés et noeuds vivent sur les trous (0..w / 0..h).
  */
+export interface CompositionMetadata {
+  version: 1;
+  source: string;
+  settings: {
+    detail: "simple" | "equilibree" | "precise";
+    difficulty: "debutant" | "intermediaire" | "expert";
+    palette: "originale" | "harmonisee" | "personnalisee";
+    codes: string; width: number; height: number;
+  };
+  cards: { id: string; name: string; visible: boolean; overrideCode?: string }[];
+}
+
 export interface Pattern {
+  /** Optional recipe; legacy projects remain compatible and unchanged. */
+  composition?: CompositionMetadata;
   name: string;
   w: number;
   h: number;
@@ -150,6 +164,7 @@ export function createPattern(name: string, w: number, h: number, count: Count =
 export function clonePattern(p: Pattern): Pattern {
   return {
     ...p,
+    composition: p.composition ? { ...p.composition, settings: { ...p.composition.settings }, cards: p.composition.cards.map(c => ({ ...c })) } : undefined,
     cross: p.cross.slice(),
     fwd: p.fwd.slice(),
     bwd: p.bwd.slice(),
@@ -491,6 +506,7 @@ export function fabricInfo(p: Pattern) {
 export function toObject(p: Pattern) {
   return {
     v: 3,
+    composition: p.composition,
     id: p.id, folder: p.folder, fabric: p.fabric, provenance: p.provenance,
     backStrands: p.backStrands, waste: p.waste,
     ornamentDone: p.ornamentDone,
@@ -576,6 +592,18 @@ export function fromObject(input: unknown): Pattern | null {
     ornamentDone: Array.isArray(o.ornamentDone) ? o.ornamentDone.filter((v): v is string => typeof v === "string") : [],
     folder: typeof o.folder === "string" ? o.folder : "",
     fabric,
+    composition: (() => {
+      const v = o.composition;
+      if (!v || typeof v !== "object") return undefined;
+      const c = v as Partial<CompositionMetadata>;
+      if (c.version !== 1 || typeof c.source !== "string" || c.source.length > 8_000_000 ||
+          !c.settings || typeof c.settings !== "object" || !Array.isArray(c.cards) ||
+          c.cards.length > 32 ||
+          c.cards.some(x => !x || typeof x.id !== "string" || typeof x.name !== "string" ||
+            x.name.length > 120 || typeof x.visible !== "boolean" ||
+            (x.overrideCode !== undefined && (typeof x.overrideCode !== "string" || x.overrideCode.length > 30)))) return undefined;
+      return c as CompositionMetadata;
+    })(),
     provenance: o.provenance as Provenance | undefined,
     symbolMap: o.symbolMap as Record<string, number> | undefined,
     beadMap: isCodeMap(o.beadMap) ? (o.beadMap as Record<string, string>) : undefined,
