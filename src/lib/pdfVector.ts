@@ -183,6 +183,10 @@ export async function readVectorChart(
   for (const p of pages) {
     const outside = splitRuns(p.items, (x, y) => !insideAny(p.boxes, x, y));
     for (const row of cluster(outside, (it) => it.y, 5)) {
+      // Les graduations 0, 5, 10... au-dessus des grilles sont parfois
+      // elles-mêmes des codes DMC existants. Ne jamais les interpréter
+      // comme des paires « symbole → couleur ».
+      if (row.length >= 3 && row.every(it => /^-?\d{1,4}$/.test(it.str.trim()))) continue;
       const codes = row
         .map((it) => ({ it, code: codeOfText(it.str) }))
         .filter((c) => c.code && flossIndex(c.code) >= 0)
