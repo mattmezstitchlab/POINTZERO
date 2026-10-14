@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from "react";
-import {BookOpen,CheckCircle2,ChevronRight,Download,ExternalLink,FileCheck2,FileText,FolderOpen,Plus,Scale,Shield,ShieldCheck,Trash2,Users} from "lucide-react";
+import {BookOpen,ChevronRight,Download,ExternalLink,FileCheck2,FileText,FolderOpen,Scale,Shield,Trash2,Users} from "lucide-react";
 import {StudioFrame,studioButton,studioInput,saveStudioFile} from "./StudioFrame";
 import {
  BASIS,LEGAL_ACTIVE_KEY,TREATMENTS,inspectLegal,legalDraft,newLegalDossier,newTreatment,
