@@ -225,6 +225,13 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
           const next=attachSubject(scene,floralBird(),125,24);setScene(next);
           setSelectedId(next.layers.at(-1)!.id);setMessage("Petit oiseau ajouté, éditable indépendamment.");
         })}>+ Petit oiseau facultatif</button>
+        <label className="block text-xs text-white/70">Profondeur brodable
+          <select className="mt-2 w-full rounded-md border border-white/20 bg-[#27272c] p-2 text-sm" value={scene.depth??"naturelle"}
+            onChange={e=>{setScene(prev=>({...prev,depth:e.target.value as "naturelle"|"renforcee"}));setConfirmed(false);}}>
+            <option value="naturelle">Naturelle : superposition seule</option>
+            <option value="renforcee">Renforcée : contours d'appui ciblés</option>
+          </select>
+        </label>
         <button className="w-full rounded-md border border-white/20 px-3 py-2 text-left text-sm" onClick={suggest}>
           + Proposer deux feuilles dans les vides
         </button>
