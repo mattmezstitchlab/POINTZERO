@@ -386,7 +386,9 @@ export default function App() {
       onSelection={setSelection} onBegin={() => { if (!remote) dispatch({ type: "begin" }); }}
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
       onEnd={(changed) => { if (!remote) dispatch({ type: "end", changed }); }}
-      onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }} />
+      onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
+      onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
+      onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
     <TopBar pattern={P} onCreate={() => { setPanel(null); setActiveCategory("create"); setCategoryPanel("create"); setShowWelcome(false); }}
       canUndo={!remote && store.past.length > 0 && !store.pending}
       canRedo={!remote && store.future.length > 0 && !store.pending}
@@ -397,13 +399,23 @@ export default function App() {
       onExport={() => { setCategoryPanel(null); setPanel("export"); }}
       onSettings={() => { setCategoryPanel(null); setPanel("project"); }}
       onShare={() => { setCategoryPanel(null); setPanel("share"); }}
-      saving={saving} />
+      saving={saving} drawing={showDrawingTools} onDrawing={() => { setShowDrawingTools(v => !v); setTool("cross"); setActiveCategory("compose"); }} />
     <CategoryBar active={activeCategory} onChoose={openCategory} />
+    <MotifLibrary readOnly={!!remote}
+      onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); }}
+      onAddSaved={sprite => addStitchedPattern(sprite)}
+      onOpenProject={p => { void loadPattern(p); setTool("hand"); }}
+      onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose"); }}
+      onOpenLibrary={() => { setCategoryPanel(null); setPanel("library"); }} />
+    <CompositionProperties scene={sceneFromPattern(P)} selectedId={selectedSubjectId}
+      onSelect={id => { setSelectedSubjectId(id); setActiveCategory("compose"); setTool("hand"); }}
+      onChange={changeSelectedSubject} onReorder={(id,delta) => updateScene(scene => reorderSubject(scene,id,delta))}
+      onDuplicate={duplicateSelectedSubject} onRemove={removeSelectedSubject} readOnly={!!remote} />
     {showWelcome && !remote && <div className="pointer-events-none fixed inset-0 z-[28] flex items-center justify-center px-3 pb-12 pt-12"><div className="pointer-events-auto"><AtelierCreate {...createActions} /></div></div>}
     <Sheet open={categoryPanel === "create"} onClose={() => setCategoryPanel(null)} title="Créer" subtitle="Une seule création, directement dans la grille"><AtelierCreate {...createActions} compact /></Sheet>
-    {!showWelcome && <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />}
+    {!showWelcome && (showDrawingTools || activeCategory === "stitch") && <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />}
     {!showWelcome && selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
-    <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={panel !== null || categoryPanel !== null || showWelcome || !!file} />
+    <FlossRail pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={(!showDrawingTools && activeCategory !== "stitch") || panel !== null || categoryPanel !== null || showWelcome || !!file} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
     <WorkspacePanel open={panel === "project" || categoryPanel === "compose" || categoryPanel === "threads" || categoryPanel === "stitch"}
       onClose={() => { setCategoryPanel(null); closePanel(); }} pattern={P} onSet={setPattern}
