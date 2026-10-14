@@ -20,6 +20,8 @@ import ProgrammeStudio from "./components/ProgrammeStudio";
 import AdminStudio from "./components/AdminStudio";
 import MiniSiteStudio from "./components/MiniSiteStudio";
 import PDFStudio from "./components/PDFStudio";
+import GenerationStudio from "./components/GenerationStudio";
+import type { MiniSite } from "./lib/miniSiteCore";
 import { loadProjectOptions } from "./lib/budgetCore";
 import AtelierCreate from "./components/AtelierCreate";
 import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
@@ -69,15 +71,16 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 export default function App() {
   const [boot] = useState(loadStored);
   // Existing embroidery projects resume untouched; newcomers open the multiformat studio.
-  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf">(() => {
+  const [studioMode, setStudioMode] = useState<"design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation">(() => {
     try {
       const chosen = localStorage.getItem("pointzero:workspace");
-      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" ? chosen : boot ? "embroidery" : "design";
+      return chosen === "design" || chosen === "photo" || chosen === "fashion" || chosen === "embroidery" || chosen === "budget" || chosen === "programme" || chosen === "admin" || chosen === "mini-site" || chosen === "pdf" || chosen === "generation" ? chosen : boot ? "embroidery" : "design";
     } catch { return "embroidery"; }
   });
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
+  const [miniSiteHandoff,setMiniSiteHandoff] = useState<MiniSite|null>(null);
   const [linkedProject,setLinkedProject] = useState<{id:string;name:string}|null>(null);
-  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf") => {
+  const switchStudio = (mode: "design" | "embroidery" | "photo" | "fashion" | "budget" | "programme" | "admin" | "mini-site" | "pdf" | "generation") => {
     if(mode==="budget"||mode==="programme"||mode==="admin")setLinkedProject(loadProjectOptions()[0]??null);
     setStudioMode(mode);
     try { localStorage.setItem("pointzero:workspace", mode); } catch { /* Local storage may be restricted. */ }
@@ -393,6 +396,7 @@ export default function App() {
         onPhoto={() => switchStudio("photo")} onFashion={() => switchStudio("fashion")}
         onBudget={() => switchStudio("budget")} onProgramme={() => switchStudio("programme")} onAdmin={() => switchStudio("admin")}
         onMiniSite={() => switchStudio("mini-site")} onPDF={() => switchStudio("pdf")}
+        onGeneration={() => switchStudio("generation")}
         incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
     : studioMode === "photo"
     ? <PhotoStudio onBack={() => switchStudio("design")} onUse={dataUrl => {
@@ -411,11 +415,28 @@ export default function App() {
     : studioMode === "admin"
     ? <AdminStudio onBack={() => switchStudio("design")} linkedProject={linkedProject} />
     : studioMode === "mini-site"
-    ? <MiniSiteStudio onBack={() => switchStudio("design")} />
+    ? <MiniSiteStudio onBack={() => switchStudio("design")} incomingDraft={miniSiteHandoff} />
     : studioMode === "pdf"
     ? <PDFStudio onBack={() => switchStudio("design")} onConvertToPattern={file => {
         setPdfFile(file);switchStudio("embroidery");
+      }} onUsePattern={p=>{
+        setWorkspace("create");setView("pattern");
+        void loadPattern(p);switchStudio("embroidery");
+        notify("Grille magnétique assemblée et importée dans l'atelier.");
       }} />
+    : studioMode === "generation"
+    ? <GenerationStudio onBack={() => switchStudio("design")}
+        onImage={dataUrl=>{
+          setPhotoHandoff({id:crypto.randomUUID?.()??String(Date.now()),dataUrl});
+          switchStudio("design");
+        }}
+        onPattern={p=>{
+          setWorkspace("create");setView("pattern");
+          void loadPattern(p);switchStudio("embroidery");
+        }}
+        onMiniSite={site=>{
+          setMiniSiteHandoff(site);switchStudio("mini-site");
+        }} />
     : <div className={`pz-atelier pz-embroidery-studio fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
