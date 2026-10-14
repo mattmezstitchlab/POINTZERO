@@ -81,6 +81,8 @@ export interface CompositionMetadata {
 }
 
 export interface Pattern {
+  /** Autonomous reusable subject layers; optional in legacy projects. */
+  subjectScene?: import("./subjectEngine").SubjectScene;
   /** Optional recipe; legacy projects remain compatible and unchanged. */
   composition?: CompositionMetadata;
   name: string;
@@ -165,6 +167,7 @@ export function clonePattern(p: Pattern): Pattern {
   return {
     ...p,
     composition: p.composition ? { ...p.composition, settings: { ...p.composition.settings }, cards: p.composition.cards.map(c => ({ ...c })) } : undefined,
+    subjectScene: p.subjectScene ? { ...p.subjectScene, layers: p.subjectScene.layers.map(l=>({...l})), warnings:[...p.subjectScene.warnings] } : undefined,
     cross: p.cross.slice(),
     fwd: p.fwd.slice(),
     bwd: p.bwd.slice(),
@@ -507,6 +510,7 @@ export function toObject(p: Pattern) {
   return {
     v: 3,
     composition: p.composition,
+    subjectScene: p.subjectScene,
     id: p.id, folder: p.folder, fabric: p.fabric, provenance: p.provenance,
     backStrands: p.backStrands, waste: p.waste,
     ornamentDone: p.ornamentDone,
@@ -603,6 +607,26 @@ export function fromObject(input: unknown): Pattern | null {
             x.name.length > 120 || typeof x.visible !== "boolean" ||
             (x.overrideCode !== undefined && (typeof x.overrideCode !== "string" || x.overrideCode.length > 30)))) return undefined;
       return c as CompositionMetadata;
+    })(),
+    subjectScene: (() => {
+      const value=o.subjectScene;
+      if(!value || typeof value!=="object")return undefined;
+      const scene=value as import("./subjectEngine").SubjectScene;
+      if(scene.version!==1 || typeof scene.source!=="string" || scene.source.length>12_000_000 ||
+        typeof scene.backdrop!=="string" || scene.backdrop.length>12_000_000 ||
+        !Array.isArray(scene.layers) || scene.layers.length>16 ||
+        !Array.isArray(scene.warnings) || scene.warnings.some(v=>typeof v!=="string"||v.length>500) ||
+        scene.layers.some(l=> !l || typeof l.id!=="string" || l.id.length>110 ||
+          typeof l.name!=="string" || l.name.length>120 ||
+          typeof l.sprite!=="string" || l.sprite.length>5_000_000 ||
+          !Number.isInteger(l.x) || !Number.isInteger(l.y) ||
+          Math.abs(l.x)>1000 || Math.abs(l.y)>1000 ||
+          typeof l.scale!=="number" || !Number.isFinite(l.scale) || l.scale<.25 || l.scale>3 ||
+          typeof l.visible!=="boolean" || typeof l.locked!=="boolean" ||
+          !["auto","manual","library"].includes(l.origin) ||
+          (l.tint!==undefined && (typeof l.tint!=="string" || l.tint.length>30))
+        ))return undefined;
+      return scene;
     })(),
     provenance: o.provenance as Provenance | undefined,
     symbolMap: o.symbolMap as Record<string, number> | undefined,
