@@ -11,6 +11,9 @@ import {
 } from "../lib/subjectEngine";
 import { multiSubjectDemo } from "../lib/subjectDemo";
 import { deleteLibrarySubject, loadSubjectLibrary, openLibrarySubject, storeSubject } from "../lib/subjectLibrary";
+import { addSuggestedLeaves, floralBird, floralDemo } from "../lib/floralComposition";
+import { adaptPatternToProfile, loadBrodeuseProfile, type AdaptationMode } from "../lib/brodeuseProfile";
+import BrodeuseProfilePanel from "./BrodeuseProfilePanel";
 
 const inkColor=(idx:number)=>FLOSS[idx]?.hex??"#555";
 function SubjectPreview({pattern,scene,selected,onChoose,onMove}:{
@@ -113,6 +116,8 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   const [mergeId,setMergeId]=useState("");
   const [showSource,setShowSource]=useState(false);
   const [confirmed,setConfirmed]=useState(false);
+  const [profile,setProfile]=useState(loadBrodeuseProfile);
+  const [mode,setMode]=useState<AdaptationMode>(pattern.adaptation?.mode??"original");
   const selected=scene.layers.find(l=>l.id===selectedId)??null;
   const lastRender=useRef<{scene:SubjectScene;pattern:Pattern}|null>(null);
   const original=useMemo(()=>{try{return fromObject(JSON.parse(scene.source));}catch{return null;}},[scene.source]);
@@ -134,6 +139,13 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
     }catch(e){return {pattern:null,error:e instanceof Error?e.message:"Recomposition impossible."};}
   },[scene]);
   const composed=result.pattern;
+  const adapted=useMemo(()=>{
+    if(!composed)return null;
+    try{return adaptPatternToProfile(composed,profile,mode);}
+    catch{return null;}
+  },[composed,profile,mode]);
+  const output=adapted?.pattern??composed;
+  const risks=(adapted?.report.maxDeltaE??0)>12 || !!adapted?.report.weakBoundaries || (!!adapted?.report.missing.length&&mode==="stock");
   const adjust=(id:string,patch:Partial<Pick<SubjectLayer,"name"|"x"|"y"|"scale"|"visible"|"locked"|"tint">>)=>{
     setScene(old=>changeSubject(old,id,patch));setConfirmed(false);
   };
@@ -147,6 +159,17 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
     }));
     setScene(next);setSelectedId(next.layers[0]?.id??null);setMessage("Démo originale : les noms sont fournis par le scénario, non détectés par une IA.");setConfirmed(false);
   };
+  const loadFloral=()=>{
+    const next=floralDemo();
+    setScene(next);setSelectedId(next.layers.find(l=>l.name.startsWith("Rose"))?.id??null);
+    setMessage("Bouquet original : trois fleurs indépendantes, quatre feuilles et une branche. Labels rédigés, sans reconnaissance IA.");
+    setConfirmed(false);
+  };
+  const suggest=()=>operation(()=>{
+    const next=addSuggestedLeaves(scene,2);
+    if(next.layers.length===scene.layers.length)throw new Error("Aucun espace adapté repéré pour ajouter des feuilles.");
+    setScene(next);setMessage("Feuilles proposées dans les vides, modifiables et supprimables par annulation du projet.");
+  });
   const saveSelected=()=>{
     if(!selected)return;
     operation(()=>{setLibrary(storeSubject(spriteForExport(selected)));setMessage("Sujet enregistré localement (pas publié en boutique).");});
@@ -158,16 +181,16 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   const offscreen=composed?.subjectScene?.warnings.some(w=>w.includes("hors de la grille"))??false;
   const hiddenCount=scene.layers.filter(l=>!l.visible).length;
   const finish=()=>{
-    if(!composed)return;
-    if((offscreen||hiddenCount>0)&&!confirmed){setMessage("Confirmez les points cachés ou hors-grille avant de remplacer l'atelier.");return;}
-    onUse(composed);
+    if(!output)return;
+    if((offscreen||hiddenCount>0||risks)&&!confirmed){setMessage("Confirmez les éléments masqués et les risques de substitution avant d'utiliser ce motif.");return;}
+    onUse(output);
   };
   const exportPdf=async()=>{
-    if(!composed||busy)return;
+    if(!output||busy)return;
     setBusy(true);
     try{
       const opts={bw:false,paper:"a4" as const};
-      downloadBlob(await buildPdf(composed,opts),pdfFileName(composed,opts));
+      downloadBlob(await buildPdf(output,opts),pdfFileName(output,opts));
       setMessage("PDF calculé à partir du même Pattern recomposé que la grille.");
     }catch(e){setMessage(e instanceof Error?e.message:"Erreur PDF.");}
     finally{setBusy(false);}
@@ -185,7 +208,7 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
         <h2 className="text-lg font-semibold">Décomposer → Composer</h2></div>
       <div className="flex items-center gap-2">
         <button className="rounded-md border border-white/20 px-3 py-2 text-xs" onClick={onCancel}><X size={14} className="mr-1 inline"/> Fermer</button>
-        <button className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-40" disabled={!composed||busy||((offscreen||hiddenCount>0)&&!confirmed)} onClick={finish}>
+        <button className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-40" disabled={!output||busy||((offscreen||hiddenCount>0||risks)&&!confirmed)} onClick={finish}>
           <Check size={15} className="mr-1 inline"/> Utiliser dans l'atelier
         </button>
       </div>
@@ -194,11 +217,25 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
       <aside className="space-y-4 border-b border-white/10 p-4 lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <h3 className="text-sm font-semibold">Détection et extraction</h3>
         <p className="text-xs leading-relaxed text-white/55">Segmentation géométrique des groupes colorés. La reconnaissance sémantique des objets par IA n'est pas encore activée.</p>
-        <button className="w-full rounded-md border border-white/30 px-3 py-3 text-left text-sm" onClick={resetDemo}>Tester avec 3 sujets : oiseau, fleur, maison</button>
+        <button className="w-full rounded-md border border-[#bca7ff] bg-[#bca7ff]/10 px-3 py-3 text-left text-sm" onClick={loadFloral}>
+          Tester un bouquet · 3 fleurs + 4 feuilles + branche
+        </button>
+        <button className="w-full rounded-md border border-white/30 px-3 py-2 text-left text-sm" onClick={resetDemo}>Ancienne démo : oiseau, fleur, maison</button>
+        <button className="w-full rounded-md border border-white/20 px-3 py-2 text-left text-sm" onClick={()=>operation(()=>{
+          const next=attachSubject(scene,floralBird(),125,24);setScene(next);
+          setSelectedId(next.layers.at(-1)!.id);setMessage("Petit oiseau ajouté, éditable indépendamment.");
+        })}>+ Petit oiseau facultatif</button>
+        <button className="w-full rounded-md border border-white/20 px-3 py-2 text-left text-sm" onClick={suggest}>
+          + Proposer deux feuilles dans les vides
+        </button>
         <button className="w-full rounded-md border border-white/20 px-3 py-2 text-sm" onClick={()=>operation(()=>{
           const next=detectSubjects(composed??pattern).scene;
           setScene(next);setSelectedId(next.layers[0]?.id??null);
         })}>Décomposer ce motif</button>
+        <details className="border-t border-white/10 pt-3">
+          <summary className="cursor-pointer text-sm font-semibold">Profil et stock de fils</summary>
+          <div className="mt-3"><BrodeuseProfilePanel profile={profile} onChange={p=>{setProfile(p);setConfirmed(false);}}/></div>
+        </details>
         <div className="border-t border-white/10 pt-3">
           <h4 className="mb-2 text-sm font-medium">Bibliothèque personnelle</h4>
           <p className="mb-2 text-xs text-white/50">Composants enregistrés sur cet appareil. Les droits d'auteur de chaque source restent applicables.</p>
@@ -213,15 +250,31 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
       <main className="min-h-[450px] space-y-4 overflow-y-auto bg-[#1d1c20] p-4" aria-label="Grille de composition des sujets">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div><p className="text-[11px] uppercase tracking-[.12em] text-white/45">Composition interactive</p><h3 className="text-base font-semibold">{composed?.name??"Motif"}</h3></div>
-          <span className="text-xs text-white/65">{composed?.w} × {composed?.h} points · {scene.layers.length} sujets · {currentCount} croix</span>
+          <span className="text-xs text-white/65">{output?.w} × {output?.h} points · {scene.layers.length} éléments · {currentCount} croix</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-semibold text-white/75">Ma version :</span>
+          {(["original","stock","debutant","expert","reduite","petit"] as AdaptationMode[]).map(m=>
+            <button type="button" key={m} aria-pressed={mode===m}
+              className={"rounded-md border px-2 py-1.5 capitalize "+(mode===m?"border-[#c3b9f8] bg-[#c3b9f8]/20":"border-white/15")}
+              onClick={()=>{setMode(m);setConfirmed(false);}}>{m==="stock"?"Mes fils":m==="debutant"?"Débutant":m==="reduite"?"Peu de couleurs":m==="petit"?"Petit format":m==="expert"?"Expert":"Original"}</button>)}
         </div>
         <div className="rounded-md bg-[#faf7f0] p-3">
-          {composed&&<SubjectPreview pattern={composed} scene={scene} selected={selectedId} onChoose={setSelectedId} onMove={(id,x,y)=>adjust(id,{x,y})}/>}
+          {output&&<SubjectPreview pattern={output} scene={scene} selected={selectedId} onChoose={setSelectedId} onMove={(id,x,y)=>adjust(id,{x,y})}/>}
         </div>
+        {adapted&&<div className="space-y-1 text-xs text-white/70">
+          <p>{adapted.report.afterColors} références DMC · {adapted.report.substitutions.length} substitutions · {adapted.report.estimatedMeters} m de brin simple estimés</p>
+          {adapted.report.substitutions.length>0&&<details className="rounded-md border border-white/10 p-2">
+            <summary className="cursor-pointer">Voir les substitutions DMC</summary>
+            <p className="mt-2">{adapted.report.substitutions.slice(0,35).map(t=>t.from+" → "+t.to+" (ΔE "+t.deltaE+")").join(" · ")}</p>
+          </details>}
+          {adapted.report.warnings.map((w,i)=><p role="status" key={i} className="rounded-md border border-amber-300/25 bg-amber-300/10 p-2 text-amber-100">{w}</p>)}
+          {mode==="stock"&&adapted.report.missing.map(x=><p key={x.code} className="text-amber-200">{x.code} : {x.requiredMeters} m nécessaires, {x.ownedMeters} m disponibles (brin simple)</p>)}
+        </div>}
         <div className="flex flex-wrap justify-center gap-2 text-xs">
           <button className="rounded-md border border-white/20 px-3 py-2" onClick={()=>setShowSource(v=>!v)}>{showSource?"Masquer":"Voir"} la source originale</button>
-          <button className="rounded-md border border-white/20 px-3 py-2" onClick={()=>composed&&saveProjectFile(composed)} disabled={!composed}><FileJson size={14} className="mr-1 inline"/> Exporter JSON</button>
-          <button className="rounded-md border border-white/20 px-3 py-2" onClick={()=>void exportPdf()} disabled={!composed||busy}><Download size={14} className="mr-1 inline"/> Exporter PDF</button>
+          <button className="rounded-md border border-white/20 px-3 py-2" onClick={()=>output&&saveProjectFile(output)} disabled={!output}><FileJson size={14} className="mr-1 inline"/> Exporter JSON</button>
+          <button className="rounded-md border border-white/20 px-3 py-2" onClick={()=>void exportPdf()} disabled={!output||busy}><Download size={14} className="mr-1 inline"/> Exporter PDF</button>
         </div>
         {showSource&&original&&<section className="space-y-2 rounded-md border border-white/10 p-3 text-xs">
           <h4 className="font-semibold">Source originale · non modifiée</h4>
@@ -233,9 +286,9 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
         </section>}
         {scene.warnings.map((w,i)=><p key={i} className="rounded-md border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">{w}</p>)}
         {composed?.subjectScene?.warnings.filter(w=>!scene.warnings.includes(w)).map((w,i)=><p key={i} className="rounded-md border border-red-300/25 p-2 text-xs text-red-200">{w}</p>)}
-        {(hiddenCount>0||offscreen)&&<label className="flex items-center gap-2 text-xs text-amber-200">
+        {(hiddenCount>0||offscreen||risks)&&<label className="flex items-center gap-2 text-xs text-amber-200">
           <input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>
-          Je confirme les éléments cachés ou les points hors-grille.
+          Je confirme les éléments cachés, les points hors-grille ou les risques de remplacement des fils.
         </label>}
         {result.error&&<p role="alert" className="text-sm text-red-200">{result.error}</p>}
         {message&&<p role="status" className="text-xs text-white/70">{message}</p>}
