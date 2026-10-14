@@ -36,7 +36,7 @@ afterAll(() => {
 });
 
 let root: Root | null = null, container: HTMLElement | null = null;
-let openSpy: ReturnType<typeof vi.fn>, motifSpy: ReturnType<typeof vi.fn>, pdfSpy: ReturnType<typeof vi.fn>;
+let openSpy: ReturnType<typeof vi.fn>, motifSpy: ReturnType<typeof vi.fn>, pdfSpy: ReturnType<typeof vi.fn>, projectSpy: ReturnType<typeof vi.fn>;
 const click = async (el: Element) => {
   await act(async () => { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
 };
@@ -47,8 +47,8 @@ beforeEach(async () => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  openSpy = vi.fn(); motifSpy = vi.fn(); pdfSpy = vi.fn();
-  await act(async () => { root!.render(<Landing onOpen={openSpy} onMotif={motifSpy} onPdf={pdfSpy} />); });
+  openSpy = vi.fn(); motifSpy = vi.fn(); pdfSpy = vi.fn(); projectSpy = vi.fn(async () => null);
+  await act(async () => { root!.render(<Landing onOpen={openSpy} onMotif={motifSpy} onPdf={pdfSpy} onProjectFile={projectSpy} />); });
 });
 afterEach(async () => {
   await act(async () => root?.unmount());
@@ -69,6 +69,7 @@ describe("Accueil clair, une seule grille", () => {
     expect(byText(/Générer/)).toBeTruthy();
     expect(byText(/Importer un PDF/)).toBeNull(); // L'entrée PDF est un label, non un bouton doublon.
     expect(container!.textContent).toContain("Importer un PDF");
+    expect(container!.textContent).toContain("Importer un projet JSON");
     expect(container!.textContent).not.toContain("paiement est simulé");
     expect(container!.textContent).not.toContain("Faire le point zéro");
   });
@@ -93,12 +94,31 @@ describe("Accueil clair, une seule grille", () => {
 
   it("importer un PDF dirige le fichier vers le vrai atelier sans montrer de puzzle sur l'accueil", async () => {
     const file = new File(["%PDF-1.4\n"], "broderie.pdf", { type: "application/pdf" });
-    const input = container!.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = container!.querySelector('input[accept="application/pdf,.pdf"]') as HTMLInputElement;
     Object.defineProperty(input, "files", { configurable: true, value: [file] });
     await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
     expect(pdfSpy).toHaveBeenCalledWith(file);
     expect(container!.querySelector(".ancre-table")).toBeNull();
     expect(container!.querySelector('[aria-label="Préparation du patron PDF"]')).toBeNull();
+  });
+
+  it("importe directement un projet POINTZERO JSON avec le lecteur de l'application", async () => {
+    const file = new File(['{"v":3}'], "Bee2.pointzero.json", { type: "application/json" });
+    const input = container!.querySelector('input[aria-label="Choisir un projet POINTZERO JSON ou OXS"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(projectSpy).toHaveBeenCalledWith(file);
+    expect(container!.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("signale immédiatement une erreur d'import JSON sans quitter l'accueil", async () => {
+    projectSpy.mockResolvedValue("Projet invalide");
+    const file = new File(["{}"], "corrompu.pointzero.json", { type: "application/json" });
+    const input = container!.querySelector('input[aria-label="Choisir un projet POINTZERO JSON ou OXS"]') as HTMLInputElement;
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(container!.querySelector('[role="alert"]')?.textContent).toContain("Projet invalide");
   });
 
   it("garde le déplacement et zoom de la grille universelle", async () => {
