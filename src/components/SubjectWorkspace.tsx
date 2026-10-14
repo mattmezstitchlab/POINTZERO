@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { ArrowDown, ArrowUp, Check, Copy, Download, Eye, EyeOff, FileJson, GitMerge, Lock, LockOpen, Move, Scissors, Save, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Download, Eye, EyeOff, FileJson, GitMerge, Lock, LockOpen, Scissors, Save, Trash2, X } from "lucide-react";
 import { FLOSS, flossIndex } from "../lib/dmc";
 import { downloadBlob, saveProjectFile } from "../lib/io";
 import { buildPdf, pdfFileName } from "../lib/pdf";
@@ -105,14 +105,6 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   const [showSource,setShowSource]=useState(false);
   const [confirmed,setConfirmed]=useState(false);
   const selected=scene.layers.find(l=>l.id===selectedId)??null;
-  const source=useMemo(()=>{
-    // All scene snapshots are read through the same existing Pattern codec.
-    const x=JSON.parse(scene.source) as unknown;
-    const result=sceneFromPattern(pattern);
-    if(result?.source===scene.source)return pattern;
-    // For a demo, the source is immediately reconstructed from the same scene.
-    return x;
-  },[scene.source,pattern]);
   const result=useMemo(()=>{
     try{return {pattern:recomposeSubjects(scene),error:""};}
     catch(e){return {pattern:null,error:e instanceof Error?e.message:"Recomposition impossible."};}
