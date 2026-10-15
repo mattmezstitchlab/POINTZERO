@@ -39,12 +39,13 @@ export function validUniversalMeta(raw:unknown):raw is UniversalMeta{
   const v=raw[collections[i]];
   if(!Array.isArray(v)||v.length>caps[i]||!ids(v))return false;
  }
- if(!raw.references.every((r:DossierReference)=>obj(r)&&["document","media","studio","source"].includes(r.type)&&short(r.title,180)&&short(r.targetId,130)&&short(r.studio,70)&&["proposé","confirmé","rejeté"].includes(r.status)))return false;
- if(!raw.decisions.every((r:DossierDecision)=>obj(r)&&short(r.title,400)&&["proposé","confirmé","rejeté"].includes(r.status)&&short(r.at,40)))return false;
- if(!raw.actions.every((r:DossierAction)=>obj(r)&&short(r.label,280)&&["à-faire","réalisée","bloquée"].includes(r.state)&&typeof r.requiresValidation==="boolean"))return false;
- if(!raw.contributions.every((r:DossierContribution)=>obj(r)&&short(r.personId,100)&&short(r.description,500)&&short(r.at,40)))return false;
- if(!raw.relations.every((r:DossierRelation)=>obj(r)&&short(r.fromId,100)&&short(r.toId,100)&&short(r.kind,60)))return false;
- if(!raw.history.every((r:DossierChange)=>obj(r)&&short(r.at,40)&&ident(r.entityId)&&short(r.field,80)&&short(r.before,3000)&&short(r.after,3000)&&
+ const d=raw as unknown as UniversalMeta;
+ if(!d.references.every((r:DossierReference)=>obj(r)&&["document","media","studio","source"].includes(r.type)&&short(r.title,180)&&short(r.targetId,130)&&short(r.studio,70)&&["proposé","confirmé","rejeté"].includes(r.status)))return false;
+ if(!d.decisions.every((r:DossierDecision)=>obj(r)&&short(r.title,400)&&["proposé","confirmé","rejeté"].includes(r.status)&&short(r.at,40)))return false;
+ if(!d.actions.every((r:DossierAction)=>obj(r)&&short(r.label,280)&&["à-faire","réalisée","bloquée"].includes(r.state)&&typeof r.requiresValidation==="boolean"))return false;
+ if(!d.contributions.every((r:DossierContribution)=>obj(r)&&short(r.personId,100)&&short(r.description,500)&&short(r.at,40)))return false;
+ if(!d.relations.every((r:DossierRelation)=>obj(r)&&short(r.fromId,100)&&short(r.toId,100)&&short(r.kind,60)))return false;
+ if(!d.history.every((r:DossierChange)=>obj(r)&&short(r.at,40)&&ident(r.entityId)&&short(r.field,80)&&short(r.before,3000)&&short(r.after,3000)&&
  ["utilisateur","studio","import"].includes(r.origin)&&["confirmé","brouillon"].includes(r.validation)))return false;
  if(raw.training!==undefined){
   const t=raw.training;
