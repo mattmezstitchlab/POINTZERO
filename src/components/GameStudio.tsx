@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent } from "react";
 import { ArrowDownToLine, ArrowRight, Focus, Magnet, Music2, Pause, Play, RotateCcw, Volume2, VolumeX, Waves, ZoomIn, ZoomOut } from "lucide-react";
 import { StudioFrame, studioButton } from "./StudioFrame";
-import { ARTISTS, GAME_SIZE, bestMove, clearGroup, finalScore, matchingGroup, newGame, revealPercent, usePower, type GameBoard, type Power } from "../lib/confettiGame";
+import { ARTISTS, GAME_SIZE, bestMove, clearGroup, finalScore, newGame, revealPercent, usePower, type Power } from "../lib/confettiGame";
 
 type Phase="ready"|"playing"|"result"|"paused";
 const CONFETTI=["#e99aab","#6caab5","#edca78","#a5bd91","#9b91c1"];
@@ -14,7 +14,6 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
  const [zoom,setZoom]=useState(1);
  const [pan,setPan]=useState({x:0,y:0});
  const [muted,setMuted]=useState(false);
- const [power,setPower]=useState<Power>("wave");
  const [focus,setFocus]=useState(-1);
  const [message,setMessage]=useState("");
  const [best,setBest]=useState(()=>{try{return Number(localStorage.getItem("pointzero:confetti-best")||0)}catch{return 0}});
@@ -29,7 +28,6 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
  const interval=useRef<number|null>(null);
  const audio=useRef<AudioContext|null>(null);
  const beat=useRef<number|null>(null);
- const combo=board.combo;
  const artist=ARTISTS[board.artist];
  function stopAudio(){
   if(beat.current!==null)window.clearInterval(beat.current);
@@ -90,10 +88,10 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
  }
  function activate(kind:Power){
   if(phase!=="playing")return;
-  if(kind==="focus"){const idx=bestMove(boardRef.current);setFocus(idx);setPower(kind);return}
+  if(kind==="focus"){const idx=bestMove(boardRef.current);setFocus(idx);return}
   const idx=focus>=0?focus:bestMove(boardRef.current);
   if(idx<0)return;
-  setBoard(v=>usePower(v,kind,idx));setFocus(-1);setPower(kind);
+  setBoard(v=>usePower(v,kind,idx));setFocus(-1);
  }
  function cellUnder(clientX:number,clientY:number){
   const c=canvas.current;if(!c)return -1;
