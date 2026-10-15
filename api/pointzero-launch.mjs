@@ -29,7 +29,9 @@ export default async function handler(req,res){
   return res.status(200).json({
    config:await safeConfig(),
    signupReady:waitlistReady()&&!!process.env.TURNSTILE_SITE_KEY,
-   turnstileSiteKey:waitlistReady()?process.env.TURNSTILE_SITE_KEY||"":""});
+   turnstileSiteKey:waitlistReady()?process.env.TURNSTILE_SITE_KEY||"":"",
+   legalEntity:process.env.POINTZERO_LEGAL_ENTITY||"",
+   privacyContact:process.env.POINTZERO_PRIVACY_EMAIL||""});
  }
  if(req.method!=="POST")return error(res,405,"Méthode non autorisée.");
  if(Number(req.headers["content-length"]||0)>160_000)return error(res,413,"Requête trop volumineuse.");
@@ -88,7 +90,7 @@ export default async function handler(req,res){
   const inserted=await redis("SET",emailKey,JSON.stringify(data),"EX",259200,"NX");
   if(inserted!=="OK")return res.status(200).json({status:"pending",message:"Une inscription existe déjà pour cette adresse. Vérifiez votre boîte mail."});
   await redis("SET",key+":confirm:"+hash(token),normalized,"EX",259200);
-  await redis("SET",key+":unsubscribe:"+hash(unsubscribe),normalized);
+  await redis("SET",key+":unsubscribe:"+hash(unsubscribe),normalized,"EX",259200);
   try{
    const link=fullUrl("confirm",token);
    const name=data.firstName?escapeHTML(data.firstName)+", ":"";
