@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Code2, Download, Eye, GraduationCap, Layers3, Monitor, Palette, Plus, RotateCcw, Save, Scale, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import { LEGAL_ACTIVE_KEY } from "../lib/legalCore";
@@ -6,7 +6,7 @@ import {AIME_WORLD_CHANGED,academyDossierKey,attachAcademyResource,readDossier} 
 import { contrastGrade } from "../lib/accessibilityCore";
 import {
  ACADEMY_KEY, ACADEMY_PROGRESS_KEY, ACADEMY_LESSONS, ACADEMY_TEMPLATES,
- courseProgress,defaultLearning,exportAcademyHTML,makeAcademyProject,makeSection,palettes,
+ academyDisplayProject,courseProgress,defaultLearning,exportAcademyHTML,makeAcademyProject,makeSection,palettes,
  readAcademy,readLearning,safeHref,validLearning,validProject,
  type SiteProject,type SiteSection,type SectionKind,type Device,type LearningState,type AcademyTemplate
 } from "../lib/academyCore";
@@ -47,7 +47,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
  const linked=linkedDossierId?readDossier(linkedDossierId):null;
  const isLinked=!!linked&&project.dossierBinding?.spaceId===linked.id;
  const effectiveTitle=isLinked&&project.dossierBinding?.titleMode==="linked"?linked.title:project.siteTitle;
- const effectiveProject={...project,siteTitle:effectiveTitle,name:isLinked&&project.dossierBinding?.titleMode==="linked"?linked.title:project.name};
+ const effectiveProject=academyDisplayProject(project,linked);
  const [device,setDevice]=useState<Device>("desktop");
  const [selected,setSelected]=useState<string|null>(null);
  const [mode,setMode]=useState<"apprenant"|"formateur">("apprenant");
