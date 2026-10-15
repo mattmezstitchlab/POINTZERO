@@ -21,7 +21,7 @@ export interface StitchResult {
 }
 const clamp=(n:number,min:number,max:number)=>Math.min(max,Math.max(min,n));
 export const STITCH_DEFAULTS: StitchRequest = {
-  prompt:"",width:80,maxColors:12,detail:"equilibre",style:"botanique",format:"carre",count:14,seed:1
+  prompt:"",width:80,maxColors:12,detail:"equilibre",style:"reeliste",format:"carre",count:14,seed:1
 };
 const ratio: Record<FormatId,number> = {carre:1,portrait:1.4,paysage:0.7};
 export function dimensionsFor(req: StitchRequest) {
