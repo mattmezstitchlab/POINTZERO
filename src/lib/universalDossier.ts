@@ -4,6 +4,7 @@
  */
 import {WORLD_KEY,ids,newMoment,newSpace,readWorld,safeWorld,writeWorld,type WorldSpace} from "./oneSpaceCore";
 import {emptyUniversalMeta,validUniversalMeta,type DossierChange,type TrainingContext,type UniversalMeta} from "./dossierSchema";
+import {validProject} from "./academyCore";
 export const AIME_WORLD_CHANGED="aime:universal-world-changed";
 export const DOSSIER_EXPORT_KIND="aime:universal-dossier";
 export const academyDossierKey=(id:string)=>"pointzero:academy:linked:"+id+":v1";
@@ -137,10 +138,24 @@ export function addUniversalMoment(spaceId:string,title:string,time:string):Worl
  const revision:DossierChange={id:ids(),at:iso(),entityId:moment.id,field:"moments",before:"",after:moment.title+" @ "+moment.time,origin:"utilisateur",validation:"confirmé"};
  return persist({...space,moments:[...space.moments,moment],dossier:{...meta,history:[...meta.history,revision].slice(-300)}});
 }
-export function attachAcademyResource(spaceId:string,academyProjectId:string):WorldSpace{
+/** Verify the referenced local support without mutating or repairing anything. */
+export function academyReferenceHealth(space:WorldSpace):"none"|"available"|"missing"|"invalid"{
+ const ref=space.dossier?.references.find(r=>r.type==="studio"&&r.studio==="academy");
+ if(!ref)return "none";
+ try{
+  const raw=localStorage.getItem(academyDossierKey(space.id));
+  if(raw===null)return "missing";
+  const saved=validProject(JSON.parse(raw));
+  return saved&&saved.id===ref.targetId&&saved.dossierBinding?.spaceId===space.id?"available":"invalid";
+ }catch{return "invalid";}
+}
+export function attachAcademyResource(spaceId:string,academyProjectId:string,approveReplacement=false):WorldSpace{
  const space=readDossier(spaceId);if(!space)throw Error("Dossier source introuvable.");
  const d=space.dossier??emptyUniversalMeta(space.description);
  const current=d.references.find(r=>r.type==="studio"&&r.studio==="academy");
+ if(!academyProjectId.trim()||academyProjectId.length>100)throw Error("Identifiant Academy invalide.");
+ if(current&&current.targetId!==academyProjectId&&!approveReplacement)
+  throw Error("Conflit Academy : référence existante conservée. Autorisation explicite requise avant remplacement.");
  const ref={id:current?.id??ids(),type:"studio" as const,title:"Support pédagogique Academy",targetId:academyProjectId,studio:"academy",status:"confirmé" as const};
  const refs=current?d.references.map(r=>r.id===current.id?ref:r):[...d.references,ref];
  const tiles=space.tiles.map(t=>t.kind==="academy"?{...t,refId:academyProjectId}:t);
