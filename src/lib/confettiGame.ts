@@ -19,7 +19,6 @@ function h(seed:number,x:number,y:number){let n=(Math.imul((x+1)*374761393,(y+1)
 export function portraitAt(artist:number,x:number,y:number):number {
  const shift=(artist%3)-1;
  const cx=24+shift, faceY=23;
- if(circle(x,y,cx,61,22,29))return artist%2===0?3:5; // clothing
  if(circle(x,y,cx,24,15,20)){
   const hair=artist===3?2:artist===4?3:artist===1?3:2;
   if(y<13+Math.sin((x+shift)*.5)*2)return hair;
@@ -30,6 +29,7 @@ export function portraitAt(artist:number,x:number,y:number):number {
   if(y>31&&y<35&&Math.abs(x-cx)<2)return 1; // nose
   return artist%2===0?1:0;
  }
+ if(circle(x,y,cx,61,22,29))return artist%2===0?3:5; // clothing sits behind the face
  if(artist===2&&y>8&&y<14&&Math.abs(x-cx)<19)return 2;
  return 0;
 }
