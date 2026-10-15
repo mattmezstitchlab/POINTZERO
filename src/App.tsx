@@ -438,7 +438,7 @@ export default function App() {
       await new Promise<void>(resolve=>{revealTimers.current.push(window.setTimeout(resolve,650));});
       if(token!==generationToken.current)return;
       setRevealPhase("symbols");setGenerationStatus("Lecture des symboles DMC…");
-      window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:"focus",x:result.original.w/2,y:result.original.h/2,scale:22}}));
+      if(!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:"focus",x:result.original.w/2,y:result.original.h/2,scale:22}}));
       await new Promise<void>(resolve=>{revealTimers.current.push(window.setTimeout(resolve,550));});
       if(token!==generationToken.current)return;
       setPattern(result.cleaned);
