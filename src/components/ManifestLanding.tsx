@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, Fingerprint, GitBranch, Grid2X2, GraduationCap, HeartHandshake, Mail, Music2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight, Clock3, Fingerprint, GitBranch, Grid2X2, GraduationCap, HeartHandshake, Mail, Music2, ShieldCheck, Sparkles } from "lucide-react";
 import { DEFAULT_LAUNCH, STATUS_LABELS, canEnter, canPreview, countdown, validLaunch, type LaunchConfig } from "../lib/launchManifest";
 import "./ManifestLanding.css";
 
