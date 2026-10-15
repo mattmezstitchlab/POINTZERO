@@ -29,7 +29,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
    const saved=validProject(JSON.parse(localStorage.getItem(academyDossierKey(linkedDossierId))??"null"));
    if(saved?.dossierBinding?.spaceId===linkedDossierId)return saved;
   }catch{/* Unlinked legacy Academy remains untouched. */}
-  return {...makeAcademyProject(),dossierBinding:{spaceId:linkedDossierId,titleMode:"linked"}};
+  return {...makeAcademyProject(),dossierBinding:{spaceId:linkedDossierId,titleMode:"linked",objectivesMode:"linked"}};
  };
  const readProgress=():LearningState=>{
   if(!linkedDossierId)return readLearning();
@@ -47,7 +47,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
  const linked=linkedDossierId?readDossier(linkedDossierId):null;
  const isLinked=!!linked&&project.dossierBinding?.spaceId===linked.id;
  const effectiveTitle=isLinked&&project.dossierBinding?.titleMode==="linked"?linked.title:project.siteTitle;
- const effectiveProject=academyDisplayProject(project,linked);
+ const effectiveProject=academyDisplayProject(project,linked?{id:linked.id,title:linked.title,objectives:linked.dossier?.objectives}:null);
  const [device,setDevice]=useState<Device>("desktop");
  const [selected,setSelected]=useState<string|null>(null);
  const [mode,setMode]=useState<"apprenant"|"formateur">("apprenant");
@@ -57,6 +57,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
  const [collapsed,setCollapsed]=useState(false);
  const picker=useRef<HTMLInputElement>(null);
  const selectedSection=project.sections.find(s=>s.id===selected)??project.sections[0]??null;
+ const displayedSection=effectiveProject.sections.find(s=>s.id===selectedSection?.id)??null;
  const tasks=courseProgress(effectiveProject,learning);
  const inspectorSelected=selectedSection!==null;
  const grades=useMemo(()=>contrastGrade(project.foreground,project.background),[project.foreground,project.background]);
@@ -72,7 +73,9 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
  const patchSite=(patch:Partial<SiteProject>)=>update(p=>({...p,...patch}));
  const patchSection=(patch:Partial<SiteSection>)=>{
   if(!selectedSection)return;
-  update(p=>({...p,sections:p.sections.map(s=>s.id===selectedSection.id?{...s,...patch}:s)}));
+  update(p=>({...p,sections:p.sections.map(s=>s.id===selectedSection.id?{...s,...patch}:s),
+   dossierBinding:patch.body!==undefined&&selectedSection.kind==="intro"&&p.dossierBinding?
+    {...p.dossierBinding,objectivesMode:"custom"}:p.dossierBinding}));
  };
  const addSection=(kind:SectionKind)=>{
   if(project.sections.length>=45)return setNotice("Maximum 45 sections.");
@@ -207,7 +210,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
        <label className={studioTxt}>Titre du bloc<input aria-label="Titre du bloc Academy" className={studioInput+" mt-1"} maxLength={150}
          value={selectedSection.title} onChange={e=>patchSection({title:e.target.value})}/></label>
        <label className={studioTxt}>Contenu<textarea aria-label="Texte du bloc Academy" className={studioInput+" mt-1 min-h-28 resize-y"} maxLength={1800}
-         value={selectedSection.body} onChange={e=>patchSection({body:e.target.value})}/></label>
+         value={displayedSection?.body??selectedSection.body} onChange={e=>patchSection({body:e.target.value})}/></label>
        <label className={studioTxt}>Texte du bouton (facultatif)<input aria-label="Bouton du bloc Academy" className={studioInput+" mt-1"} maxLength={80}
          value={selectedSection.actionLabel} onChange={e=>patchSection({actionLabel:e.target.value})}/></label>
        <label className={studioTxt}>Destination HTTPS, email, téléphone ou ancre
@@ -235,7 +238,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
    <button type="button" aria-label="Exporter le site Academy en HTML" onClick={exportHTML} className="flex min-h-9 items-center gap-1.5 rounded-[5px] bg-white px-3 text-xs font-semibold text-black"><Code2 size={15}/> <span className="hidden sm:inline">Export site</span></button>
  </div>;
  const selectedStyle={backgroundColor:project.background,color:project.foreground,fontFamily:project.font==="serif"?"Georgia,serif":"system-ui,Arial,sans-serif"};
- const rootPreview=selectedSection??project.sections[0];
+ const rootPreview=displayedSection??effectiveProject.sections[0];
  return <StudioFrame title="UI/UX & Academy" subtitle="No Code · apprendre et construire un véritable site dans le même espace"
    onBack={onBack} leftLabel="Projets et cours Academy" rightLabel="Inspecteur UI UX" actions={actions} left={left} right={right}>
    <div className="mx-auto max-w-[1320px] space-y-4 pb-28">
@@ -270,7 +273,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
                onClick={()=>setSelected(s.id)} className="text-[11px] opacity-75 hover:underline">{s.title||"Rubrique"}</button>)}</div>
          </header>
          <main>
-           {project.sections.map(s=><section key={s.id} tabIndex={0} role="button"
+           {effectiveProject.sections.map(s=><section key={s.id} tabIndex={0} role="button"
              aria-label={"Modifier "+s.title} aria-pressed={rootPreview.id===s.id}
              onClick={()=>setSelected(s.id)}
              onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setSelected(s.id);}}}
