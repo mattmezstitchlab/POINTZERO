@@ -37,7 +37,6 @@ import MotifLibrary from "./components/MotifLibrary";
 import EmbroideryInspector from "./components/EmbroideryInspector";
 import { getMotifPreset } from "./lib/motifPresets";
 import { attachSubject, changeSubject, duplicateSubject, recomposeSubjects, removeSubject, reorderSubject, sceneFromPattern, type SubjectScene, type SubjectLayer } from "./lib/subjectEngine";
-import Sheet from "./components/Sheet";
 import PaletteSheet from "./components/PaletteSheet";
 import FlossRail from "./components/FlossRail";
 import WorkspacePanel, { DEFAULT_PREFS, type Preferences } from "./components/WorkspacePanel";
@@ -103,7 +102,6 @@ export default function App() {
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
   const [activeCategory, setActiveCategory] = useState<AtelierCategory>("compose");
-  const [categoryPanel, setCategoryPanel] = useState<AtelierCategory | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [promptText, setPromptText] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
@@ -175,7 +173,7 @@ export default function App() {
     if (!remote) { try { await saveLibrary(store.present, true); } catch { /* The explicit file backup remains available. */ } }
     const next = { ...p, supplies: { ...p.supplies, ...inventory } };
     setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
-    setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setCategoryPanel(null); setShowWelcome(false);
+    setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setShowWelcome(false);
   };
 
   useEffect(() => {
@@ -261,7 +259,7 @@ export default function App() {
       else if (key === "p") { if (workspace === "stitch") chooseTool("park"); else setPanel("palette"); }
       else if (key === "f") setPanel("palette");
       else if (key === "t") setView((v) => v === "real" ? "flat" : v === "flat" ? "pattern" : "real");
-      else if (key === "escape") { closePanel(); setSelection(null); setCategoryPanel(null); }
+      else if (key === "escape") { closePanel(); setSelection(null); }
     };
     window.addEventListener("keydown", keys); return () => window.removeEventListener("keydown", keys);
   }, [chooseTool, remote, workspace, closePanel]);
@@ -301,18 +299,17 @@ export default function App() {
 
   const projectInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const openComposition = () => { if (!remote) { closePanel(); setCategoryPanel(null); setCompositionInput(P); } };
+  const openComposition = () => { if (!remote) { closePanel(); setCompositionInput(P); } };
   const onRemote = useCallback((p: Pattern | null) => {
     setRemote(p);
-    if (p) { setShowWelcome(false); setCategoryPanel(null); setActiveCategory("stitch"); setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); }
+    if (p) { setShowWelcome(false); setActiveCategory("stitch"); setWorkspace("stitch"); setView("pattern"); setTool("hand"); setColor((c) => p.palette.includes(c) ? c : p.palette[0] ?? 0); }
   }, []);
   const importAnyFile = (chosen: File) => {
     if (/\.(json|oxs)$/i.test(chosen.name)) { void openProjectFromFile(chosen); }
     else if (/\.pdf$/i.test(chosen.name) || chosen.type === "application/pdf") { setPdfFile(chosen); }
     else if (chosen.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(chosen.name)) { setAutoImage(chosen); }
     else { notify("Format non reconnu : image, PDF, JSON ou OXS."); return; }
-    setShowWelcome(false); setCategoryPanel(null);
-  };
+    setShowWelcome(false); };
   // Snapshots are native POINTZERO projects, never flat decorative images.
   const sceneOf = (p: Pattern): SubjectScene => {
     const saved = sceneFromPattern(p);
@@ -333,7 +330,7 @@ export default function App() {
       setPattern(recomposeSubjects(next));
       setSelectedSubjectId(next.layers[next.layers.length - 1]?.id ?? null);
       setTool("hand"); setWorkspace("create"); setView("flat");
-      setActiveCategory("compose"); setShowWelcome(false); setCategoryPanel(null); closePanel();
+      setActiveCategory("compose"); setShowWelcome(false); closePanel();
     } catch (error) { notify(error instanceof Error ? error.message : "Impossible d’ajouter ce motif."); }
   };
   const updateScene = (change: (scene: SubjectScene) => SubjectScene) => {
@@ -390,7 +387,6 @@ export default function App() {
   const openRightPanel = (section: RightSection) => {
     setRightSection(section);
     setPanel(null);
-    setCategoryPanel(null);
     setMobileLibraryOpen(false);
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) setMobileInspectorOpen(true);
   };
@@ -399,13 +395,11 @@ export default function App() {
     setPanel(null);
     setShowWelcome(false);
     if (next === "create") {
-      setCategoryPanel("create");
       setRightSection("properties");
       setMobileInspectorOpen(false);
       if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) setMobileLibraryOpen(true);
       return;
     }
-    setCategoryPanel(null);
     if (next === "stitch") chooseWorkspace("stitch");
     else chooseWorkspace("create");
     if (next === "compose") setTool("hand");
@@ -416,7 +410,7 @@ export default function App() {
     onGenerate: () => setPromptOpen(true),
     onImport: importAnyFile,
     onBlank: () => { panelActions.new(80, 80); setActiveCategory("compose"); setShowDrawingTools(false); },
-    onLibrary: () => { setShowWelcome(false); setCategoryPanel(null); setPanel("library"); },
+    onLibrary: () => { setShowWelcome(false); setPanel("library"); },
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
@@ -539,13 +533,13 @@ export default function App() {
       onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })}
       symbols={symbols} onSymbols={() => setSymbols((v) => !v)}
       view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)}
-      onLibrary={() => { setCategoryPanel(null); setPanel("library"); }}
-      onExport={() => { setCategoryPanel(null); setPanel("export"); }}
+      onLibrary={() => { setPanel("library"); }}
+      onExport={() => { setPanel("export"); }}
       onSettings={() => openRightPanel("settings")}
-      onShare={() => { setCategoryPanel(null); setPanel("share"); }}
+      onShare={() => { setPanel("share"); }}
       saving={saving} drawing={showDrawingTools}
       onAdvanced={() => openCategory("compose")}
-      onDrawing={() => { setTool(showDrawingTools ? "hand" : "cross"); setShowDrawingTools(!showDrawingTools); setActiveCategory("compose"); setCategoryPanel(null); setMobileInspectorOpen(false); if (window.matchMedia("(max-width: 1023px)").matches) setMobileLibraryOpen(true); }} />
+      onDrawing={() => { setTool(showDrawingTools ? "hand" : "cross"); setShowDrawingTools(!showDrawingTools); setActiveCategory("compose"); setMobileInspectorOpen(false); if (window.matchMedia("(max-width: 1023px)").matches) setMobileLibraryOpen(true); }} />
     {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[58px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
       aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
     <aside aria-label="Bibliothèque et outils de broderie"
@@ -565,7 +559,7 @@ export default function App() {
             onAddSaved={sprite => {addStitchedPattern(sprite);setMobileLibraryOpen(false);}}
             onOpenProject={p => { void loadPattern(p); setTool("hand");setMobileLibraryOpen(false); }}
             onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose");setMobileLibraryOpen(false); }}
-            onOpenLibrary={() => { setCategoryPanel(null);setMobileLibraryOpen(false);setPanel("library"); }} />
+            onOpenLibrary={() => { setMobileLibraryOpen(false);setPanel("library"); }} />
         ) : <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 text-[12px] leading-relaxed text-white/60">
           {activeCategory === "threads"
             ? "Le rail DMC en bas permet de choisir un fil. Ses caractéristiques, la toile et le stock sont dans l'inspecteur à droite."
