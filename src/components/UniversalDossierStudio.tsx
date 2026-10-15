@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState,type ChangeEvent} from "react";
 import {ArrowLeft,ArrowRight,BookOpen,Check,ChevronDown,Download,FileText,GraduationCap,History,Layers3,Plus,Save,Upload} from "lucide-react";
 import {readWorld} from "../lib/oneSpaceCore";
-import {AIME_WORLD_CHANGED,addUniversalMoment,adoptLegacySpace,createUniversalDossier,exportUniversalJSON,importUniversalJSON,projectFormation,readDossier,understandIntent,updateUniversalField} from "../lib/universalDossier";
+import {AIME_WORLD_CHANGED,academyReferenceHealth,addUniversalMoment,adoptLegacySpace,createUniversalDossier,exportUniversalJSON,importUniversalJSON,projectFormation,readDossier,understandIntent,updateUniversalField} from "../lib/universalDossier";
 import type{EditKey,Inference} from "../lib/universalDossier";
 import "./UniversalDossierStudio.css";
 type Props={onBack:()=>void;onOpenAcademy:(id:string)=>void};
@@ -109,7 +109,7 @@ export default function UniversalDossierStudio({onBack,onOpenAcademy}:Props){
       <p>Chaque Studio utilise l'identifiant du même dossier. Les données spécifiques restent sous sa propre responsabilité.</p>
       <button type="button" onClick={()=>onOpenAcademy(current.id)} className="ud-action-button"><BookOpen size={18}/><span><strong>{current.dossier?.references.some(r=>r.studio==="academy")?"Retrouver le support Academy":"Créer un support pédagogique"}</strong><small>Ouvrir l'éditeur existant sans ressaisir le titre</small></span><ArrowRight size={16}/></button>
       <button type="button" onClick={()=>{try{download(exportUniversalJSON(current),"aime-dossier-"+current.id.slice(0,8)+".json")}catch(e){setNotice(String(e))}}} className="ud-action-button"><Download size={18}/><span><strong>Exporter le dossier</strong><small>JSON complet, avec identifiant et mémoire</small></span><ArrowRight size={16}/></button>
-      <div className="ud-resources"><strong>Ressources reliées</strong>{current.dossier?.references.length?current.dossier.references.map(r=><p key={r.id}>{r.title} · {r.targetId.slice(0,8)} · {r.status}</p>):<p>Aucune ressource rattachée pour le moment.</p>}</div>
+      <div className="ud-resources"><strong>Ressources reliées</strong>{current.dossier?.references.length?current.dossier.references.map(r=><p key={r.id}>{r.title} · {r.targetId.slice(0,8)} · {r.status}{r.studio==="academy"&&r.type==="studio"?" · "+({available:"support présent",missing:"support introuvable sur cet appareil",invalid:"référence ou fichier Academy invalide",none:"aucune référence"}[academyReferenceHealth(current)]):""}</p>):<p>Aucune ressource rattachée pour le moment.</p>}</div>
       <button className="ud-history-toggle" type="button" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(v=>!v)}><History size={17}/> Mémoire des changements <ChevronDown size={15}/></button>
       {historyOpen&&<div className="ud-history">{current.dossier?.history.length?current.dossier.history.slice().reverse().map(h=><article key={h.id}><time dateTime={h.at}>{new Date(h.at).toLocaleString("fr-FR")}</time><strong>{h.field}</strong><p>{readable(h.before)||"—"} → {readable(h.after)||"—"}</p><small>{h.origin} · {h.validation}</small></article>):<p>Aucune modification confirmée.</p>}</div>}
      </aside>
