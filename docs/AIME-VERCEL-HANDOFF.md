@@ -103,7 +103,7 @@ npm run verify
 
 Le script `verify` exécute `tsc --noEmit && vitest run && vite build`. Les tests React/Vitest tournent en JSDOM. Ils valident les contrats du code ; ils **ne certifient pas** la qualité mobile, les clics en navigateur réel, les permissions ni les routes derrière SSO.
 
-La PR #40 au commit `32cd0c8` avait **415 tests réussis sur 415 / 54 fichiers, TypeScript et build Vite réussis**. Les tests supplémentaires de consolidation doivent être réexécutés sur **son SHA à elle**. Ne pas reprendre 415 comme résultat de la consolidation sans une nouvelle CI.
+La PR #40 au commit `32cd0c8` avait **415 tests réussis sur 415 / 54 fichiers**. La consolidation a été vérifiée sur le commit [`21d1d10b19a824b360220e5cad569b5e31a3fef7`](https://github.com/mattmezstitchlab/POINTZERO/commit/21d1d10b19a824b360220e5cad569b5e31a3fef7) : **420 tests réussis sur 420 / 54 fichiers, TypeScript et build Vite réussis**, workflow GitHub Actions `38825043947` conclu `success`. Toute modification ultérieure, y compris de ce document, exige une nouvelle vérification sur le SHA résultant.
 
 Checklist indispensable :
 1. Création, schéma, IDs canoniques et projection Formation.
