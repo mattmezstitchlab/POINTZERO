@@ -1,4 +1,4 @@
-const CACHE = "point-zero-manifest-v1";
+const CACHE = "point-zero-aime-v1";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./app-icon.svg", "./images/grille-roses.png", "./images/papillon.png", "./images/hero-ipad-broderie.jpg"];
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then(async (cache) => {
@@ -8,7 +8,7 @@ self.addEventListener("install", (event) => {
 });
 self.addEventListener("activate", (event) => {
   event.waitUntil(caches.keys().then(async (keys) => {
-    await Promise.all(keys.filter((key) => (key.startsWith("point-zero-b-") || key.startsWith("point-zero-manifest-")) && key !== CACHE).map((key) => caches.delete(key)));
+    await Promise.all(keys.filter((key) => (key.startsWith("point-zero-b-") || key.startsWith("point-zero-manifest-") || key.startsWith("point-zero-aime-")) && key !== CACHE).map((key) => caches.delete(key)));
     await self.clients.claim();
   }));
 });
