@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState,type ChangeEvent} from "react";
 import {ArrowLeft,ArrowRight,BookOpen,Check,ChevronDown,Clock3,Download,FileText,GraduationCap,History,Layers3,Plus,Save,Upload} from "lucide-react";
 import {readWorld,type WorldSpace} from "../lib/oneSpaceCore";
-import {AIME_WORLD_CHANGED,adoptLegacySpace,createUniversalDossier,exportUniversalJSON,importUniversalJSON,projectFormation,readDossier,understandIntent,updateUniversalField} from "../lib/universalDossier";
+import {AIME_WORLD_CHANGED,addUniversalMoment,adoptLegacySpace,createUniversalDossier,exportUniversalJSON,importUniversalJSON,projectFormation,readDossier,understandIntent,updateUniversalField} from "../lib/universalDossier";
 import type{EditKey,Inference} from "../lib/universalDossier";
 import "./UniversalDossierStudio.css";
 type Props={onBack:()=>void;onOpenAcademy:(id:string)=>void};
@@ -12,6 +12,7 @@ export default function UniversalDossierStudio({onBack,onOpenAcademy}:Props){
  const [intent,setIntent]=useState(""),[preview,setPreview]=useState<Inference|null>(null);
  const [notice,setNotice]=useState(""),[editing,setEditing]=useState<EditKey|null>(null),[draft,setDraft]=useState("");
  const [historyOpen,setHistoryOpen]=useState(false),[showTraining,setShowTraining]=useState(true);
+ const [momentTitle,setMomentTitle]=useState(""),[momentTime,setMomentTime]=useState("");
  const upload=useRef<HTMLInputElement>(null);
  useEffect(()=>{const update=()=>setWorld(readWorld());window.addEventListener(AIME_WORLD_CHANGED,update);window.addEventListener("storage",update);return()=>{window.removeEventListener(AIME_WORLD_CHANGED,update);window.removeEventListener("storage",update)}},[]);
  const current=world.spaces.find(s=>s.id===activeId)??null;
@@ -92,6 +93,12 @@ export default function UniversalDossierStudio({onBack,onOpenAcademy}:Props){
         {field("dossier.training.prerequisites","Prérequis",view.prerequisites)}
         {field("dossier.training.outline","Programme",(view.outline??[]).join("\n"))}
         {field("dossier.training.evaluation","Évaluation",view.evaluation)}
+        <div className="ud-field"><div className="ud-field-label"><span>Créneaux du dossier</span></div>
+         {view.moments.length?view.moments.map(m=><p className="ud-field-value" key={m.id}>{m.title} · {m.time||"Heure à définir"}</p>):<p className="ud-field-value">Aucun créneau défini.</p>}
+         <div className="ud-edit"><input aria-label="Intitulé du créneau" placeholder="Séance découverte" maxLength={180} value={momentTitle} onChange={e=>setMomentTitle(e.target.value)}/>
+          <input aria-label="Horaire du créneau" type="time" value={momentTime} onChange={e=>setMomentTime(e.target.value)}/>
+          <button className="ud-save" type="button" onClick={()=>{try{addUniversalMoment(current.id,momentTitle,momentTime);setMomentTitle("");setMomentTime("");setNotice("Créneau ajouté à la chronologie canonique.");}catch(e){setNotice(e instanceof Error?e.message:"Horaire invalide.")}}}><Plus size={14}/> Ajouter un moment</button></div>
+        </div>
         <p className="ud-warning">{view.disclaimer}</p>
         {view.missing.length>0&&<div className="ud-missing"><strong>À préciser</strong>{view.missing.map(v=><span key={v}>{v}</span>)}</div>}
        </div>}
