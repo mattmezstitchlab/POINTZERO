@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState,type ChangeEvent} from "react";
-import {ArrowLeft,ArrowRight,BookOpen,Check,ChevronDown,Clock3,Download,FileText,GraduationCap,History,Layers3,Plus,Save,Upload} from "lucide-react";
-import {readWorld,type WorldSpace} from "../lib/oneSpaceCore";
+import {ArrowLeft,ArrowRight,BookOpen,Check,ChevronDown,Download,FileText,GraduationCap,History,Layers3,Plus,Save,Upload} from "lucide-react";
+import {readWorld} from "../lib/oneSpaceCore";
 import {AIME_WORLD_CHANGED,addUniversalMoment,adoptLegacySpace,createUniversalDossier,exportUniversalJSON,importUniversalJSON,projectFormation,readDossier,understandIntent,updateUniversalField} from "../lib/universalDossier";
 import type{EditKey,Inference} from "../lib/universalDossier";
 import "./UniversalDossierStudio.css";
