@@ -233,7 +233,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
   });
 
-  it("affiche la landing claire LE MONDE AIME depuis son lien direct, puis ouvre les ateliers", async () => {
+  it("conserve la page publique LE MONDE AIME par lien direct, hors du menu des studios", async () => {
     window.history.replaceState(null,"","/?site=le-monde-aime");
     await mount();
     expect(container?.querySelector('[aria-label="Présentation LE MONDE AIME"]')).toBeTruthy();
@@ -242,7 +242,15 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(container?.querySelector('[aria-label="Espace Musique inclusive"]')).toBeTruthy();
     await click(button("Retour au studio universel"));
     await click(button("Ouvrir le menu des studios"));
-    await click(button("Ouvrir le studio LE MONDE AIME · Présentation"));
+    expect(button("Ouvrir le studio LE MONDE AIME · Présentation")).toBeNull();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Retour à l’accueil POINTZERO"));
+    const publicLink=container?.querySelector('a[href="?site=le-monde-aime"]');
+    expect(publicLink).toBeTruthy();
+    await act(async()=>root?.unmount());
+    root=null;container?.remove();container=null;
+    window.history.replaceState(null,"","/?site=le-monde-aime");
+    await mount();
     await click(button("Créer une œuvre dans LE MONDE AIME"));
     expect(container?.querySelector('[aria-label="Espace LE MONDE AIME"]')).toBeTruthy();
   });
