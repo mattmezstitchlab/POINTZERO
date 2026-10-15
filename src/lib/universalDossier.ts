@@ -2,7 +2,7 @@
  * All writes preserve original world storage and its unrelated spaces/tiles/signals.
  * Deliberately deterministic, offline interpretation, NOT an AI service.
  */
-import {ids,newSpace,readWorld,safeWorld,writeWorld,type WorldSpace} from "./oneSpaceCore";
+import {ids,newMoment,newSpace,readWorld,safeWorld,writeWorld,type WorldSpace} from "./oneSpaceCore";
 import {emptyUniversalMeta,validUniversalMeta,type DossierChange,type TrainingContext,type UniversalMeta} from "./dossierSchema";
 export const AIME_WORLD_CHANGED="aime:universal-world-changed";
 export const DOSSIER_EXPORT_KIND="aime:universal-dossier";
@@ -52,7 +52,7 @@ export function makeUniversalDossier(input:string):WorldSpace{
  dossier.actions=[{id:ids(),label:"Relire la compréhension",state:"à-faire",requiresValidation:true},
  {id:ids(),label:"Créer un support dans Academy",state:"à-faire",requiresValidation:false},
  {id:ids(),label:"Exporter le dossier JSON",state:"à-faire",requiresValidation:false}];
- const created={...base,description:inference.intent,dossier};
+ const created={...base,description:trim(inference.intent,1200),dossier};
  if(!validUniversalMeta(dossier))throw Error("Dossier généré invalide.");
  return created;
 }
@@ -113,6 +113,16 @@ export function updateUniversalField(spaceId:string,field:EditKey,input:string,o
  next={...next,dossier:{...d,history:[...d.history,item].slice(-300)}};
  if(!validUniversalMeta(next.dossier))throw Error("Modification rejetée par la validation.");
  return persist(next);
+}
+/** Add a canonical scheduled moment, not a second formation-only schedule. */
+export function addUniversalMoment(spaceId:string,title:string,time:string):WorldSpace{
+ const space=readDossier(spaceId);if(!space)throw Error("Dossier introuvable.");
+ if(space.moments.length>=200)throw Error("Limite de moments atteinte.");
+ if(title.trim().length<2||title.length>180||!(time===""||/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)))throw Error("Titre ou horaire invalide.");
+ const moment=newMoment(trim(title,180),time);
+ const meta=space.dossier??emptyUniversalMeta(space.description);
+ const revision:DossierChange={id:ids(),at:iso(),entityId:moment.id,field:"moments",before:"",after:moment.title+" @ "+moment.time,origin:"utilisateur",validation:"confirmé"};
+ return persist({...space,moments:[...space.moments,moment],dossier:{...meta,history:[...meta.history,revision].slice(-300)}});
 }
 export function attachAcademyResource(spaceId:string,academyProjectId:string):WorldSpace{
  const space=readDossier(spaceId);if(!space)throw Error("Dossier source introuvable.");
