@@ -247,7 +247,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(button("Ouvrir le studio LE MONDE AIME · Présentation")).toBeNull();
     await click(button("Ouvrir le menu des studios"));
     await click(button("Retour à l’accueil POINTZERO"));
-    const publicLink=container?.querySelector('a[href="?site=le-monde-aime"]');
+    const publicLink=container?.querySelector('a[href="/le-monde-aime"]');
     expect(publicLink).toBeTruthy();
     await act(async()=>root?.unmount());
     container?.remove();
