@@ -3,6 +3,7 @@ import { Accessibility, GraduationCap, GitBranch, Layers3, Scale, ArrowLeft, Boo
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
+import FragmentGridWorkspace from "./FragmentGridWorkspace";
 import {
   FORMATS, addDesignElement, colorOK, createDesign, designToHTML, designToSVG, duplicateDesign, safeDesign, specFor,
   validDataImage, type DesignDocument, type DesignElement, type DesignFormat
@@ -75,7 +76,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [leftTab, setLeftTab] = useState<"elements"|"formats"|"documents">("elements");
+  const [leftTab, setLeftTab] = useState<"elements"|"formats"|"documents"|"fragments">("elements");
   const [search, setSearch] = useState("");
   const [sidebar, setSidebar] = useState(false);
   const [drafts, setDrafts] = useState<DesignDocument[]>(readDrafts);
@@ -291,8 +292,8 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     <div className="relative flex min-h-0 flex-1">
       <button onClick={()=>setSidebar(!sidebar)} className="absolute left-3 top-3 z-20 grid size-10 place-items-center rounded-[5px] border border-white/20 bg-[#09090b] lg:hidden" aria-label={sidebar?"Fermer les ressources":"Ouvrir les ressources"}><LayoutTemplate size={18}/></button>
       <aside aria-label="Ressources et formats" className={"pz-design-sidebar absolute bottom-0 left-0 top-0 z-20 flex w-[252px] flex-col border-r border-white/10 bg-[#0b0b0d] lg:relative lg:translate-x-0 "+(sidebar?"translate-x-0":"-translate-x-full")}>
-        <div className="grid grid-cols-3 gap-1 border-b border-white/10 p-2">
-          {([["elements","Éléments"],["formats","Formats"],["documents","Projets"]] as const).map(([id,label])=>
+        <div className="grid grid-cols-4 gap-1 border-b border-white/10 p-2">
+          {([["elements","Éléments"],["formats","Formats"],["documents","Projets"],["fragments","Grille"]] as const).map(([id,label])=>
             <button key={id} onClick={()=>setLeftTab(id)} aria-pressed={leftTab===id} className={"min-h-9 rounded-[5px] text-[11px] font-semibold "+(leftTab===id?"bg-white text-black":"text-white/65 hover:bg-white/10")}>{label}</button>)}
         </div>
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3">
@@ -320,6 +321,11 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               <span className="font-semibold">{f.label}</span><span className="text-[10px] text-white/55">{f.description}</span>
             </button>)}
           </>}
+          {leftTab==="fragments"&&<>
+            <h2 className="mb-3 text-[12px] font-semibold">Grille universelle</h2>
+            <p className="text-[11px] leading-relaxed text-white/65">Importez une collection JSON depuis AIME MÉTAMORPHOSE. Chaque case conserve sa source, son cadrage et son verrouillage.</p>
+            <p className="mt-3 text-[11px] leading-relaxed text-white/65">La grille se recompose lorsque vous agrandissez un fragment. Ce format reste indépendant des points et des fils DMC.</p>
+          </>}
           {leftTab==="documents"&&<>
             <button onClick={saveDraft} className={action+" w-full"}><Save size={15}/> Sauvegarder le projet</button>
             <button onClick={()=>projectPicker.current?.click()} className={action+" mt-2 w-full"}><FolderOpen size={15}/> Importer un JSON</button>
@@ -332,6 +338,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
         </div>
 
       </aside>
+      {leftTab === "fragments" ? <FragmentGridWorkspace/> : <>
       <main ref={stage} aria-label="Canevas de création universel" className="pz-design-stage min-w-0 flex-1 overflow-auto p-4 pt-16 lg:p-5" onClick={()=>setSelected(null)}>
         <div className="mx-auto flex min-h-full w-fit flex-col items-center justify-center">
           <div className="mb-2 flex w-full items-center justify-between gap-3 text-[11px] text-white/65">
@@ -406,8 +413,9 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
           </button>)}
         </div>
       </aside>
+      </>}
     </div>
-    <div className="pz-design-mobile-properties absolute bottom-4 right-4 z-30 xl:hidden">
+    {leftTab !== "fragments" && <div className="pz-design-mobile-properties absolute bottom-4 right-4 z-30 xl:hidden">
       {element?<div className="pz-design-menu max-h-[36dvh] w-[220px] overflow-y-auto p-3">
         <div className="mb-2 flex items-center justify-between text-xs font-semibold"><span>Élément sélectionné</span><button onClick={()=>setSelected(null)} aria-label="Fermer les propriétés"><X size={15}/></button></div>
         {element.kind==="text"&&<textarea aria-label="Texte de l'élément" className={mono+" w-full"} rows={2} value={element.text} onChange={e=>patchElement(element.id,{text:e.target.value})}/>}
@@ -416,7 +424,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
         </label>
         <button className={action+" mt-2 w-full"} onClick={()=>{change({...doc,elements:layers.filter(x=>x.id!==element.id)});setSelected(null);}}><Trash2 size={14}/> Supprimer</button>
       </div>:<div className="pz-design-menu p-2 text-xs text-white/70">{specFor(doc.format).label}</div>}
-    </div>
+    </div>}
     <input ref={imagePicker} type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>void chooseImage(e)} className="sr-only" aria-label="Importer une image pour la création"/>
     <input ref={projectPicker} type="file" accept=".json,application/json" onChange={e=>void openJSON(e)} className="sr-only" aria-label="Importer une création POINTZERO JSON"/>
     {notice&&<div className="absolute bottom-3 left-1/2 z-40 max-w-[85vw] -translate-x-1/2 rounded-[6px] border border-white/20 bg-[#09090b] px-4 py-3 text-center text-xs text-white shadow-xl" role="status" onClick={()=>setNotice("")}>{notice}</div>}
