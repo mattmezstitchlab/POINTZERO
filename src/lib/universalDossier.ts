@@ -2,7 +2,7 @@
  * All writes preserve original world storage and its unrelated spaces/tiles/signals.
  * Deliberately deterministic, offline interpretation, NOT an AI service.
  */
-import {WORLD_KEY,ids,newSpace,readWorld,safeWorld,setSpace,writeWorld,type WorldSpace} from "./oneSpaceCore";
+import {ids,newSpace,readWorld,safeWorld,writeWorld,type WorldSpace} from "./oneSpaceCore";
 import {emptyUniversalMeta,validUniversalMeta,type DossierChange,type TrainingContext,type UniversalMeta} from "./dossierSchema";
 export const AIME_WORLD_CHANGED="aime:universal-world-changed";
 export const DOSSIER_EXPORT_KIND="aime:universal-dossier";
@@ -55,6 +55,12 @@ export function makeUniversalDossier(input:string):WorldSpace{
  const created={...base,description:inference.intent,dossier};
  if(!validUniversalMeta(dossier))throw Error("Dossier généré invalide.");
  return created;
+}
+export function adoptLegacySpace(spaceId:string):WorldSpace{
+ const space=readDossier(spaceId);if(!space)throw Error("Espace introuvable.");
+ if(space.dossier)return space;
+ const meta=emptyUniversalMeta(space.description||"",space.kind==="mariage"?"mariage":space.kind==="association"?"transmission":"creation");
+ return persist({...space,dossier:meta}); // Original people, moments, signals and refs unchanged.
 }
 export function createUniversalDossier(input:string):WorldSpace{
  const store=readWorld();if(store.spaces.length>=30)throw Error("Limite de 30 espaces locaux atteinte : sauvegardez vos données.");
