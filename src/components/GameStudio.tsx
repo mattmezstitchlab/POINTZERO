@@ -238,7 +238,7 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
     className="h-full w-full touch-none select-none" style={{touchAction:"none"}}
     onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
     onWheel={(e:WheelEvent<HTMLCanvasElement>)=>{e.preventDefault();setZoom(v=>clamp(v*(e.deltaY<0?1.14:.88),.7,5));}}/>
-   {phase!=="playing"&&<div className="absolute inset-0 flex flex-col items-center justify-center bg-[#111116]/80 p-6 text-center text-white">
+   {phase!=="playing"&&<div className={"absolute inset-0 flex flex-col items-center p-6 text-center text-white "+(phase==="result"?"justify-end bg-gradient-to-t from-black/95 via-black/25 to-transparent":"justify-center bg-[#111116]/80")}>
     {phase==="ready"?<>
      <Music2 size={28} className="mb-4 text-[#dcaaba]"/>
      <h3 className="text-3xl font-semibold tracking-[-.04em]">30 secondes.</h3>
