@@ -2,7 +2,7 @@
  * All writes preserve original world storage and its unrelated spaces/tiles/signals.
  * Deliberately deterministic, offline interpretation, NOT an AI service.
  */
-import {ids,newMoment,newSpace,readWorld,safeWorld,writeWorld,type WorldSpace} from "./oneSpaceCore";
+import {WORLD_KEY,ids,newMoment,newSpace,readWorld,safeWorld,writeWorld,type WorldSpace} from "./oneSpaceCore";
 import {emptyUniversalMeta,validUniversalMeta,type DossierChange,type TrainingContext,type UniversalMeta} from "./dossierSchema";
 export const AIME_WORLD_CHANGED="aime:universal-world-changed";
 export const DOSSIER_EXPORT_KIND="aime:universal-dossier";
@@ -34,9 +34,22 @@ export function selectedDossier():WorldSpace|null{
  const store=readWorld();
  return store.spaces.find(s=>s.id===store.selectedSpaceId)??null;
 }
+/** A corrupted or future-version local store must never be interpreted as empty
+ * for a write: that would replace an unrecoverable original value.
+ * Read-only legacy UI remains unchanged; only dossier mutations are guarded.
+ */
+export function writableWorld(){
+ const original=localStorage.getItem(WORLD_KEY);
+ if(original===null)return readWorld();
+ let decoded:unknown;
+ try{decoded=JSON.parse(original);}catch{throw Error("Stockage AIME illisible : données conservées, exportez une sauvegarde avant toute correction.");}
+ const validated=safeWorld(decoded);
+ if(!validated)throw Error("Stockage AIME incompatible : données conservées, aucun remplacement automatique.");
+ return validated;
+}
 const emit=()=>{if(typeof window!=="undefined")window.dispatchEvent(new Event(AIME_WORLD_CHANGED));};
 const persist=(space:WorldSpace,selected=true)=>{
- const store=readWorld();
+ const store=writableWorld();
  const next={...store,selectedSpaceId:selected?space.id:store.selectedSpaceId,
  spaces:store.spaces.some(x=>x.id===space.id)?store.spaces.map(x=>x.id===space.id?space:x):[...store.spaces,space]};
  if(!safeWorld(next))throw Error("Dossier invalide ou limite de stockage atteinte.");
@@ -63,7 +76,7 @@ export function adoptLegacySpace(spaceId:string):WorldSpace{
  return persist({...space,dossier:meta}); // Original people, moments, signals and refs unchanged.
 }
 export function createUniversalDossier(input:string):WorldSpace{
- const store=readWorld();if(store.spaces.length>=30)throw Error("Limite de 30 espaces locaux atteinte : sauvegardez vos données.");
+ const store=writableWorld();if(store.spaces.length>=30)throw Error("Limite de 30 espaces locaux atteinte : sauvegardez vos données.");
  const space=makeUniversalDossier(input);
  return persist(space);
 }
@@ -167,7 +180,7 @@ export function importUniversalJSON(raw:unknown,replace=false):WorldSpace{
  if(input.kind!==DOSSIER_EXPORT_KIND||input.version!==1||!input.space)throw Error("Format de dossier incompatible.");
  const space=input.space;
  if(!safeWorld({version:1,spaces:[space],selectedSpaceId:space.id}))throw Error("Schéma du dossier non conforme.");
- const store=readWorld();
+ const store=writableWorld();
  if(store.spaces.some(s=>s.id===space.id)&&!replace)throw Error("Conflit d'identifiant : importation refusée. Confirmez explicitement un remplacement.");
  if(!store.spaces.some(s=>s.id===space.id)&&store.spaces.length>=30)throw Error("Capacité locale atteinte.");
  return persist(space);
