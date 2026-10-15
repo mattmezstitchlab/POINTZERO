@@ -595,7 +595,7 @@ export default function App() {
             <p className="mt-1 truncate text-[11px] text-white/50">{P.name}</p>
           </div>
           <WorkspacePanel key={contextSection} inline open onClose={() => openRightPanel("properties")} pattern={P} onSet={setPattern}
-            actions={panelActions} prefs={prefs} onPrefs={setPrefs} onTool={chooseTool} tool={tool} color={color}
+            actions={panelActions} prefs={prefs} onPrefs={setPrefs} color={color}
             onColor={setColor} workspace={workspace} section={contextSection}
             extraActions={contextSection === "edit" ? <button type="button" className="btn-tinted" disabled={!!remote} onClick={openComposition}>Composition intelligente · aperçu</button> : undefined} />
         </div>
