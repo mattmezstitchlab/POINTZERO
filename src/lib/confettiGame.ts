@@ -18,7 +18,7 @@ const circle=(x:number,y:number,cx:number,cy:number,rx:number,ry:number)=>
 function h(seed:number,x:number,y:number){let n=(Math.imul((x+1)*374761393,(y+1)*668265263)^seed)>>>0;n=Math.imul(n^(n>>>13),1274126177)>>>0;return(n^(n>>>16))>>>0}
 export function portraitAt(artist:number,x:number,y:number):number {
  const shift=(artist%3)-1;
- const cx=24+shift, faceY=23;
+ const cx=24+shift;
  if(circle(x,y,cx,24,15,20)){
   const hair=artist===3?2:artist===4?3:artist===1?3:2;
   if(y<13+Math.sin((x+shift)*.5)*2)return hair;
