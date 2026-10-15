@@ -4,7 +4,7 @@ import {act} from "react";
 import {createRoot,type Root} from "react-dom/client";
 import {newPerson,newMoment,newSpace,readWorld,writeWorld,WORLD_KEY,safeWorld} from "../lib/oneSpaceCore";
 import {academyDisplayProject,ACADEMY_KEY,makeAcademyProject,validProject,exportAcademyHTML} from "../lib/academyCore";
-import {emptyUniversalMeta,validUniversalMeta} from "../lib/dossierSchema";
+import {validUniversalMeta} from "../lib/dossierSchema";
 import {academyDossierKey,adoptLegacySpace,attachAcademyResource,createUniversalDossier,exportUniversalJSON,importUniversalJSON,makeUniversalDossier,projectFormation,readDossier,understandIntent,updateUniversalField,addUniversalMoment} from "../lib/universalDossier";
 import {entryStudio} from "../lib/entryNavigation";
 import UniversalDossierStudio from "../components/UniversalDossierStudio";
