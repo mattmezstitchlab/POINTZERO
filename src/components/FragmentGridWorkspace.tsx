@@ -11,7 +11,7 @@ function restore():FragmentCollection {
   try{const value=readFragments(JSON.parse(localStorage.getItem(STORAGE)??"null"));if(value)return value;}catch{}
   return demoFragments();
 }
-export default function FragmentGridWorkspace(){
+export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentCollection|null}={}){
   const [collection,setCollection]=useState<FragmentCollection>(restore);
   const [selected,setSelected]=useState<string|null>(null);
   const [inspectorOpen,setInspectorOpen]=useState(false);
@@ -20,6 +20,10 @@ export default function FragmentGridWorkspace(){
   const [notice,setNotice]=useState("");
   const chooser=useRef<HTMLInputElement>(null);
   const active=collection.fragments.find(f=>f.id===selected)??null;
+  useEffect(()=>{
+    if(!incoming)return;
+    setCollection(incoming);setSelected(null);setNotice("Analyse intégrée : "+incoming.fragments.length+" fragments disponibles.");
+  },[incoming]);
   useEffect(()=>{try{localStorage.setItem(STORAGE,JSON.stringify(collection));}catch{setNotice("Stockage local plein : exportez votre JSON.")}},[collection]);
   function patch(id:string,change:Partial<Fragment>){setCollection(c=>updateFragment(c,id,change))}
   function toggleLock(id:string){setCollection(c=>({...c,fragments:c.fragments.map(f=>f.id===id?{...f,locked:!f.locked}:f)}))}
