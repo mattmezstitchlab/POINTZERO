@@ -40,7 +40,9 @@ export function validConfig(raw){
  if(!safeString(raw.title,130)||!safeString(raw.eyebrow,130)||!safeString(raw.subtitle,220)||
  !safeString(raw.introduction,900)||!safeString(raw.announcement,500)||!safeString(raw.mainLabel,130)||
  !(raw.mainDate===null||dateOk(raw.mainDate))||!Array.isArray(raw.studios)||raw.studios.length!==13||
- !Array.isArray(raw.journal)||raw.journal.length>80)return false;
+ !Array.isArray(raw.journal)||raw.journal.length>80||
+ (raw.aimeSignatures!==undefined&&(!Array.isArray(raw.aimeSignatures)||raw.aimeSignatures.length<1||
+ raw.aimeSignatures.length>8||raw.aimeSignatures.some(x=>!safeString(x,160)||!x.startsWith("Architecture Intelligente ")))))return false;
  const ids=new Set();
  for(const s of raw.studios){
   if(!s||!(s.id in expectedRoutes)||ids.has(s.id)||s.route!==expectedRoutes[s.id]||
