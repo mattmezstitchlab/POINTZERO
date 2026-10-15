@@ -4,7 +4,7 @@ import { DEFAULT_LAUNCH, STATUS_LABELS, canEnter, canPreview, countdown, validLa
 import "./ManifestLanding.css";
 
 interface Props {onStudio:(route:string)=>void;onAdmin:()=>void}
-interface PublicState {config:LaunchConfig|null;signupReady:boolean;turnstileSiteKey:string;legalEntity:string;privacyContact:string}
+interface PublicState {config:LaunchConfig|null;signupReady:boolean;turnstileSiteKey:string;legalEntity:string;privacyContact:string;privacyPolicyUrl:string}
 const THEME_ICONS=[Fingerprint,ShieldCheck,Grid2X2,Clock3,Sparkles,HeartHandshake,HeartHandshake,Grid2X2,GraduationCap,GitBranch,Sparkles,GitBranch,Sparkles];
 const pad=(n:number)=>String(n).padStart(2,"0");
 const btn="pz-manifest-button";
@@ -166,14 +166,14 @@ function ReuseDemo(){
  </section>;
 }
 export default function ManifestLanding({onStudio,onAdmin}:Props){
- const [state,setState]=useState<PublicState>({config:null,signupReady:false,turnstileSiteKey:"",legalEntity:"",privacyContact:""});
+ const [state,setState]=useState<PublicState>({config:null,signupReady:false,turnstileSiteKey:"",legalEntity:"",privacyContact:"",privacyPolicyUrl:""});
  const [expanded,setExpanded]=useState<string|null>(null);
  useEffect(()=>{
   let active=true;
   fetch("/api/pointzero-launch").then(r=>r.ok?r.json():Promise.reject()).then((raw:PublicState)=>{
    if(!active)return;setState({
     config:validLaunch(raw.config)?raw.config:null,signupReady:raw.signupReady===true,turnstileSiteKey:typeof raw.turnstileSiteKey==="string"?raw.turnstileSiteKey:"",
-    legalEntity:typeof raw.legalEntity==="string"?raw.legalEntity:"",privacyContact:typeof raw.privacyContact==="string"?raw.privacyContact:""
+    legalEntity:typeof raw.legalEntity==="string"?raw.legalEntity:"",privacyContact:typeof raw.privacyContact==="string"?raw.privacyContact:"",privacyPolicyUrl:typeof raw.privacyPolicyUrl==="string"?raw.privacyPolicyUrl:""
    });
   }).catch(()=>undefined);
   return()=>{active=false};
@@ -285,7 +285,8 @@ export default function ManifestLanding({onStudio,onAdmin}:Props){
         {state.privacyContact?<a href={"mailto:"+state.privacyContact} className="mt-3 inline-block text-[13px] font-semibold underline">{state.privacyContact}</a>:<p className="mt-3 text-xs text-[#ae8792]">Contact de confidentialité à configurer avant lancement.</p>}
        </div>
       </div>
-      <p className="mt-8 max-w-[950px] text-[12px] leading-relaxed text-[#999]">Une politique de confidentialité complète (durées de conservation des inscriptions confirmées, hébergeurs, droits d'accès et suppression) devra être validée et publiée avant la collecte réelle. Le formulaire reste désactivé tant que l'éditeur et son contact ne sont pas configurés.</p>
+      <p className="mt-8 max-w-[950px] text-[12px] leading-relaxed text-[#999]">Le formulaire reste désactivé tant que l'identité de l'éditeur, son contact et une politique de confidentialité complète ne sont pas configurés.</p>
+      {state.privacyPolicyUrl&&<a href={state.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 text-[12px] font-semibold text-[#765c69] underline">Consulter la politique de confidentialité complète <ArrowUpRight size={14}/></a>}
      </div>
    </section>
    <footer className="pz-manifest-footer"><div className="pz-manifest-wrap"><p className="pz-manifest-kicker">POINTZERO .0</p>
