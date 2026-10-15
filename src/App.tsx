@@ -423,7 +423,7 @@ export default function App() {
     ? <ManifestLanding onStudio={route => {
         const allowed = ["design","embroidery","admin","mini-site","programme","one-space","art-world","academy","causal","metamorphose","ripplecircle","game"];
         if(allowed.includes(route))switchStudio(route as Parameters<typeof switchStudio>[0]);
-      }} onOpenAtelier={() => switchStudio("design")} onAimeLanding={() => switchStudio("aime-landing")} onAdmin={() => switchStudio("manifest-admin")}/>
+      }} onOpenAtelier={() => switchStudio("design")} onAdmin={() => switchStudio("manifest-admin")}/>
     : studioMode === "manifest-admin"
     ? <ManifestAdminStudio onBack={() => switchStudio("manifest")}/>
     : studioMode === "design"
