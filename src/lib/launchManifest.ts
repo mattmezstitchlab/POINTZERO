@@ -12,6 +12,7 @@ export interface LaunchConfig {
  version:1;title:string;eyebrow:string;subtitle:string;introduction:string;
  mainDate:string|null;mainLabel:string; announcement:string;
  studios:LaunchStudio[];journal:LaunchJournal[];
+ aimeSignatures?:string[];
 }
 export const STATUS_LABELS:Record<LaunchStatus,string>={
  available:"Disponible",experiment:"En expérimentation",preparation:"En préparation",future:"À venir"
@@ -52,7 +53,9 @@ export function validLaunch(raw:unknown):LaunchConfig|null {
  typeof c.mainLabel!=="string"||c.mainLabel.length>130||
  typeof c.announcement!=="string"||c.announcement.length>500||
  !(c.mainDate===null||validDate(c.mainDate))||
- !Array.isArray(c.studios)||c.studios.length!==DEFAULT_LAUNCH.studios.length||!Array.isArray(c.journal)||c.journal.length>80)return null;
+ !Array.isArray(c.studios)||c.studios.length!==DEFAULT_LAUNCH.studios.length||!Array.isArray(c.journal)||c.journal.length>80||
+ (c.aimeSignatures!==undefined&&(!Array.isArray(c.aimeSignatures)||c.aimeSignatures.length<1||c.aimeSignatures.length>8||
+ c.aimeSignatures.some(x=>typeof x!=="string"||!x.startsWith("Architecture Intelligente ")||x.length>160))))return null;
  const expected=new Map(DEFAULT_LAUNCH.studios.map(v=>[v.id,v]));
  const found=new Set<string>();
  for(const t of c.studios){
