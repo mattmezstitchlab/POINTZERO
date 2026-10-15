@@ -51,6 +51,6 @@ describe("POINTZERO .0 — manifeste et livraison progressive",()=>{
   await act(async()=>{identity!.dispatchEvent(new MouseEvent("click",{bubbles:true}))});
   expect(onStudio).toHaveBeenCalledWith("identite");
   expect(onStudio).toHaveBeenCalledTimes(2);
-  expect(node.textContent).toContain("Ce studio n'est pas encore ouvert publiquement");
+  expect(node.textContent).toContain("Découvrir le Studio");
  });
 });
