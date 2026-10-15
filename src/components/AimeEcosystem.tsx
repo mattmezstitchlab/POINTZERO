@@ -1,4 +1,4 @@
-import {useEffect,useState,type MouseEvent,type ReactNode} from "react";
+import {useEffect,useRef,useState,type MouseEvent,type ReactNode} from "react";
 import {ArrowDownRight,ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Clock3,Heart,Layers3} from "lucide-react";
 import {AIME_EDITORIAL_VERSION,AIME_SIGNATURES,UNIVERSES,UNIVERSE_BY_SLUG,STUDIO_STORIES,STORY_BY_ID, MOTORS,VISION_MILESTONES} from "../lib/aimeEditorial";
 import {DEFAULT_LAUNCH,STATUS_LABELS,canEnter,canPreview,validLaunch,type LaunchConfig} from "../lib/launchManifest";
@@ -169,6 +169,7 @@ function Unknown({onNavigate}:{onNavigate:(path:string)=>void}){
 }
 export default function AimeEcosystem({page,onNavigate,onOpenStudio}:Props){
  const [config,setConfig]=useState<LaunchConfig>(DEFAULT_LAUNCH);
+ const scrollRef=useRef<HTMLDivElement>(null);
  useEffect(()=>{
   let active=true;
   fetch("/api/pointzero-launch").then(r=>r.ok?r.json():Promise.reject()).then(v=>{
@@ -177,7 +178,10 @@ export default function AimeEcosystem({page,onNavigate,onOpenStudio}:Props){
   return()=>{active=false};
  },[]);
  const slug=(typeof window!=="undefined"?window.location.pathname:"/").split("/")[2]||"";
- return <div className="ae-shell" aria-label="AIME — Architecture mère">
+ useEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=0;
+  document.title=(page==="aime-home"?"AIME® — Une architecture de continuité.":page==="vision"?"La vision · AIME®":page==="studio-detail"?((config.studios.find(x=>x.id===slug)?.title||"Studio")+" · AIME®"):page==="universe-detail"?((UNIVERSE_BY_SLUG.get(slug)?.name||"Univers")+" · AIME®"):"Les Univers · AIME®");
+ },[page,slug,config.studios]);
+ return <div ref={scrollRef} className="ae-shell" aria-label="AIME — Architecture mère">
   <SiteHeader onNavigate={onNavigate}/>
   {page==="aime-home"?<MainHome onNavigate={onNavigate}/>:
    page==="universe-index"?<Universes onNavigate={onNavigate}/>:
