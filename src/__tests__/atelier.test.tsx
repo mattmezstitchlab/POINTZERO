@@ -446,6 +446,19 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(left?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
     expect(dialog("Créer")?.classList.contains("is-open")).toBeFalsy();
   });
+  it("génère depuis la gauche sans ouvrir PromptStudio et exige une connexion sécurisée", async () => {
+    await mount();
+    await click(button("POINTZERO : créer un motif"));
+    const left=container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]');
+    const input=left?.querySelector('textarea[placeholder="Décrivez votre motif…"]') as HTMLTextAreaElement;
+    await act(async()=>{input.value="une hirondelle sur une fleur";input.dispatchEvent(new Event("input",{bubbles:true}))});
+    // The original app keeps the prompt in React state; clicking without credentials must not call the remote provider.
+    const generate=[...(left?.querySelectorAll("button")??[])].find(x=>x.textContent?.includes("Générer dans la grille"));
+    expect(generate).toBeTruthy();
+    expect(left?.querySelector('select[aria-label="Nombre de fils"]')).toBeTruthy();
+    expect(container?.querySelector('[role="dialog"][aria-label="Générer un motif par description"]')).toBeFalsy();
+    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+  });
   it("réutilise la colonne droite pour Fils, Suivi et Réglages, sans feuilles superposées", async () => {
     await mount();
     await click(category("Fils"));

@@ -2059,3 +2059,32 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   .pz-guided-lens { transition: none; }
 }
+
+
+/* POINTZERO — révélation du patron natif directement dans Canvas.
+   Décor uniquement : le contenu affiché dessous est le vrai Pattern DMC. */
+.pz-pattern-reveal { opacity: 1; transition: opacity .35s ease; }
+.pz-pattern-wave {
+  position: absolute; inset: 0;
+  background: linear-gradient(104deg, transparent 30%, rgba(235,181,195,.05) 43%, rgba(255,255,255,.32) 49%, rgba(182,137,155,.2) 51%, transparent 62%);
+  transform: translateX(-110%);
+  animation: pz-stitch-sweep 1.2s cubic-bezier(.24,.67,.2,1) both;
+}
+.pz-pattern-loupe {
+  position:absolute; width:120px; height:120px; top:50%; left:50%;
+  transform: translate(-50%,-50%) scale(.3); opacity:0;
+  border: 2px solid rgba(136,92,115,.6);
+  outline: 1px solid rgba(255,255,255,.65);
+  border-radius:50%;
+  box-shadow: 0 0 0 16px rgba(255,255,255,.06),0 0 0 32px rgba(211,154,172,.04);
+}
+.pz-pattern-reveal.is-symbols .pz-pattern-loupe {animation:pz-symbol-focus .55s ease both;}
+.pz-pattern-reveal.is-clean .pz-pattern-wave {
+  background:linear-gradient(105deg,transparent 33%,rgba(238,255,239,.3) 47%,rgba(163,189,164,.25) 51%,transparent 64%);
+  animation-duration:.55s;
+}
+@keyframes pz-stitch-sweep { from{transform:translateX(-110%)}to{transform:translateX(110%)}}
+@keyframes pz-symbol-focus {0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.1)}}
+@media(prefers-reduced-motion:reduce){
+  .pz-pattern-wave,.pz-pattern-loupe {animation:none!important;opacity:0!important;}
+}
