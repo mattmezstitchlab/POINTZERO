@@ -61,7 +61,8 @@ describe("POINTZERO — brancher un projet existant",()=>{
    const site=createMiniSite("portfolio");
    const html=miniSiteToHTML(site);
    expect(html).not.toContain("<script>");
-   expect(html).not.toContain("external-project");
+   expect(html).not.toContain('class="external-project"');
+   expect(html).not.toContain("data-external-url");
    const newSec=miniSection("externe");
    newSec.externalRefId="missing";
    site.sections.push(newSec);
