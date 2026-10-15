@@ -72,7 +72,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount(true);
     expect(container?.querySelector('[aria-label="AIME — Architecture mère"]')).toBeTruthy();
-    expect(container?.textContent).toContain("Une architecture en devenir");
+    expect(container?.textContent).toContain("LETTRE OUVERTE");
     await click(container?.querySelector('.ae-header-cta[href="/pointzero"]'));
     expect(container?.querySelector('[aria-label="POINTZERO .0 — Le temps retrouvé"]')).toBeTruthy();
     const opener=[...(container?.querySelectorAll("button")??[])].find(x=>x.textContent?.includes("Ouvrir l’Atelier"));
