@@ -6,6 +6,7 @@
     {"source": "/univers", "destination": "/index.html"},
     {"source": "/univers/:slug", "destination": "/index.html"},
     {"source": "/studios/:slug", "destination": "/index.html"},
-    {"source": "/vision", "destination": "/index.html"}
+    {"source": "/vision", "destination": "/index.html"},
+    {"source": "/dossier", "destination": "/index.html"}
   ]
 }
