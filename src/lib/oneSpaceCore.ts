@@ -2,9 +2,10 @@
 import {ACADEMY_KEY,validProject} from "./academyCore";
 import {PROGRAMME_STORAGE,safeProgrammeStore} from "./programmeCore";
 import {MUSIC_LABEL_KEY,safeMusicLabel} from "./musicLabelCore";
+import {readExternal} from "./externalProjects";
 export const WORLD_KEY="pointzero:one-space:v1";
 export type SpaceKind="famille"|"mariage"|"association"|"professionnel"|"personnel";
-export type TileKind="academy"|"broderie"|"musique"|"programme"|"mini-site"|"documents"|"atelier-art"|"causal"|"photo"|"design";
+export type TileKind="academy"|"broderie"|"musique"|"programme"|"mini-site"|"documents"|"atelier-art"|"causal"|"photo"|"design"|"external";
 export type RelationRole="organisateur"|"famille"|"invité"|"prestataire"|"participant";
 export type SignalKind="retard"|"changement"|"information";
 export interface SpacePerson {id:string;name:string;role:RelationRole;notificationsOptIn:boolean;subscribedMomentIds:string[]}
@@ -31,7 +32,8 @@ export const TILES:{id:TileKind;label:string;studio:string;description:string}[]
  {id:"atelier-art",label:"Atelier libre",studio:"art-world",description:"Créations et galerie"},
  {id:"causal",label:"Causal",studio:"causal",description:"Impacts et décisions"},
  {id:"photo",label:"Photo",studio:"photo",description:"Retouche et cadrage"},
- {id:"design",label:"Design",studio:"design",description:"Composition visuelle"}
+ {id:"design",label:"Design",studio:"design",description:"Composition visuelle"},
+ {id:"external",label:"Projet externe",studio:"external",description:"Lien ou aperçu d’une application déjà construite"}
 ];
 export const ids=()=>globalThis.crypto?.randomUUID?.()??Math.random().toString(36).slice(2);
 const now=()=>new Date().toISOString();
@@ -171,6 +173,7 @@ export function journeySteps(space:WorldSpace|null):TrainingStep[]{
 /** Read original records by canonical IDs: never copy or silently switch resources. */
 export function sourcesForTile(kind:TileKind):{label:string;id:string}[]{
  try{
+  if(kind==="external")return readExternal().resources.map(v=>({label:v.title,id:v.id}));
   if(kind==="academy"){
    const p=validProject(JSON.parse(localStorage.getItem(ACADEMY_KEY)??"null"));
    return p?[{label:p.siteTitle,id:p.id}]:[];
