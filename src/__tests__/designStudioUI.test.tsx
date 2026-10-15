@@ -34,6 +34,19 @@ function click(el: Element | null | undefined) {
 }
 const buttonNamed = (host:Element,label:string) => Array.from(host.querySelectorAll("button")).find(b=>b.textContent?.trim().includes(label));
 describe("POINTZERO — studio universel", () => {
+  it("ouvre la grille de fragments dans le même atelier sans modifier le document graphique", () => {
+    const view=mount();
+    expect(view.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+    click(buttonNamed(view,"Grille"));
+    const board=view.querySelector('[aria-label="Grille universelle de fragments"]');
+    expect(board).toBeTruthy();
+    expect(board?.querySelectorAll("[data-fragment-id]").length).toBeGreaterThan(3);
+    const select=board?.querySelector("[data-fragment-id]") as HTMLButtonElement;
+    click(select);
+    expect(view.querySelector('[aria-label="Propriétés du fragment"]')).toBeTruthy();
+    click(buttonNamed(view,"Éléments"));
+    expect(view.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+  });
   it("réintègre une photo ou un vêtement retouché dans la composition sans écraser l'original", () => {
     const onPhotoConsumed=vi.fn();
     const input={id:"picture-1",dataUrl:"data:image/png;base64,iVBORw0KGgo="};
