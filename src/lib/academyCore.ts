@@ -97,15 +97,16 @@ export function validProject(data:unknown):SiteProject|null{
 /** Read-through projection: the canonical title is NEVER copied back into a linked site.
  * Explicit personalization switches titleMode to "custom" and is not overwritten.
  */
-export function academyDisplayProject(project:SiteProject,source:{id:string;title:string;objectives?:string[]}|null):SiteProject{
+export function academyDisplayProject(project:SiteProject,source:{id:string;title:string;objectives?:string[];dossier?:{objectives:string[]}}|null):SiteProject{
  if(!source||project.dossierBinding?.spaceId!==source.id)return project;
  const titleLinked=project.dossierBinding.titleMode==="linked";
  const objectivesLinked=project.dossierBinding.objectivesMode==="linked";
+ const objectives=source.objectives??source.dossier?.objectives??[];
  return {...project,
   name:titleLinked?source.title:project.name,
   siteTitle:titleLinked?source.title:project.siteTitle,
-  sections:objectivesLinked&&source.objectives?.length?
-   project.sections.map(section=>section.kind==="intro"?{...section,body:source.objectives!.map((v,i)=>(i+1)+". "+v).join("\n")}:section):project.sections
+  sections:objectivesLinked&&objectives.length?
+   project.sections.map(section=>section.kind==="intro"?{...section,body:objectives.map((v,i)=>(i+1)+". "+v).join("\n")}:section):project.sections
  };
 }
 export const defaultLearning=():LearningState=>({version:1,completedCustom:[],exercises:[],notes:""});
