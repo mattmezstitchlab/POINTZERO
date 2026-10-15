@@ -10,7 +10,7 @@ export const escapeHTML=x=>String(x).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&l
 export const setNoStore=res=>{res.setHeader("Cache-Control","no-store, max-age=0");res.setHeader("X-Content-Type-Options","nosniff");};
 export const error=(res,status,message)=>res.status(status).json({error:message});
 export const credentialsReady=()=>!!(process.env.UPSTASH_REDIS_REST_URL&&process.env.UPSTASH_REDIS_REST_TOKEN);
-export const waitlistReady=()=>credentialsReady()&&!!(process.env.RESEND_API_KEY&&process.env.POINTZERO_PUBLIC_ORIGIN&&process.env.TURNSTILE_SECRET_KEY&&process.env.POINTZERO_FROM_EMAIL);
+export const waitlistReady=()=>credentialsReady()&&!!(process.env.RESEND_API_KEY&&process.env.POINTZERO_PUBLIC_ORIGIN&&process.env.TURNSTILE_SECRET_KEY&&process.env.POINTZERO_FROM_EMAIL&&process.env.POINTZERO_PRIVACY_EMAIL&&process.env.POINTZERO_LEGAL_ENTITY);
 export const adminReady=()=>credentialsReady()&&!!process.env.POINTZERO_LAUNCH_ADMIN_SECRET;
 export const adminAuthorized=req=>{
  const expected=process.env.POINTZERO_LAUNCH_ADMIN_SECRET,got=String(req.headers["x-pointzero-admin"]||"");
@@ -93,3 +93,4 @@ export const respondPage=(res,title,body)=>{
  res.setHeader("Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
  return res.status(200).end("<!doctype html><html lang='fr'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+escapeHTML(title)+" · POINTZERO</title><body style='font:16px system-ui;background:#f8f8f7;color:#222;margin:0;padding:8vh 24px;text-align:center'><main style='max-width:480px;margin:auto'><p>POINTZERO .0</p><h1>"+escapeHTML(title)+"</h1>"+body+"<p style='margin-top:35px'><a href='/'>Retour à POINTZERO</a></p></main></body></html>");
 };
+\n// Prevent any accidental direct invocation of the shared server utility route.\nexport default function notAnEndpoint(_req,res){return res.status(404).end();}\n
