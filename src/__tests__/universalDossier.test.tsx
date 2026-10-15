@@ -94,6 +94,12 @@ describe("Dossier Universel AIME — extension canonique non destructive",()=>{
   expect(validProject(project)).not.toBeNull();
   const updated=updateUniversalField(s.id,"title","Mon atelier vivant");
   expect(academyDisplayProject(project,updated).siteTitle).toBe("Mon atelier vivant");
+  const linkedObjectives={...project,dossierBinding:{spaceId:s.id,titleMode:"linked" as const,objectivesMode:"linked" as const}};
+  expect(academyDisplayProject(linkedObjectives,updated).sections.find(v=>v.kind==="intro")?.body).toContain(updated.dossier!.objectives[0]);
+  const next=updateUniversalField(s.id,"dossier.objectives","Apprendre à improviser\nJouer collectivement");
+  expect(academyDisplayProject(linkedObjectives,next).sections.find(v=>v.kind==="intro")?.body).toContain("Jouer collectivement");
+  const customObjectives={...project,dossierBinding:{spaceId:s.id,titleMode:"linked" as const,objectivesMode:"custom" as const}};
+  expect(academyDisplayProject(customObjectives,next).sections.find(v=>v.kind==="intro")?.body).toBe(project.sections.find(v=>v.kind==="intro")?.body);
   const html=exportAcademyHTML(academyDisplayProject(project,updated));
   expect(html).toContain("<title>Mon atelier vivant</title>");
   const customized={...project,siteTitle:"Mon titre personnel",dossierBinding:{spaceId:s.id,titleMode:"custom" as const}};
