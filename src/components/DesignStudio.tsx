@@ -269,7 +269,9 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
           </div>}
         </div>
       </div>
-      <div className="flex min-w-0 items-center gap-1">
+      {leftTab === "fragments"
+        ? <span className="text-[10px] font-semibold tracking-[.12em] text-white/60">GRILLE · SAUVEGARDE LOCALE</span>
+        :       <div className="flex min-w-0 items-center gap-1">
         <button type="button" onClick={undo} disabled={!past.length} className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30" aria-label="Annuler"><Undo2 size={16}/></button>
         <button type="button" onClick={redo} disabled={!future.length} className="hidden size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 disabled:opacity-30 sm:grid" aria-label="Rétablir"><Redo2 size={16}/></button>
         <button onClick={saveDraft} aria-label="Enregistrer dans Mes créations" title="Enregistrer" className="grid size-9 place-items-center rounded-[5px] text-white/80 hover:bg-white/10"><Save size={16}/></button>
@@ -287,7 +289,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               <button key={kind} className="block w-full rounded-[5px] px-2 py-2 text-left text-xs uppercase hover:bg-white/10" onClick={()=>void exportKind(kind)}>{kind==="html"?"HTML statique":kind==="json"?"Projet JSON":kind}</button>)}
           </div>}
         </div>
-      </div>
+      </div>}
     </header>
     <div className="relative flex min-h-0 flex-1">
       <button onClick={()=>setSidebar(!sidebar)} className="absolute left-3 top-3 z-20 grid size-10 place-items-center rounded-[5px] border border-white/20 bg-[#09090b] lg:hidden" aria-label={sidebar?"Fermer les ressources":"Ouvrir les ressources"}><LayoutTemplate size={18}/></button>
