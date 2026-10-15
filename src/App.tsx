@@ -444,10 +444,8 @@ export default function App() {
     studioMode === "universe-detail" || studioMode === "studio-detail" || studioMode === "vision"
     ? <AimeEcosystem page={studioMode} onNavigate={navigatePage} onOpenStudio={route=>switchStudio(route as StudioRoute)}/>
     : studioMode === "manifest"
-    ? <ManifestLanding onStudio={route => {
-        const allowed = ["design","embroidery","admin","mini-site","programme","one-space","art-world","academy","causal","metamorphose","ripplecircle","game"];
-        if(allowed.includes(route))switchStudio(route as Parameters<typeof switchStudio>[0]);
-      }} onDetails={id => navigatePage("/studios/"+id)} onAime={() => navigatePage("/")} onOpenAtelier={() => switchStudio("design")} onAdmin={() => switchStudio("manifest-admin")}/>
+    ? <ManifestLanding onDetails={id => navigatePage("/studios/"+id)} onAime={() => navigatePage("/")}
+        onOpenAtelier={() => switchStudio("design")} onAdmin={() => switchStudio("manifest-admin")}/>
     : studioMode === "manifest-admin"
     ? <ManifestAdminStudio onBack={() => switchStudio("manifest")}/>
     : studioMode === "design"
