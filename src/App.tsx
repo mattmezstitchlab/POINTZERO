@@ -91,6 +91,14 @@ export default function App() {
     try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
     catch { return "aime-home"; }
   });
+  useEffect(()=>{
+    if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
+    else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
+    else if(studioMode==="design")document.title="Atelier — POINTZERO";
+    else if(!["aime-home","vision","universe-index","universe-detail","studio-detail"].includes(studioMode)){
+      document.title="Studios — POINTZERO";
+    }
+  },[studioMode]);
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
   const [miniSiteHandoff,setMiniSiteHandoff] = useState<MiniSite|null>(null);
   const [openPrivateGallery,setOpenPrivateGallery]=useState(false);
