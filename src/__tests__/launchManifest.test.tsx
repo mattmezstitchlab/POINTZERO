@@ -10,7 +10,7 @@ afterEach(()=>{act(()=>root?.unmount());root=null;node?.remove();node=null;vi.re
 async function mount(onStudio=vi.fn()){
  vi.stubGlobal("fetch",vi.fn(async()=>({ok:true,json:async()=>({config:null,signupReady:false,turnstileSiteKey:""})})));
  node=document.createElement("div");document.body.appendChild(node);root=createRoot(node);
- await act(async()=>{root?.render(<ManifestLanding onStudio={onStudio} onOpenAtelier={vi.fn()} onAdmin={vi.fn()}/>);});
+ await act(async()=>{root?.render(<ManifestLanding onDetails={onStudio} onAime={vi.fn()} onOpenAtelier={vi.fn()} onAdmin={vi.fn()}/>);});
  return {node,onStudio};
 }
 describe("POINTZERO .0 — manifeste et livraison progressive",()=>{
@@ -41,15 +41,16 @@ describe("POINTZERO .0 — manifeste et livraison progressive",()=>{
   expect(node.textContent).toContain("Date à confirmer");
   expect(node.querySelector('form[aria-label="S\'inscrire aux informations de lancement"] button[type="submit"]')?.hasAttribute("disabled")).toBe(true);
  });
- it("ouvre le vrai studio créatif disponible, pas un studio non publié",async()=>{
+ it("présente le dossier du studio créatif et le dossier du studio en préparation",async()=>{
   const onStudio=vi.fn(),{node}=await mount(onStudio);
   const creative=node.querySelector('button[aria-label="Voir Studio Créatif"]');
   expect(creative).toBeTruthy();
   await act(async()=>{creative!.dispatchEvent(new MouseEvent("click",{bubbles:true}))});
-  expect(onStudio).toHaveBeenCalledWith("design");
+  expect(onStudio).toHaveBeenCalledWith("creatif");
   const identity=node.querySelector('button[aria-label="Voir Studio Identité"]');
   await act(async()=>{identity!.dispatchEvent(new MouseEvent("click",{bubbles:true}))});
-  expect(onStudio).toHaveBeenCalledTimes(1);
+  expect(onStudio).toHaveBeenCalledWith("identite");
+  expect(onStudio).toHaveBeenCalledTimes(2);
   expect(node.textContent).toContain("Ce studio n'est pas encore ouvert publiquement");
  });
 });
