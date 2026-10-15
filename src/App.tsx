@@ -550,13 +550,28 @@ export default function App() {
       aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
     <aside aria-label="Bibliothèque et outils de broderie"
       className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[58px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
-      <CategoryBar docked active={activeCategory} onChoose={next=>{openCategory(next);setMobileLibraryOpen(false);}} />
-      <MotifLibrary docked readOnly={!!remote}
-        onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileLibraryOpen(false); }}
-        onAddSaved={sprite => {addStitchedPattern(sprite);setMobileLibraryOpen(false);}}
-        onOpenProject={p => { void loadPattern(p); setTool("hand");setMobileLibraryOpen(false); }}
-        onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose");setMobileLibraryOpen(false); }}
-        onOpenLibrary={() => { setCategoryPanel(null);setMobileLibraryOpen(false);setPanel("library"); }} />
+      <CategoryBar docked active={activeCategory} onChoose={openCategory} />
+      {activeCategory === "create" ? (
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="Créer un nouveau motif">
+          <h2 className="mb-3 text-[13px] font-semibold">Nouveau motif</h2>
+          <AtelierCreate {...createActions} compact />
+        </div>
+      ) : <>
+        <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
+          expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
+        {activeCategory === "compose" ? (
+          <MotifLibrary docked readOnly={!!remote}
+            onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileLibraryOpen(false); }}
+            onAddSaved={sprite => {addStitchedPattern(sprite);setMobileLibraryOpen(false);}}
+            onOpenProject={p => { void loadPattern(p); setTool("hand");setMobileLibraryOpen(false); }}
+            onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose");setMobileLibraryOpen(false); }}
+            onOpenLibrary={() => { setCategoryPanel(null);setMobileLibraryOpen(false);setPanel("library"); }} />
+        ) : <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 text-[12px] leading-relaxed text-white/60">
+          {activeCategory === "threads"
+            ? "Le rail DMC en bas permet de choisir un fil. Ses caractéristiques, la toile et le stock sont dans l'inspecteur à droite."
+            : "Choisissez ici le geste à effectuer sur la grille. Les informations de suivi et le journal sont à droite."}
+        </div>}
+      </>}
     </aside>
     <aside aria-label="Panneau de réglages broderie" className={`pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 ${mobileInspectorOpen ? "translate-x-0" : "translate-x-full"}`}>
       <EmbroideryInspector pattern={P} tool={remote ? "hand" : tool} onTool={chooseTool} activeColor={color}
