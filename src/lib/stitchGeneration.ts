@@ -1,5 +1,3 @@
-import { FLOSS } from "./dmc";
-import { removeConfetti } from "./quantize";
 import { createPattern, ensurePalette, type Pattern, type Count } from "./pattern";
 import { parseComposition, pollinationsUrl, type FormatId, type StyleId } from "./promptcraft";
 import { loadRemoteImage, asyncRasterToCells } from "./convert";
