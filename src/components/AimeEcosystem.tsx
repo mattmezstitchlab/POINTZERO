@@ -23,19 +23,19 @@ function SiteHeader({onNavigate}:{onNavigate:(path:string)=>void}){
   <Jump href="/pointzero" onNavigate={onNavigate} className="ae-header-cta">POINTZERO <ArrowUpRight size={14}/></Jump>
  </header>;
 }
-function Signature(){
+function Signature({signatures}:{signatures:readonly string[]}){
  const [index,setIndex]=useState(0);
  useEffect(()=>{
   if(typeof matchMedia!=="undefined"&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-  const timer=window.setInterval(()=>setIndex(i=>(i+1)%AIME_SIGNATURES.length),7000);
+  const timer=window.setInterval(()=>setIndex(i=>(i+1)%signatures.length),7000);
   return()=>window.clearInterval(timer);
- },[]);
- return <div className="ae-signature" aria-label={AIME_SIGNATURES[0]}>
+ },[signatures]);
+ return <div className="ae-signature" aria-label={signatures[0]}>
   <span>Architecture Intelligente</span>
-  <span className="ae-signature-variable" aria-hidden="true" key={index}>{AIME_SIGNATURES[index].replace(/^Architecture Intelligente\s*/,"")}</span>
+  <span className="ae-signature-variable" aria-hidden="true" key={index}>{(signatures[index%signatures.length]||signatures[0]).replace(/^Architecture Intelligente\s*/,"")}</span>
  </div>;
 }
-function MainHome({onNavigate}:{onNavigate:(path:string)=>void}){
+function MainHome({onNavigate,signatures}:{onNavigate:(path:string)=>void;signatures:readonly string[]}){
  return <main id="aime" className="ae-home">
   <section className="ae-hero">
    <div className="ae-wrap">
@@ -43,7 +43,7 @@ function MainHome({onNavigate}:{onNavigate:(path:string)=>void}){
     <div className="ae-hero-core">
      <p className="ae-eyebrow">Il était une intention.</p>
      <h1>AIME<span className="ae-hero-star">✳</span></h1>
-     <Signature/>
+     <Signature signatures={signatures}/>
      <p className="ae-hero-lead">Et si ce que nous avons appris, vécu et créé pouvait enfin servir à ce qui vient&nbsp;?</p>
      <a className="ae-scroll-prompt" href="#lettre">Lire la lettre ouverte <ArrowDownRight size={17}/></a>
     </div>
@@ -183,7 +183,7 @@ export default function AimeEcosystem({page,onNavigate,onOpenStudio}:Props){
  },[page,slug,config.studios]);
  return <div ref={scrollRef} className="ae-shell" aria-label="AIME — Architecture mère">
   <SiteHeader onNavigate={onNavigate}/>
-  {page==="aime-home"?<MainHome onNavigate={onNavigate}/>:
+  {page==="aime-home"?<MainHome onNavigate={onNavigate} signatures={config.aimeSignatures??AIME_SIGNATURES}/>:
    page==="universe-index"?<Universes onNavigate={onNavigate}/>:
    page==="universe-detail"?<UniverseDetail slug={slug} onNavigate={onNavigate}/>:
    page==="studio-detail"?<StudioDetail slug={slug} config={config} onNavigate={onNavigate} onOpenStudio={onOpenStudio}/>:
