@@ -101,7 +101,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     const update = () => setScale(Math.min(1.4, Math.max(.12, Math.min((el.clientWidth-72)/doc.width,(el.clientHeight-72)/doc.height))));
     const observer = new ResizeObserver(update); observer.observe(el); update();
     return () => observer.disconnect();
-  }, [doc.width,doc.height]);
+  }, [doc.width,doc.height,leftTab]);
   useEffect(() => {
     try { localStorage.setItem(CURRENT,JSON.stringify(doc)); }
     catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
