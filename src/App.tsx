@@ -573,29 +573,44 @@ export default function App() {
         </div>}
       </>}
     </aside>
-    <aside aria-label="Panneau de réglages broderie" className={`pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 ${mobileInspectorOpen ? "translate-x-0" : "translate-x-full"}`}>
-      <EmbroideryInspector pattern={P} tool={remote ? "hand" : tool} onTool={chooseTool} activeColor={color}
-        view={view} onView={setView} symbols={symbols} onSymbols={() => setSymbols(v=>!v)}
-        onFit={() => setFitKey(k=>k+1)}
-        onSettings={() => {setMobileInspectorOpen(false);setCategoryPanel(null);setPanel("project");}}
-        onBrowse={() => {setMobileInspectorOpen(false);setPanel("palette");}} workspace={workspace}
-        scene={sceneFromPattern(P)} selectedId={selectedSubjectId}
-        onSelect={id => {setSelectedSubjectId(id);setActiveCategory("compose");setTool("hand");}}
-        onChange={changeSelectedSubject} onReorder={(id,delta) => updateScene(scene=>reorderSubject(scene,id,delta))}
-        onDuplicate={duplicateSelectedSubject} onRemove={removeSelectedSubject} readOnly={!!remote}/>
+    <aside aria-label="Inspecteur de broderie"
+      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
+      <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
+        {([
+          ["properties","Objet"],["edit","Dessin"],["prepare","Fils"],
+          ["follow","Suivi"],["settings","Réglages"],
+        ] as [RightSection,string][]).map(([id,label]) =>
+          <button key={id} type="button" aria-pressed={rightSection===id}
+            onClick={() => id==="edit" ? openCategory("compose") : id==="prepare" ? openCategory("threads") : id==="follow" ? openCategory("stitch") : openRightPanel(id)}
+            className={rightSection===id ? "min-h-9 rounded-[5px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
+      </nav>
+      {rightSection === "properties" ? (
+        <EmbroideryInspector pattern={P} activeColor={color}
+          onSettings={() => openRightPanel("settings")}
+          onBrowse={() => { setMobileInspectorOpen(false); setPanel("palette"); }} workspace={workspace}
+          scene={sceneFromPattern(P)} selectedId={selectedSubjectId}
+          onSelect={id => {setSelectedSubjectId(id);setActiveCategory("compose");setTool("hand");}}
+          onChange={changeSelectedSubject} onReorder={(id,delta) => updateScene(scene=>reorderSubject(scene,id,delta))}
+          onDuplicate={duplicateSelectedSubject} onRemove={removeSelectedSubject} readOnly={!!remote}/>
+      ) : (
+        <div className="px-3 py-3">
+          <div className="mb-3 border-b border-white/10 pb-3">
+            <h2 className="text-[14px] font-semibold">{{
+              edit:"Composer",prepare:"Fils & toile",follow:"Broder",settings:"Réglages & aide"
+            }[contextSection]}</h2>
+            <p className="mt-1 truncate text-[11px] text-white/50">{P.name}</p>
+          </div>
+          <WorkspacePanel key={contextSection} inline open onClose={() => openRightPanel("properties")} pattern={P} onSet={setPattern}
+            actions={panelActions} prefs={prefs} onPrefs={setPrefs} onTool={chooseTool} tool={tool} color={color}
+            onColor={setColor} workspace={workspace} section={contextSection}
+            extraActions={contextSection === "edit" ? <button type="button" className="btn-tinted" disabled={!!remote} onClick={openComposition}>Composition intelligente · aperçu</button> : undefined} />
+        </div>
+      )}
     </aside>
     {showWelcome && !remote && <div className="pointer-events-none fixed inset-0 z-[28] flex items-center justify-center px-3 pb-12 pt-12"><div className="pointer-events-auto"><AtelierCreate {...createActions} /></div></div>}
-    <Sheet open={categoryPanel === "create"} onClose={() => setCategoryPanel(null)} title="Créer" subtitle="Une seule création, directement dans la grille"><AtelierCreate {...createActions} compact /></Sheet>
-    {!showWelcome && showDrawingTools && <Dock tool={remote ? "hand" : tool} onTool={chooseTool} color={color} workspace={workspace} />}
     {!showWelcome && selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
     <FlossRail fullWidth pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={showWelcome || !!file} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
-    <WorkspacePanel open={panel === "project" || categoryPanel === "compose" || categoryPanel === "threads" || categoryPanel === "stitch"}
-      onClose={() => { setCategoryPanel(null); closePanel(); }} pattern={P} onSet={setPattern}
-      actions={panelActions} prefs={prefs} onPrefs={setPrefs} onTool={chooseTool} tool={tool} color={color}
-      onColor={setColor} workspace={workspace} section={contextSection}
-      extraActions={categoryPanel === "compose" ? <button className="btn-tinted" onClick={openComposition}>Composition intelligente · aperçu</button> :
-      categoryPanel === "threads" ? <button className="btn-tinted" onClick={() => { setCategoryPanel(null); setPanel("palette"); }}>Palette et stock DMC</button> : undefined} />
     <LibrarySheet open={panel === "library"} onClose={closePanel} onLoad={(p) => void loadPattern(p)} onNew={() => panelActions.new(80, 80)} inventory={inventory} />
     {autoImage && <AutomaticImageImport file={autoImage}
       onCancel={() => setAutoImage(null)}
