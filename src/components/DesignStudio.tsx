@@ -264,7 +264,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               {name:"AIME MÉTAMORPHOSE · Grille",icon:<Sparkles size={16}/>,onClick:onMetamorphose},
               {name:"RIPPLECIRCLE · Cadran vivant",icon:<GitBranch size={16}/>,onClick:onRippleCircle},
               {name:"Studio Game · Confetti 30",icon:<Gamepad2 size={16}/>,onClick:onGame},
-              {name:"Studio Causal · Impacts",icon:<GitBranch size={16}/>,onClick:onCausal},
+              {name:"Studio Causal · RIPPLE",icon:<GitBranch size={16}/>,onClick:onCausal},
               {name:"Juridique & RGPD",icon:<Scale size={16}/>,onClick:onLegal},
               {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld},
               {name:"LE MONDE AIME · Présentation",icon:<HeartHandshake size={16}/>,onClick:onAimeLanding}
