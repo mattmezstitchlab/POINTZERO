@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, Fingerprint, GitBranch, Grid2X2, GraduationCap, HeartHandshake, Mail, Music2, ShieldCheck, Sparkles } from "lucide-react";
-import { DEFAULT_LAUNCH, STATUS_LABELS, canEnter, canPreview, countdown, validLaunch, type LaunchConfig, type LaunchStudio } from "../lib/launchManifest";
+import { DEFAULT_LAUNCH, STATUS_LABELS, canEnter, canPreview, countdown, validLaunch, type LaunchConfig } from "../lib/launchManifest";
 import "./ManifestLanding.css";
 
 interface Props {onStudio:(route:string)=>void;onAdmin:()=>void}
@@ -8,7 +8,6 @@ interface PublicState {config:LaunchConfig|null;signupReady:boolean;turnstileSit
 const THEME_ICONS=[Fingerprint,ShieldCheck,Grid2X2,Clock3,Sparkles,HeartHandshake,HeartHandshake,Grid2X2,GraduationCap,GitBranch,Sparkles,GitBranch,Sparkles];
 const pad=(n:number)=>String(n).padStart(2,"0");
 const btn="pz-manifest-button";
-const label=(title:string)=>title.toUpperCase();
 
 function CountdownView({date,title,primary=false}:{date:string|null;title:string;primary?:boolean}){
  const [now,setNow]=useState(()=>Date.now());
@@ -84,7 +83,7 @@ function Waitlist({state}:{state:PublicState}){
   }catch(e){setError(e instanceof Error?e.message:"Une erreur est survenue.");}
   finally{setBusy(false);setToken("");}
  }
- const short=[...state.config?.studios??DEFAULT_LAUNCH.studios];
+ const short=[...(state.config?.studios??DEFAULT_LAUNCH.studios)];
  return <section id="suivre" className="pz-manifest-section pz-manifest-dark" aria-labelledby="pz-waitlist-title">
   <div className="pz-manifest-wrap pz-waitlist-layout">
    <div><p className="pz-manifest-kicker text-white/55">RESTER DANS LA BOUCLE — 2026 → 2027</p>
