@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { ArrowDownToLine, ExternalLink, Grid3X3, Lock, LockOpen, Plus, Upload } from "lucide-react";
+import { ArrowDownToLine, ExternalLink, Lock, LockOpen, Plus, Upload } from "lucide-react";
 import { allowedFragmentUrl, demoFragments, readFragments, reorderFragments, updateFragment, type Fragment, type FragmentCollection } from "../lib/fragmentGrid";
 
 const STORAGE="pointzero:universal-fragments:v1";
@@ -14,6 +14,7 @@ function restore():FragmentCollection {
 export default function FragmentGridWorkspace(){
   const [collection,setCollection]=useState<FragmentCollection>(restore);
   const [selected,setSelected]=useState<string|null>(null);
+  const [inspectorOpen,setInspectorOpen]=useState(false);
   const [layout,setLayout]=useState<Layout>("editorial");
   const [device,setDevice]=useState<"desktop"|"tablet"|"phone">("desktop");
   const [notice,setNotice]=useState("");
@@ -72,7 +73,7 @@ export default function FragmentGridWorkspace(){
               const actual=Math.min(span,device==="phone"?2:device==="tablet"?3:4);
               const selectedHere=selected===f.id,back=tones[i%tones.length];
               return <button key={f.id} type="button" draggable={!f.locked} data-fragment-id={f.id}
-                onClick={()=>setSelected(f.id)} onDragStart={e=>{e.dataTransfer.setData("text/plain",f.id);e.dataTransfer.effectAllowed="move"}}
+                onClick={()=>{setSelected(f.id);setInspectorOpen(true)}} onDragStart={e=>{e.dataTransfer.setData("text/plain",f.id);e.dataTransfer.effectAllowed="move"}}
                 onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const from=e.dataTransfer.getData("text/plain");setCollection(c=>reorderFragments(c,from,f.id))}}
                 className={"relative flex min-w-0 flex-col justify-between overflow-hidden rounded-[5px] border p-3 text-left transition-shadow hover:shadow-lg "+(selectedHere?"border-[#333] ring-2 ring-[#333]":"border-black/5")}
                 style={{gridColumn:"span "+actual,background:back[0],color:back[1],gridRow:layout==="immersive"&&i===0?"span 2":"span 1"}}>
@@ -92,8 +93,12 @@ export default function FragmentGridWorkspace(){
         {notice&&<p role="status" className="mt-3 rounded-[5px] border border-[#e5dfdb] bg-white p-3 text-[12px]">{notice}</p>}
       </div>
     </main>
-    <aside aria-label="Propriétés du fragment" className="pz-design-properties hidden w-[245px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b0b0d] p-4 text-white xl:block">
-      <h2 className="mb-4 text-[13px] font-semibold">Fragment / Propriétés</h2>
+    <aside aria-label="Propriétés du fragment"
+      className={"pz-design-properties shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b0b0d] p-4 text-white "+
+        (inspectorOpen?"fixed inset-x-3 bottom-3 z-40 max-h-[65dvh] w-auto rounded-[6px] border xl:static xl:max-h-none xl:w-[245px] xl:rounded-none":"hidden w-[245px] xl:block")}>
+      <div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-[13px] font-semibold">Fragment / Propriétés</h2>
+        <button type="button" className="min-h-9 rounded-[5px] border border-white/20 px-2 text-xs xl:hidden" onClick={()=>setInspectorOpen(false)}>Fermer</button>
+      </div>
       {active ? <>
         <p className="mb-3 text-[11px] text-white/60">Source conservée. La composition ne modifie pas l'original.</p>
         {([["title","Titre"],["description","Description"],["kind","Catégorie"],["sourceUrl","URL source"],["image","URL image"],["notes","Notes"]] as const).map(([key,label])=>
