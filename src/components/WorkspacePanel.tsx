@@ -10,7 +10,6 @@ import { runChecks, type CheckResult } from "../lib/checks";
 import { SYMBOL_COUNT } from "../lib/symbols";
 import { activityGrid, bestDay, sessionSummary } from "../lib/sessionStats";
 import type { Session } from "../lib/pattern";
-import type { Tool } from "../lib/stitch";
 import Sheet from "./Sheet";
 import BrodeuseProfilePanel from "./BrodeuseProfilePanel";
 import { loadBrodeuseProfile } from "../lib/brodeuseProfile";
@@ -26,9 +25,9 @@ export interface PanelActions {
   new: (w: number, h: number) => void; library: () => void; share: () => void; prompt: () => void;
   notify: (msg: string) => void;
 }
-export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actions, prefs, onPrefs, onTool, tool, color, onColor, workspace, section = "prepare", extraActions, inline = false }: {
+export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actions, prefs, onPrefs, color, onColor, workspace, section = "prepare", extraActions, inline = false }: {
   open: boolean; onClose: () => void; pattern: Pattern; onSet: (p: Pattern) => void; actions: PanelActions;
-  prefs: Preferences; onPrefs: (v: Preferences) => void; onTool: (v: Tool) => void; tool: Tool; color: number; onColor: (c: number) => void; workspace: "create" | "stitch"; section?: "prepare" | "edit" | "follow" | "settings"; extraActions?: ReactNode; inline?: boolean;
+  prefs: Preferences; onPrefs: (v: Preferences) => void; color: number; onColor: (c: number) => void; workspace: "create" | "stitch"; section?: "prepare" | "edit" | "follow" | "settings"; extraActions?: ReactNode; inline?: boolean;
 }) {
   const importRef = useRef<HTMLInputElement>(null), manualRef = useRef<HTMLInputElement>(null), pdfRef = useRef<HTMLInputElement>(null), fileRef = useRef<HTMLInputElement>(null);
   const [w, setW] = useState(80), [h, setH] = useState(80), [text, setText] = useState("BONJOUR"), [scale, setScale] = useState(1), [to, setTo] = useState(""), [mixA, setMixA] = useState("321"), [mixB, setMixB] = useState("Blanc"), [aStrands, setAStrands] = useState(1), [bStrands, setBStrands] = useState(1), [tests, setTests] = useState<CheckResult[] | null>(null);
