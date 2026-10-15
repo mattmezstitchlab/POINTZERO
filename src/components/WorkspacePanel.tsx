@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, Circle, FileUp, FolderOpen, ImagePlus, Layers, Lock, Plus, Radio, ShieldCheck, Unlock, X } from "lucide-react";
+import { Check, FileUp, FolderOpen, ImagePlus, Layers, Lock, Plus, Radio, ShieldCheck, Unlock, X } from "lucide-react";
 import { COUNTS, ensurePalette, fabricInfo, type Pattern } from "../lib/pattern";
 import { addLayer, replaceColor, resizePattern, stampText, switchLayer } from "../lib/editing";
 import { BASE_FLOSS, FLOSS, flossIndex, nearestFlossList, registerBlend } from "../lib/dmc";
@@ -26,9 +26,9 @@ export interface PanelActions {
   new: (w: number, h: number) => void; library: () => void; share: () => void; prompt: () => void;
   notify: (msg: string) => void;
 }
-export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actions, prefs, onPrefs, onTool, tool, color, onColor, workspace, section = "prepare", extraActions }: {
+export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actions, prefs, onPrefs, onTool, tool, color, onColor, workspace, section = "prepare", extraActions, inline = false }: {
   open: boolean; onClose: () => void; pattern: Pattern; onSet: (p: Pattern) => void; actions: PanelActions;
-  prefs: Preferences; onPrefs: (v: Preferences) => void; onTool: (v: Tool) => void; tool: Tool; color: number; onColor: (c: number) => void; workspace: "create" | "stitch"; section?: "prepare" | "edit" | "follow" | "settings"; extraActions?: ReactNode;
+  prefs: Preferences; onPrefs: (v: Preferences) => void; onTool: (v: Tool) => void; tool: Tool; color: number; onColor: (c: number) => void; workspace: "create" | "stitch"; section?: "prepare" | "edit" | "follow" | "settings"; extraActions?: ReactNode; inline?: boolean;
 }) {
   const importRef = useRef<HTMLInputElement>(null), manualRef = useRef<HTMLInputElement>(null), pdfRef = useRef<HTMLInputElement>(null), fileRef = useRef<HTMLInputElement>(null);
   const [w, setW] = useState(80), [h, setH] = useState(80), [text, setText] = useState("BONJOUR"), [scale, setScale] = useState(1), [to, setTo] = useState(""), [mixA, setMixA] = useState("321"), [mixB, setMixB] = useState("Blanc"), [aStrands, setAStrands] = useState(1), [bStrands, setBStrands] = useState(1), [tests, setTests] = useState<CheckResult[] | null>(null);
@@ -44,20 +44,16 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
   // Le panneau reste monté pendant qu'on brode : `sessionSummary` recompte
   // toutes les cases pour l'estimation de fin, autant ne le faire que quand le
   // journal est réellement affiché, et pas à chaque échantillon de stylet.
-  const session = open ? sessionSummary(p) : null;
+  const session = open && tab === "follow" ? sessionSummary(p) : null;
   // Trois substitutions du fil actif, par écart perceptuel croissant. Le pool
   // par défaut exclut les mélanges : on ne propose pas une recette comme
   // remplacement d'une recette.
-  const substituts = open && FLOSS[color]
+  const substituts = open && tab === "edit" && FLOSS[color]
     ? nearestFlossList(FLOSS[color].lab, 4).filter((s) => s.idx !== color).slice(0, 3)
     : [];
   const change = <K extends keyof Preferences>(key: K, value: Preferences[K]) => onPrefs({ ...prefs, [key]: value });
-  const toolButton = (id: Tool, title: string) => <button key={id} className={`flex min-h-11 items-center gap-2 rounded-[10px] px-3 text-left text-[13px] ${tool === id ? "bg-accent/15 text-accent-2" : "hover:bg-white/[.04] text-label-2"}`} aria-pressed={tool === id} onClick={() => onTool(id)}><Circle size={12} />{title}</button>;
 
-  return <Sheet open={open} onClose={onClose}
-    title={{prepare:"Fils & toile", edit:"Composer", follow:"Broder", settings:"Réglages & aide"}[section]}
-    subtitle={p.name}
-    toolbar={extraActions ? <div className="flex flex-wrap gap-2">{extraActions}</div> : undefined}>
+  const content = <>
     <input type="file" accept="image/*" className="hidden" ref={manualRef} onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)actions.importAdvanced(selected);}} />
     <input type="file" accept="image/*" className="hidden" ref={importRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) actions.importFile(file); e.target.value = ""; }} />
     <input type="file" accept=".pdf,application/pdf" className="hidden" ref={pdfRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) actions.importFile(file); e.target.value = ""; }} />
@@ -79,7 +75,7 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
         {workspace === "stitch" && <p className="border-l-2 border-warn pl-3 text-[12px] text-warn">Passez en mode Créer pour modifier le patron. Le suivi reste séparé du dessin.</p>}
         <fieldset disabled={workspace === "stitch"} className="space-y-5 disabled:opacity-50">
         <Label title="Sens du demi-point"><select className="field" value={prefs.halfDirection} onChange={(e) => change("halfDirection", e.target.value as Preferences["halfDirection"])}><option value="forward">Diagonale /</option><option value="backward">Diagonale inverse</option><option value="auto">Selon le côté touché</option></select></Label>
-        <Block title="Outils de conception"><div className="grid grid-cols-2 gap-1">{([['select','Sélection rectangle'],['lasso','Lasso'],['move','Déplacer la sélection'],['line','Ligne de croix'],['rect','Rectangle'],['ellipse','Ellipse'],['threeQuarter','Trois-quarts'],['petite','Petite croix'],['bead','Perle']] as [Tool,string][]).map(([id,label]) => toolButton(id,label))}</div><Label title="Symétrie du dessin"><select className="field" value={prefs.symmetry} onChange={(e) => change("symmetry", e.target.value as Preferences["symmetry"])}><option value="none">Aucune</option><option value="x">Miroir horizontal</option><option value="y">Miroir vertical</option><option value="both">Les deux axes</option></select></Label></Block>
+        <Block title="Symétrie du dessin"><Label title="Symétrie du dessin"><select className="field" value={prefs.symmetry} onChange={(e) => change("symmetry", e.target.value as Preferences["symmetry"])}><option value="none">Aucune</option><option value="x">Miroir horizontal</option><option value="y">Miroir vertical</option><option value="both">Les deux axes</option></select></Label></Block>
         <Block title="Lettrage compté"><Label title="Alphabet 5 × 7, A–Z et chiffres"><input className="field" value={text} maxLength={60} onChange={(e) => setText(e.target.value)} /></Label><NumberField title="Échelle de l’alphabet" value={scale} min={1} max={5} onChange={setScale} /><button className="btn-tinted mt-3 w-full" onClick={() => { onSet(stampText(p, text, Math.max(0, Math.floor(p.w / 2 - text.length * 3 * scale)), Math.floor(p.h / 2), color, scale)); actions.notify("Lettrage posé en croix réelles. Annulable."); }}>Poser le texte au centre</button></Block>
         <Block title="Remplacer le fil actif">
           <p className="text-[12px] text-label-3">Fil actif : DMC {FLOSS[color]?.code ?? "—"}. Remplace tous ses points sur le calque actif.</p>
@@ -118,7 +114,7 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
       </>}
 
       {tab === "follow" && <>
-        <Block title="Marquer sans modifier le patron"><div className="grid grid-cols-2 gap-1">{([['mark','Case par case'],['details','Contours / ornements'],['block','Bloc 10 × 10'],['row','Ligne entière'],['park','Garer un fil'],['unpick','À défaire'],['note','Note sur la grille']] as [Tool,string][]).map(([id,label]) => toolButton(id,label))}</div><Toggle title="Uniquement le fil actif" checked={prefs.onlyActive} onChange={() => change("onlyActive", !prefs.onlyActive)} /><p className="mt-2 text-[11px] text-label-3">Les croix et fractions sont suivies par case. Les contours, noeuds, petites croix et perles sont suivis séparément. Les fractions de plusieurs couleurs dans une même case sont marquées ensemble : vérifiez-les visuellement.</p></Block>
+        <Block title="Marquer sans modifier le patron"><Toggle title="Uniquement le fil actif" checked={prefs.onlyActive} onChange={() => change("onlyActive", !prefs.onlyActive)} /><p className="mt-2 text-[11px] text-label-3">Les croix et fractions sont suivies par case. Les contours, noeuds, petites croix et perles sont suivis séparément. Les fractions de plusieurs couleurs dans une même case sont marquées ensemble : vérifiez-les visuellement.</p></Block>
         <Block title="Parking et rappels"><p className="text-[12px] leading-relaxed text-label-2">{p.parked?.length ?? 0} fils garés · {p.mistakes?.length ?? 0} cases à défaire. Avec Parking, touchez le coin d’une case. Retouchez le même emplacement pour libérer le fil.</p><Label title="Texte de la prochaine annotation"><textarea className="field min-h-[80px] py-2" value={prefs.annotation} onChange={(e) => change("annotation", e.target.value)} placeholder="Ex. Vérifier les points arrière avant de finir" /></Label>{(p.annotations ?? []).map((a, i) => <div key={i} className="mt-2 flex items-start gap-2 text-[12px]"><span className="flex-1 text-label-2">({a.x},{a.y}) {a.text}</span><button aria-label="Supprimer cette note" onClick={() => onSet({ ...p, annotations: p.annotations?.filter((_, n) => n !== i) })}><X size={14} /></button></div>)}</Block>
         <Block title="Journal du projet"><ActivityCalendar sessions={p.sessions ?? []} /><p className="mt-3 text-[13px] text-label-2">{Math.round((p.sessions ?? []).reduce((n, s) => n + s.seconds, 0) / 60)} min en mode Broder · {(p.sessions ?? []).reduce((n, s) => n + s.cells, 0)} cases nettes marquées.</p><p className="mt-2 text-[12px] text-label-2">{session?.activeDays ?? 0} jour(s) actifs · meilleure série : {session?.longest ?? 0} jours · {(session?.perMinute ?? 0).toFixed(1)} cases/min enregistrées.</p>{session?.eta && <p className="mt-1 text-[12px] text-label-2">Fin indicative des croix : {session.eta}, au rythme enregistré.</p>}{(p.sessions ?? []).slice(-7).reverse().map((s, i) => <div key={i} className="mt-2 flex justify-between text-[12px] text-label-3"><span>{s.date}</span><span>{Math.round(s.seconds / 60)} min · {s.cells} cases</span></div>)}<p className="mt-2 text-[11px] text-label-3">Le temps est compté quand l’atelier est visible, en mode Broder. Ce n’est pas une mesure de la vitesse réelle de l’aiguille. L’estimation de fin apparaît après trois jours, sans garantie de délai.</p><button className="mt-3 text-[13px] text-accent-2" onClick={() => { if (window.confirm("Réinitialiser le suivi de ce patron ? Le dessin reste intact.")) { const next = clonePattern(p); next.done.fill(0); next.parked = []; next.mistakes = []; next.ornamentDone = []; onSet(next); } }}>Réinitialiser le suivi</button></Block>
       </>}
@@ -130,9 +126,17 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
         <Block title="Vérifications locales"><button className="btn-tinted w-full" onClick={() => setTests(runChecks())}><ShieldCheck size={16} />Exécuter les tests du moteur</button>{tests && <div className="mt-3 space-y-2">{tests.map((t) => <p key={t.name} className={`flex items-start gap-2 text-[11px] ${t.ok ? "text-ok" : "text-danger"}`}>{t.ok ? <Check size={13} className="mt-0.5 shrink-0" /> : <X size={13} />}{t.name}{!t.ok && ` : ${t.detail}`}</p>)}</div>}<p className="mt-3 text-[11px] leading-relaxed text-label-3">{BASE_FLOSS.length} références couleur documentées. DMC commercialise 500 teintes ; les références sans valeur fiable ne sont pas inventées. {SYMBOL_COUNT} définitions vectorielles disponibles, mêmes formes dans le PDF et l’écran. La lisibilité des symboles complexes à petite taille doit être testée à l’impression.</p></Block>
         <Block title="Confidentialité et droits"><p className="text-[12px] leading-relaxed text-label-2">Images, patrons, stock et versions sont traités et conservés localement. Pas de compte, d’abonnement ou d’analytique intégré. Effacer les données du navigateur peut supprimer vos projets : exportez vos sauvegardes JSON.</p><p className="mt-3 text-[12px] leading-relaxed text-label-2">Un PDF acheté reste la propriété de son auteur. L’import et le suivi ne transfèrent aucun droit de redistribution. Vérifiez la licence avant de partager, modifier pour diffusion ou vendre un patron. Chaque participant d’un atelier doit disposer de sa propre autorisation. Il ne s’agit pas d’un avis juridique.</p><p className="mt-3 text-[11px] text-label-3">Couleurs : craft-color-codes, MakeBead, CC BY 4.0. Les teintes sont approximatives. Le visuel d’accueil est une illustration de mise en scène, pas une preuve de fonctionnement sur un appareil testé.</p><a className="mt-2 block text-[12px] text-accent-2" href="https://github.com/makebead/craft-color-codes" target="_blank" rel="noreferrer">Source des valeurs DMC</a></Block>
       </>}
-      <Block title="Notes et image de référence"><textarea className="field min-h-[90px] py-2" value={p.notes ?? ""} onChange={(e) => onSet({ ...p, notes: e.target.value })} aria-label="Notes du projet" placeholder="Consignes de broderie, références, finitions…" />{p.reference && <details className="mt-3"><summary className="cursor-pointer text-[12px] text-accent-2">Voir l’image source</summary><img src={p.reference} className="mt-2 max-h-[260px] w-full rounded-[12px] object-contain" alt="Image de référence du projet" /></details>}</Block>
+      {(tab === "settings" || tab === "prepare") && <Block title="Notes et image de référence"><textarea className="field min-h-[90px] py-2" value={p.notes ?? ""} onChange={(e) => onSet({ ...p, notes: e.target.value })} aria-label="Notes du projet" placeholder="Consignes de broderie, références, finitions…" />{p.reference && <details className="mt-3"><summary className="cursor-pointer text-[12px] text-accent-2">Voir l’image source</summary><img src={p.reference} className="mt-2 max-h-[260px] w-full rounded-[12px] object-contain" alt="Image de référence du projet" /></details>}</Block>}
     </div>
-  </Sheet>;
+  </>;
+  if (inline) return <div className="pz-panel pz-embroidery-inline min-h-0 text-white">
+    {extraActions && <div className="mb-3 flex flex-wrap gap-2">{extraActions}</div>}
+    {content}
+  </div>;
+  return <Sheet open={open} onClose={onClose}
+    title={{prepare:"Fils & toile",edit:"Composer",follow:"Broder",settings:"Réglages & aide"}[section]}
+    subtitle={p.name}
+    toolbar={extraActions ? <div className="flex flex-wrap gap-2">{extraActions}</div> : undefined}>{content}</Sheet>;
 }
 
 function Label({ title, children }: { title: string; children: React.ReactNode }) { return <label className="mt-2 block text-[12px] text-label-2"><span className="mb-1.5 block">{title}</span>{children}</label>; }
