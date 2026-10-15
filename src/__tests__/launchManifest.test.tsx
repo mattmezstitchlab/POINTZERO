@@ -10,7 +10,7 @@ afterEach(()=>{act(()=>root?.unmount());root=null;node?.remove();node=null;vi.re
 async function mount(onStudio=vi.fn()){
  vi.stubGlobal("fetch",vi.fn(async()=>({ok:true,json:async()=>({config:null,signupReady:false,turnstileSiteKey:""})})));
  node=document.createElement("div");document.body.appendChild(node);root=createRoot(node);
- await act(async()=>{root?.render(<ManifestLanding onDetails={onStudio} onAime={vi.fn()} onOpenAtelier={vi.fn()} onAdmin={vi.fn()}/>);});
+ await act(async()=>{root?.render(<ManifestLanding onDetails={onStudio} onAime={vi.fn()} onOpenAtelier={vi.fn()} onUniversal={vi.fn()} onAdmin={vi.fn()}/>);});
  return {node,onStudio};
 }
 describe("POINTZERO .0 — manifeste et livraison progressive",()=>{
