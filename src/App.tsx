@@ -14,7 +14,8 @@ import EmbroideryToolbox from "./components/EmbroideryToolbox";
 import TopBar from "./components/TopBar";
 import DesignStudio from "./components/DesignStudio";
 import ManifestLanding from "./components/ManifestLanding";
-import { entryStudio, type StudioRoute } from "./lib/entryNavigation";
+import AimeEcosystem from "./components/AimeEcosystem";
+import { entryStudio, publicPathFor, type StudioRoute } from "./lib/entryNavigation";
 import ManifestAdminStudio from "./components/ManifestAdminStudio";
 import MetamorphoseStudio from "./components/MetamorphoseStudio";
 import RippleCircleStudio from "./components/RippleCircleStudio";
@@ -87,21 +88,41 @@ export default function App() {
   // The domain root ALWAYS opens the public manifesto, regardless of stored projects.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
-    try { return entryStudio(window.location.search,window.location.hash); }
-    catch { return "manifest"; }
+    try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
+    catch { return "aime-home"; }
   });
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
   const [miniSiteHandoff,setMiniSiteHandoff] = useState<MiniSite|null>(null);
   const [openPrivateGallery,setOpenPrivateGallery]=useState(false);
   const [linkedProject,setLinkedProject] = useState<{id:string;name:string}|null>(null);
-  const switchStudio = (mode: StudioRoute) => {
-    if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
-    setStudioMode(mode);
-    if(new URLSearchParams(window.location.search).has("site")||new URLSearchParams(window.location.search).has("page")||new URLSearchParams(window.location.search).has("studio")){
-      const url=new URL(window.location.href);url.searchParams.delete("site");url.searchParams.delete("page");url.searchParams.delete("studio");
-      window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+  // Public pages are addressable and reversible with browser back/forward.
+  // Workspace data remains in its original localStorage keys, untouched.
+  const navigatePage=(path:string)=>{
+    const next=new URL(path,window.location.origin);
+    if(next.origin!==window.location.origin)return;
+    if(next.pathname!==window.location.pathname||next.search!==window.location.search){
+      window.history.pushState(null,"",next.pathname+next.search+next.hash);
     }
-    try { localStorage.setItem("pointzero:workspace", mode); } catch { /* Local storage may be restricted. */ }
+    setStudioMode(entryStudio(next.search,next.hash,next.pathname));
+  };
+  useEffect(()=>{
+    const restoreRoute=()=>setStudioMode(entryStudio(window.location.search,window.location.hash,window.location.pathname));
+    window.addEventListener("popstate",restoreRoute);
+    return()=>window.removeEventListener("popstate",restoreRoute);
+  },[]);
+  const switchStudio = (mode: StudioRoute) => {
+    if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+      mode==="universe-index"||mode==="design"){
+      navigatePage(publicPathFor(mode));
+    }else if(mode==="manifest-admin") {
+      setStudioMode(mode); // private admin overlay, no navigable public route
+    }else{
+      if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
+      navigatePage(publicPathFor(mode));
+    }
+    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","manifest-admin"].includes(mode)){
+      try { localStorage.setItem("pointzero:workspace", mode); } catch { /* keep existing data */ }
+    }
   };
   const [store, dispatch] = useReducer(reducer, boot, (v) => initState(v ?? blankPattern()));
   const [remote, setRemote] = useState<Pattern | null>(null);
@@ -419,11 +440,14 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "manifest"
+  return studioMode === "aime-home" || studioMode === "universe-index" ||
+    studioMode === "universe-detail" || studioMode === "studio-detail" || studioMode === "vision"
+    ? <AimeEcosystem page={studioMode} onNavigate={navigatePage} onOpenStudio={route=>switchStudio(route as StudioRoute)}/>
+    : studioMode === "manifest"
     ? <ManifestLanding onStudio={route => {
         const allowed = ["design","embroidery","admin","mini-site","programme","one-space","art-world","academy","causal","metamorphose","ripplecircle","game"];
         if(allowed.includes(route))switchStudio(route as Parameters<typeof switchStudio>[0]);
-      }} onOpenAtelier={() => switchStudio("design")} onAdmin={() => switchStudio("manifest-admin")}/>
+      }} onDetails={id => navigatePage("/studios/"+id)} onAime={() => navigatePage("/")} onOpenAtelier={() => switchStudio("design")} onAdmin={() => switchStudio("manifest-admin")}/>
     : studioMode === "manifest-admin"
     ? <ManifestAdminStudio onBack={() => switchStudio("manifest")}/>
     : studioMode === "design"
@@ -488,7 +512,7 @@ export default function App() {
           }
         }} />
     : studioMode === "aime-landing"
-    ? <AimeLanding onBack={() => switchStudio("manifest")}
+    ? <AimeLanding onBack={() => switchStudio("aime-home")}
         onCreate={()=>{setOpenPrivateGallery(false);switchStudio("art-world");}}
         onGallery={()=>{setOpenPrivateGallery(true);switchStudio("art-world");}}
         onMusic={()=>switchStudio("music")}/>
