@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight, Clock3, Fingerp
 import { DEFAULT_LAUNCH, STATUS_LABELS, countdown, validLaunch, type LaunchConfig } from "../lib/launchManifest";
 import "./ManifestLanding.css";
 
-interface Props {onDetails:(id:string)=>void;onAime:()=>void;onOpenAtelier:()=>void;onAdmin:()=>void}
+interface Props {onDetails:(id:string)=>void;onAime:()=>void;onOpenAtelier:()=>void;onUniversal:()=>void;onAdmin:()=>void}
 interface PublicState {config:LaunchConfig|null;signupReady:boolean;turnstileSiteKey:string;legalEntity:string;privacyContact:string;privacyPolicyUrl:string}
 const THEME_ICONS=[Fingerprint,ShieldCheck,Grid2X2,Clock3,Sparkles,HeartHandshake,HeartHandshake,Grid2X2,GraduationCap,GitBranch,Sparkles,GitBranch,Sparkles];
 const pad=(n:number)=>String(n).padStart(2,"0");
@@ -165,7 +165,7 @@ function ReuseDemo(){
   </div>
  </section>;
 }
-export default function ManifestLanding({onDetails,onAime,onOpenAtelier,onAdmin}:Props){
+export default function ManifestLanding({onDetails,onAime,onOpenAtelier,onUniversal,onAdmin}:Props){
  const [state,setState]=useState<PublicState>({config:null,signupReady:false,turnstileSiteKey:"",legalEntity:"",privacyContact:"",privacyPolicyUrl:""});
  useEffect(()=>{
   let active=true;
@@ -194,6 +194,7 @@ export default function ManifestLanding({onDetails,onAime,onOpenAtelier,onAdmin}
       <div className="pz-hero-buttons"><a href="#manifeste" className={btn+" is-primary"}>Découvrir le manifeste <ArrowDownRight size={17}/></a>
        <a href="#studios" className={btn+" is-secondary"}>Explorer les studios <ArrowRight size={17}/></a>
        <button type="button" onClick={onOpenAtelier} className={btn+" is-secondary"}>Ouvrir l’Atelier <ArrowUpRight size={17}/></button>
+       <button type="button" onClick={onUniversal} className={btn+" is-secondary"}>Créer un Dossier Universel <ArrowUpRight size={17}/></button>
       </div>
       <div className="mt-9"><CountdownView date={config.mainDate} title={config.mainLabel||"Présentation publique"} primary/></div>
      </div>
