@@ -5,7 +5,7 @@ import {createRoot,type Root} from "react-dom/client";
 import {newPerson,newMoment,newSpace,readWorld,writeWorld,WORLD_KEY,safeWorld} from "../lib/oneSpaceCore";
 import {academyDisplayProject,ACADEMY_KEY,makeAcademyProject,validProject,exportAcademyHTML} from "../lib/academyCore";
 import {validUniversalMeta} from "../lib/dossierSchema";
-import {academyDossierKey,adoptLegacySpace,attachAcademyResource,createUniversalDossier,exportUniversalJSON,importUniversalJSON,makeUniversalDossier,projectFormation,readDossier,understandIntent,updateUniversalField,addUniversalMoment} from "../lib/universalDossier";
+import {academyDossierKey,academyReferenceHealth,adoptLegacySpace,attachAcademyResource,createUniversalDossier,exportUniversalJSON,importUniversalJSON,makeUniversalDossier,projectFormation,readDossier,understandIntent,updateUniversalField,writableWorld,addUniversalMoment} from "../lib/universalDossier";
 import {entryStudio} from "../lib/entryNavigation";
 import UniversalDossierStudio from "../components/UniversalDossierStudio";
 import AcademyStudio from "../components/AcademyStudio";
@@ -143,4 +143,66 @@ describe("Dossier Universel AIME — extension canonique non destructive",()=>{
   expect(entryStudio("","","/espace")).toBe("universal-dossier");
   expect(entryStudio("?studio=academy&dossier="+s.id,"","/atelier")).toBe("academy");
  });
+ it("affiche explicitement l'absence d'objectifs liés, sans contenu pédagogique périmé",()=>{
+  const s=createUniversalDossier("Je veux proposer un atelier de saxophone pour dix débutants");
+  const p={...makeAcademyProject(),dossierBinding:{spaceId:s.id,titleMode:"linked" as const,objectivesMode:"linked" as const}};
+  const empty=updateUniversalField(s.id,"dossier.objectives","");
+  const linked=academyDisplayProject(p,empty);
+  const intro=linked.sections.find(section=>section.kind==="intro");
+  expect(intro?.body).toContain("Aucun objectif pédagogique renseigné");
+  expect(intro?.body).not.toBe(p.sections.find(section=>section.kind==="intro")?.body);
+  expect(exportAcademyHTML(linked)).toContain("Aucun objectif pédagogique renseigné");
+  const custom={...p,dossierBinding:{...p.dossierBinding,objectivesMode:"custom" as const}};
+  expect(academyDisplayProject(custom,empty).sections.find(v=>v.kind==="intro")?.body).toBe(p.sections.find(v=>v.kind==="intro")?.body);
+ });
+ it("ne remplace pas une référence Academy existante sans accord explicite et signale son état",()=>{
+  const s=createUniversalDossier("Atelier musical avec programme et dix débutants");
+  expect(academyReferenceHealth(s)).toBe("none");
+  const first=attachAcademyResource(s.id,"academy-premier");
+  expect(academyReferenceHealth(first)).toBe("missing");
+  localStorage.setItem(academyDossierKey(s.id),"{malformed-json");
+  expect(academyReferenceHealth(first)).toBe("invalid");
+  const support={...makeAcademyProject(),id:"academy-premier",dossierBinding:{spaceId:s.id,titleMode:"linked" as const}};
+  localStorage.setItem(academyDossierKey(s.id),JSON.stringify(support));
+  expect(academyReferenceHealth(first)).toBe("available");
+  expect(()=>attachAcademyResource(s.id,"academy-autre")).toThrow(/Conflit Academy/);
+  expect(readDossier(s.id)?.dossier?.references[0].targetId).toBe("academy-premier");
+  const approved=attachAcademyResource(s.id,"academy-autre",true);
+  expect(approved.dossier?.references[0].targetId).toBe("academy-autre");
+  expect(approved.dossier?.history.at(-1)?.before).toBe("academy-premier");
+  expect(academyReferenceHealth(approved)).toBe("invalid");
+  expect(()=>attachAcademyResource(s.id,"")).toThrow(/Identifiant Academy invalide/);
+ });
+ it("préserve octet pour octet un store local corrompu et bloque l'import qui l'effacerait",()=>{
+  const broken="{legacy-invalid-json";
+  localStorage.setItem(WORLD_KEY,broken);
+  expect(()=>writableWorld()).toThrow(/illisible/);
+  expect(()=>createUniversalDossier("Je souhaite proposer un atelier pédagogique")).toThrow(/illisible/);
+  const candidate=makeUniversalDossier("Je souhaite proposer une formation");
+  expect(()=>importUniversalJSON({kind:"aime:universal-dossier",version:1,space:candidate})).toThrow(/illisible/);
+  expect(localStorage.getItem(WORLD_KEY)).toBe(broken);
+  const future=JSON.stringify({version:999,spaces:[],selectedSpaceId:""});
+  localStorage.setItem(WORLD_KEY,future);
+  expect(()=>createUniversalDossier("Je souhaite organiser un atelier")).toThrow(/incompatible/);
+  expect(localStorage.getItem(WORLD_KEY)).toBe(future);
+ });
+ it("n'inscrit aucun changement d'historique quand le navigateur refuse l'écriture",()=>{
+  const s=createUniversalDossier("Je veux organiser un atelier pour dix débutants");
+  const original=localStorage.getItem(WORLD_KEY);
+  const mock=vi.spyOn(Storage.prototype,"setItem").mockImplementation(()=>{throw new Error("QuotaExceededError");});
+  try{expect(()=>updateUniversalField(s.id,"title","Nouveau titre")).toThrow(/QuotaExceededError/);}
+  finally{mock.mockRestore();}
+  expect(localStorage.getItem(WORLD_KEY)).toBe(original);
+  expect(readDossier(s.id)?.title).toBe(s.title);
+ });
+ it("préserve le support Academy endommagé lors d'une réouverture liée",async()=>{
+  const s=createUniversalDossier("Atelier saxophone de dix débutants");
+  const corrupted="{academy-original-unreadable";
+  localStorage.setItem(academyDossierKey(s.id),corrupted);
+  const view=await mount(<AcademyStudio onBack={vi.fn()} onAccessibility={vi.fn()} linkedDossierId={s.id}/>);
+  expect(localStorage.getItem(academyDossierKey(s.id))).toBe(corrupted);
+  expect(view.textContent).toContain("contenu original conservé");
+  expect(readDossier(s.id)?.dossier?.references.some(r=>r.studio==="academy")).toBe(false);
+ });
+
 });
