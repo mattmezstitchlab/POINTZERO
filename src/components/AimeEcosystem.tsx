@@ -19,6 +19,7 @@ function SiteHeader({onNavigate}:{onNavigate:(path:string)=>void}){
    <Jump href="/univers" onNavigate={onNavigate}>Univers</Jump>
    <Jump href="/vision" onNavigate={onNavigate}>La vision</Jump>
    <Jump href="/dossier" onNavigate={onNavigate}>Dossier</Jump>
+   <Jump href="/espace" onNavigate={onNavigate}>Créer</Jump>
    <Jump href="/le-monde-aime" onNavigate={onNavigate}>Le Monde Aime</Jump>
   </nav>
   <Jump href="/pointzero" onNavigate={onNavigate} className="ae-header-cta">POINTZERO <ArrowUpRight size={14}/></Jump>
@@ -87,7 +88,8 @@ function MainHome({onNavigate,signatures}:{onNavigate:(path:string)=>void;signat
     <p className="ae-kicker">LA PREMIÈRE PORTE</p>
     <h2>Ce qui compte, ce n'est pas seulement de créer. C'est de pouvoir continuer.</h2>
     <p>En entrant dans AIME, vous découvrirez des intentions documentées, des domaines à explorer et les outils de POINTZERO. Certaines expériences sont déjà utilisables. D'autres appartiennent encore au futur que nous cherchons à construire.</p>
-    <Jump href="/univers" onNavigate={onNavigate} className="ae-primary">Entrer dans AIME <ArrowRight size={19}/></Jump>
+    <Jump href="/espace" onNavigate={onNavigate} className="ae-primary">Créer un Dossier Universel <ArrowRight size={19}/></Jump>
+    <div className="mt-4"><Jump href="/univers" onNavigate={onNavigate}>Explorer les Univers <ArrowUpRight size={16}/></Jump></div>
     <Jump href="/dossier" onNavigate={onNavigate} className="ae-reference-entry"><span><strong>Dossier de référence</strong><small>Vision · Antériorités · Impact · Investissement · Partenariats</small></span><ArrowUpRight size={23}/></Jump>
     <div className="ae-quick"><Jump href="/pointzero" onNavigate={onNavigate}>Découvrir POINTZERO <ArrowUpRight size={15}/></Jump>
      <Jump href="/le-monde-aime" onNavigate={onNavigate}>Rencontrer LE MONDE AIME <ArrowUpRight size={15}/></Jump>
@@ -191,7 +193,7 @@ export default function AimeEcosystem({page,onNavigate,onOpenStudio}:Props){
    page==="studio-detail"?<StudioDetail slug={slug} config={config} onNavigate={onNavigate} onOpenStudio={onOpenStudio}/>:
    <Vision config={config} onNavigate={onNavigate}/>}
   <footer className="ae-footer"><div className="ae-wrap"><span>AIME® · Mémoire, intention, transmission</span><span>Version éditoriale {AIME_EDITORIAL_VERSION}</span>
-   <div><Jump href="/le-monde-aime" onNavigate={onNavigate}>LE MONDE AIME</Jump><Jump href="/pointzero" onNavigate={onNavigate}>POINTZERO</Jump><Jump href="/vision" onNavigate={onNavigate}>La vision</Jump><Jump href="/dossier" onNavigate={onNavigate}>Dossier de référence</Jump></div></div>
+   <div><Jump href="/le-monde-aime" onNavigate={onNavigate}>LE MONDE AIME</Jump><Jump href="/pointzero" onNavigate={onNavigate}>POINTZERO</Jump><Jump href="/vision" onNavigate={onNavigate}>La vision</Jump><Jump href="/dossier" onNavigate={onNavigate}>Dossier de référence</Jump><Jump href="/espace" onNavigate={onNavigate}>Dossier Universel</Jump></div></div>
   </footer>
  </div>;
 }
