@@ -1,5 +1,5 @@
 import {useMemo,useState,type MouseEvent,type ReactNode} from "react";
-import {ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Check,ChevronDown,Clock3,FileText,Filter,GitBranch,Layers3,LockKeyhole,Search,ShieldCheck,SlidersHorizontal} from "lucide-react";
+import {ArrowLeft,ArrowRight,ArrowUpRight,ChevronDown,FileText,Filter,LockKeyhole,Search,ShieldCheck,SlidersHorizontal} from "lucide-react";
 import {ARCHITECTURE,CAUSAL_STEPS,COMPETITORS,FINANCE_EXAMPLE,FUNDING_AUDIENCES,HISTORY,OBSERVED,REFERENCE_DOCS,REFERENCE_EDITION,ROADMAP,SCENARIOS,SOURCES,calculateHypothesis,sourceFor,validObserved,type FinanceInputs,type ObservedSeries} from "../lib/aimeReference";
 import "./AimeDossier.css";
 type Props={onNavigate:(path:string)=>void};
@@ -92,7 +92,7 @@ function Finance(){
  const max=Math.max(1,...rows.flatMap(r=>[r.revenue,r.cost]));
  return <div className="adr-finance">
   <div className="adr-finance-input"><div className="adr-finance-header"><SlidersHorizontal size={20}/><strong>Hypothèses modifiables</strong></div>
-  <p className="adr-caption">Valeurs **pédagogiques arbitraires** et non comptes réels d'AIME. Modifiez-les pour explorer la sensibilité économique.</p>
+  <p className="adr-caption">Valeurs pédagogiques arbitraires et non comptes réels d'AIME. Modifiez-les pour explorer la sensibilité économique.</p>
   {nums.map(([key,label,unit,min,maxV,step])=><label className="adr-finance-row" key={key}>
    <span>{label}<small>{unit}</small></span><input type="number" min={min} max={maxV} step={step} value={v[key]}
     onChange={e=>{const n=Number(e.target.value);setV(prev=>({...prev,[key]:Number.isFinite(n)?Math.max(min,Math.min(maxV,n)):0}))}}/></label>)}
