@@ -292,6 +292,7 @@ export default function ManifestLanding({onStudio,onAdmin}:Props){
    <footer className="pz-manifest-footer"><div className="pz-manifest-wrap"><p className="pz-manifest-kicker">POINTZERO .0</p>
     <h2>Le temps retrouvé.</h2>
     <p>Nous avons appris à fabriquer des outils. Puis nous avons appris à les connecter. Aujourd'hui, nous pouvons commencer à leur donner une continuité.</p>
+    <p>Relier ce que nous savons à ce que nous faisons. Relier nos expériences à celles des autres. Relier le passé, le présent et les possibilités du futur.</p>
     <p>Non pour aller toujours plus vite. Mais pour retrouver le temps de comprendre, de créer, de transmettre et de vivre.</p>
     <div className="pz-manifest-footerbar"><span>UN POINT DE DÉPART. UNE INFINITÉ DE POSSIBLES.</span>
      <div className="flex items-center gap-4"><a href="#confidentialite">Confidentialité</a><a href="#accueil">Haut de page ↑</a><button onClick={onAdmin} type="button">Administration</button></div>
