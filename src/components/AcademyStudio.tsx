@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Code2, Download, Eye, GraduationCap, Layers3, Monitor, Palette, Plus, RotateCcw, Save, Scale, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import { LEGAL_ACTIVE_KEY } from "../lib/legalCore";
