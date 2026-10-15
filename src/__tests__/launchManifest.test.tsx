@@ -29,6 +29,8 @@ describe("POINTZERO .0 — manifeste et livraison progressive",()=>{
  });
  it("valide les studios, refuse une date ambiguë ou une route détournée",()=>{
   expect(validLaunch(DEFAULT_LAUNCH)).not.toBeNull();
+  expect(validLaunch({...DEFAULT_LAUNCH,aimeSignatures:["Architecture Intelligente de la Mémoire Ensemble","Architecture Intelligente des Mondes Émergents"]})).not.toBeNull();
+  expect(validLaunch({...DEFAULT_LAUNCH,aimeSignatures:["Promesse non vérifiée"]})).toBeNull();
   expect(validLaunch({...DEFAULT_LAUNCH,mainDate:"demain"})).toBeNull();
   expect(validLaunch({...DEFAULT_LAUNCH,studios:DEFAULT_LAUNCH.studios.map(s=>s.id==="creatif"?{...s,route:"admin-secret"}:s)})).toBeNull();
  });
