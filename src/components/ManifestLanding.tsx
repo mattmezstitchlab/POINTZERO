@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight, Clock3, Fingerp
 import { DEFAULT_LAUNCH, STATUS_LABELS, canEnter, canPreview, countdown, validLaunch, type LaunchConfig } from "../lib/launchManifest";
 import "./ManifestLanding.css";
 
-interface Props {onStudio:(route:string)=>void;onAdmin:()=>void}
+interface Props {onStudio:(route:string)=>void;onOpenAtelier:()=>void;onAdmin:()=>void}
 interface PublicState {config:LaunchConfig|null;signupReady:boolean;turnstileSiteKey:string;legalEntity:string;privacyContact:string;privacyPolicyUrl:string}
 const THEME_ICONS=[Fingerprint,ShieldCheck,Grid2X2,Clock3,Sparkles,HeartHandshake,HeartHandshake,Grid2X2,GraduationCap,GitBranch,Sparkles,GitBranch,Sparkles];
 const pad=(n:number)=>String(n).padStart(2,"0");
@@ -165,7 +165,7 @@ function ReuseDemo(){
   </div>
  </section>;
 }
-export default function ManifestLanding({onStudio,onAdmin}:Props){
+export default function ManifestLanding({onStudio,onOpenAtelier,onAdmin}:Props){
  const [state,setState]=useState<PublicState>({config:null,signupReady:false,turnstileSiteKey:"",legalEntity:"",privacyContact:"",privacyPolicyUrl:""});
  const [expanded,setExpanded]=useState<string|null>(null);
  useEffect(()=>{
@@ -183,7 +183,7 @@ export default function ManifestLanding({onStudio,onAdmin}:Props){
  return <div className="pz-manifest" aria-label="POINTZERO .0 — Le temps retrouvé">
   <header className="pz-manifest-nav"><a href="#accueil" className="pz-manifest-mark" aria-label="POINTZERO : retour au début"><span className="pz-manifest-logo" aria-hidden="true">×</span> POINTZERO <span className="pz-manifest-zero">.0</span></a>
    <nav aria-label="Navigation du manifeste"><a href="#manifeste">Manifeste</a><a href="#studios">Studios</a><a href="#continuite" className="hidden sm:inline">Continuité</a></nav>
-   <a className="pz-manifest-nav-cta" href="#suivre">Suivre le lancement <ArrowUpRight size={15}/></a>
+   <button className="pz-manifest-nav-cta" type="button" onClick={onOpenAtelier}>Ouvrir l’Atelier <ArrowUpRight size={15}/></button>
   </header>
   <main id="accueil">
    <section className="pz-manifest-hero" aria-labelledby="pz-manifest-title">
@@ -194,6 +194,7 @@ export default function ManifestLanding({onStudio,onAdmin}:Props){
       <p className="pz-hero-body">{heroIntro}</p>
       <div className="pz-hero-buttons"><a href="#manifeste" className={btn+" is-primary"}>Découvrir le manifeste <ArrowDownRight size={17}/></a>
        <a href="#studios" className={btn+" is-secondary"}>Explorer les studios <ArrowRight size={17}/></a>
+       <button type="button" onClick={onOpenAtelier} className={btn+" is-secondary"}>Ouvrir l’Atelier <ArrowUpRight size={17}/></button>
       </div>
       <div className="mt-9"><CountdownView date={config.mainDate} title={config.mainLabel||"Présentation publique"} primary/></div>
      </div>
@@ -295,7 +296,7 @@ export default function ManifestLanding({onStudio,onAdmin}:Props){
     <p>Relier ce que nous savons à ce que nous faisons. Relier nos expériences à celles des autres. Relier le passé, le présent et les possibilités du futur.</p>
     <p>Non pour aller toujours plus vite. Mais pour retrouver le temps de comprendre, de créer, de transmettre et de vivre.</p>
     <div className="pz-manifest-footerbar"><span>UN POINT DE DÉPART. UNE INFINITÉ DE POSSIBLES.</span>
-     <div className="flex items-center gap-4"><a href="#confidentialite">Confidentialité</a><a href="#accueil">Haut de page ↑</a><button onClick={onAdmin} type="button">Administration</button></div>
+     <div className="flex items-center gap-4"><a href="?site=le-monde-aime">Le Monde Aime — Présentation</a><a href="#confidentialite">Confidentialité</a><a href="#accueil">Haut de page ↑</a><button onClick={onAdmin} type="button">Administration</button></div>
     </div>
    </div></footer>
   </main>
