@@ -22,7 +22,7 @@ export function portraitAt(artist:number,x:number,y:number):number {
  if(circle(x,y,cx,61,22,29))return artist%2===0?3:5; // clothing
  if(circle(x,y,cx,24,15,20)){
   const hair=artist===3?2:artist===4?3:artist===1?3:2;
-  if(y<13+(Math.sin((x+shift)*.5)*2)|0)return hair;
+  if(y<13+Math.sin((x+shift)*.5)*2)return hair;
   if(x<cx-12||x>cx+12)return hair;
   if(y>26&&y<31&&((x>cx-10&&x<cx-4)||(x>cx+4&&x<cx+10)))return 3; // eyes / glasses
   if(artist===0&&y>23&&y<33&&(x===cx-3||x===cx+3))return 4;
