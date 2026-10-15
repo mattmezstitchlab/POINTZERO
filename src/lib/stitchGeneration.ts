@@ -1,6 +1,6 @@
 import { createPattern, ensurePalette, type Pattern, type Count } from "./pattern";
-import { parseComposition, pollinationsUrl, type FormatId, type StyleId } from "./promptcraft";
-import { loadRemoteImage, asyncRasterToCells } from "./convert";
+import { parseComposition, type FormatId, type StyleId } from "./promptcraft";
+import { loadImage, asyncRasterToCells } from "./convert";
 
 /** Un formulaire bref : la complexité technique reste dans le panneau de droite. */
 export interface StitchRequest {
@@ -95,13 +95,31 @@ function patternFromCross(req:StitchRequest,cross:Int16Array,w:number,h:number,n
   p.notes=`Description originale : ${req.prompt.trim()}. Grille ${w} × ${h}, palette limitée à ${req.maxColors} fils. Image source produite par un service d'images externe, conversion et optimisation DMC locales. La fidélité du contenu généré doit être vérifiée.`;
   return p;
 }
-export async function createStitchPattern(req:StitchRequest,onStage?:(step:string)=>void):Promise<StitchResult>{
+export async function createStitchPattern(req:StitchRequest,onStage?:(step:string)=>void,accessCode=""):Promise<StitchResult>{
   if(req.prompt.trim().length<3)throw new Error("Décrivez le motif en quelques mots.");
   const {w,h}=dimensionsFor(req),text=stitchImagePrompt(req);
   onStage?.("Illustration du sujet…");
   const aspect=req.format==="carre"?[768,768]:req.format==="portrait"?[640,896]:[896,640];
-  const url=pollinationsUrl(text,aspect[0],aspect[1],Math.max(0,Math.floor(req.seed)));
-  const image=await loadRemoteImage(url,120000);
+  // Authentification et modèle d'image exclusivement dans la fonction serveur.
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),58_000);
+  let image:HTMLImageElement;
+  try {
+    const response=await fetch("/api/stitch-image",{
+      method:"POST",headers:{"Content-Type":"application/json","X-Pointzero-Access-Code":accessCode},
+      body:JSON.stringify({prompt:text,width:aspect[0],height:aspect[1],seed:Math.max(0,Math.floor(req.seed))}),
+      signal:controller.signal
+    });
+    if(!response.ok){
+      const issue=await response.json().catch(()=>({error:"Erreur HTTP "+response.status}));
+      throw new Error(typeof issue.error==="string"?issue.error:"Le service d'images ne répond pas.");
+    }
+    const blob=await response.blob();
+    if(!blob.type.startsWith("image/"))throw new Error("Le serveur n’a pas transmis d’image.");
+    image=await loadImage(blob);
+  } finally {
+    clearTimeout(timer);
+  }
   onStage?.("Conversion vers les fils DMC…");
   // La palette est plafonnée avant le nettoyage. L'image ne devient jamais le patron affiché.
   const result=await asyncRasterToCells(image,w,h,{maxColors:req.maxColors,dropWhite:true,confetti:false,pixelArt:false});
