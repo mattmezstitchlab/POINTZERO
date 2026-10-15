@@ -244,7 +244,10 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
    <div className="mx-auto max-w-[1320px] space-y-4 pb-28">
      {isLinked&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-[#a6899c]/35 bg-[#29212d] px-4 py-3 text-xs" aria-label="Lien canonique Dossier Universel">
        <div>Source AIME · <strong>{linked.title}</strong> · {linked.id.slice(0,8)} · {project.dossierBinding?.titleMode==="linked"?"Titre synchronisé":"Titre personnalisé conservé"}</div>
-       {project.dossierBinding?.titleMode==="custom"&&<button type="button" className={studioButton} onClick={()=>{if(window.confirm("Réutiliser le titre du dossier ? Votre titre personnalisé n'est pas écrasé."))patchSite({dossierBinding:{spaceId:linked.id,titleMode:"linked"}})}}>Reprendre le titre canonique</button>}
+       <div className="flex flex-wrap gap-2">
+       {project.dossierBinding?.titleMode==="custom"&&<button type="button" className={studioButton} onClick={()=>{if(window.confirm("Réutiliser le titre canonique du dossier ? Le titre personnalisé reste conservé dans le projet JSON local."))patchSite({dossierBinding:{...project.dossierBinding!,titleMode:"linked"}})}}>Suivre le titre du dossier</button>}
+       {project.dossierBinding?.objectivesMode==="custom"&&<button type="button" className={studioButton} onClick={()=>{if(window.confirm("Afficher les objectifs canonique du dossier ? Le texte personnalisé reste conservé dans le projet JSON local."))patchSite({dossierBinding:{...project.dossierBinding!,objectivesMode:"linked"}})}}>Suivre les objectifs du dossier</button>}
+       </div>
      </div>}
      <div className="flex flex-wrap items-center justify-between gap-3">
        <div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-white/50">Créer · Comprendre · Transmettre</p>
