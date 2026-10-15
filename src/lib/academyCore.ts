@@ -105,8 +105,9 @@ export function academyDisplayProject(project:SiteProject,source:{id:string;titl
  return {...project,
   name:titleLinked?source.title:project.name,
   siteTitle:titleLinked?source.title:project.siteTitle,
-  sections:objectivesLinked&&objectives.length?
-   project.sections.map(section=>section.kind==="intro"?{...section,body:objectives.map((v,i)=>(i+1)+". "+v).join("\n")}:section):project.sections
+  sections:objectivesLinked?
+   project.sections.map(section=>section.kind==="intro"?{...section,body:objectives.length?
+    objectives.map((v,i)=>(i+1)+". "+v).join("\n"):"Aucun objectif pédagogique renseigné dans le Dossier Universel."}:section):project.sections
  };
 }
 export const defaultLearning=():LearningState=>({version:1,completedCustom:[],exercises:[],notes:""});
