@@ -107,6 +107,7 @@ export default function App() {
   const [promptText, setPromptText] = useState("");
   const [generationSettings, setGenerationSettings] = useState<StitchRequest>(STITCH_DEFAULTS);
   const [generationStatus,setGenerationStatus]=useState("");
+  const [generationAccessCode,setGenerationAccessCode]=useState("");
   const [generationError,setGenerationError]=useState("");
   const [lastGeneration,setLastGeneration]=useState<StitchResult|null>(null);
   const [cleanVariant,setCleanVariant]=useState<"original"|"cleaned">("cleaned");
@@ -423,10 +424,11 @@ export default function App() {
     const req:StitchRequest={...generationSettings,prompt:promptText,seed:variant?Math.floor(Math.random()*1_000_000):generationSettings.seed};
     if(variant)setGenerationSettings(req);
     if(req.prompt.trim().length<3){setGenerationError("Décrivez votre motif en quelques mots.");return;}
+    if(!generationAccessCode){setGenerationError("Saisissez le code d’accès au moteur distant. Il est défini dans les paramètres privés du serveur.");return;}
     const token=++generationToken.current;
     clearReveal();setRevealPhase(null);setGenerationError("");setGenerationStatus("Préparation du sujet…");setLastGeneration(null);
     try{
-      const result=await createStitchPattern(req,stage=>{if(generationToken.current===token)setGenerationStatus(stage)});
+      const result=await createStitchPattern(req,stage=>{if(generationToken.current===token)setGenerationStatus(stage)},generationAccessCode);
       if(token!==generationToken.current)return;
       await loadPattern(result.original);
       if(token!==generationToken.current)return;
@@ -464,6 +466,7 @@ export default function App() {
     prompt: promptText, onPrompt: setPromptText,
     onGenerate: () => {void runPatternGeneration();},
     generation: {...generationSettings,prompt:promptText}, onGenerationChange: setGenerationSettings,
+    accessCode:generationAccessCode,onAccessCode:setGenerationAccessCode,
     busy:generationStatus,error:generationError,
     cleanupCount:lastGeneration?.changed??null,cleanupVariant:cleanVariant,onCleanupVariant:chooseCleanup,
     onVariant:()=>{void runPatternGeneration(true);},
