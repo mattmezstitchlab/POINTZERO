@@ -33,6 +33,7 @@ import MusicStudio from "./components/MusicStudio";
 import MusicProductionStudio from "./components/MusicProductionStudio";
 import AccessibilityStudio from "./components/AccessibilityStudio";
 import AcademyStudio from "./components/AcademyStudio";
+import UniversalDossierStudio from "./components/UniversalDossierStudio";
 import OneSpaceStudio from "./components/OneSpaceStudio";
 import LegalStudio from "./components/LegalStudio";
 import ArtWorldStudio from "./components/ArtWorldStudio";
@@ -94,10 +95,11 @@ export default function App() {
   });
   useEffect(()=>{
     if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
+    else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
     else if(studioMode==="design")document.title="Atelier — POINTZERO";
-    else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier"].includes(studioMode)){
+    else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
       document.title="Studios — POINTZERO";
     }
   },[studioMode]);
@@ -122,7 +124,7 @@ export default function App() {
   },[]);
   const switchStudio = (mode: StudioRoute) => {
     if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
-      mode==="universe-index"||mode==="reference-dossier"||mode==="design"){
+      mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
       setStudioMode(mode); // private admin overlay, no navigable public route
@@ -130,7 +132,7 @@ export default function App() {
       if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
       navigatePage(publicPathFor(mode));
     }
-    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","manifest-admin"].includes(mode)){
+    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
       try { localStorage.setItem("pointzero:workspace", mode); } catch { /* keep existing data */ }
     }
   };
@@ -450,14 +452,16 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "reference-dossier"
+  return studioMode === "universal-dossier"
+    ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))}/>
+    : studioMode === "reference-dossier"
     ? <AimeDossier onNavigate={navigatePage}/>
     : studioMode === "aime-home" || studioMode === "universe-index" ||
     studioMode === "universe-detail" || studioMode === "studio-detail" || studioMode === "vision"
     ? <AimeEcosystem page={studioMode} onNavigate={navigatePage} onOpenStudio={route=>switchStudio(route as StudioRoute)}/>
     : studioMode === "manifest"
     ? <ManifestLanding onDetails={id => navigatePage("/studios/"+id)} onAime={() => navigatePage("/")}
-        onOpenAtelier={() => switchStudio("design")} onAdmin={() => switchStudio("manifest-admin")}/>
+        onOpenAtelier={() => switchStudio("design")} onUniversal={() => switchStudio("universal-dossier")} onAdmin={() => switchStudio("manifest-admin")}/>
     : studioMode === "manifest-admin"
     ? <ManifestAdminStudio onBack={() => switchStudio("manifest")}/>
     : studioMode === "design"
@@ -467,7 +471,7 @@ export default function App() {
         onMiniSite={() => switchStudio("mini-site")} onPDF={() => switchStudio("pdf")}
         onGeneration={() => switchStudio("generation")} onMusic={() => switchStudio("music")} onMusicProduction={() => switchStudio("music-production")} onAccessibility={() => switchStudio("accessibility")} onAcademy={() => switchStudio("academy")} onSpace={() => switchStudio("one-space")} onCausal={() => switchStudio("causal")} onLegal={() => switchStudio("legal")}
         onArtWorld={() => {setOpenPrivateGallery(false);switchStudio("art-world");}}
-        onManifest={() => switchStudio("manifest")}
+        onManifest={() => switchStudio("manifest")} onUniversal={() => switchStudio("universal-dossier")}
         onMetamorphose={() => switchStudio("metamorphose")} onRippleCircle={() => switchStudio("ripplecircle")} onGame={() => switchStudio("game")}
         incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
     : studioMode === "metamorphose"
@@ -509,7 +513,10 @@ export default function App() {
     : studioMode === "accessibility"
     ? <AccessibilityStudio onBack={() => switchStudio("design")} />
     : studioMode === "academy"
-    ? <AcademyStudio onBack={() => switchStudio("design")} onAccessibility={() => switchStudio("accessibility")} onLegal={() => switchStudio("legal")} />
+    ? <AcademyStudio linkedDossierId={new URLSearchParams(window.location.search).get("dossier")||undefined}
+        onBack={() => {const id=new URLSearchParams(window.location.search).get("dossier");
+          if(id)navigatePage("/espace?id="+encodeURIComponent(id));else switchStudio("design");}}
+        onAccessibility={() => switchStudio("accessibility")} onLegal={() => switchStudio("legal")} />
     : studioMode === "legal"
     ? <LegalStudio onBack={() => switchStudio("design")} onMiniSite={() => switchStudio("mini-site")} onAcademy={() => switchStudio("academy")} />
     : studioMode === "one-space" || studioMode === "causal"
