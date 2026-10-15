@@ -33,6 +33,10 @@ Règles Vercel ciblées dans `vercel.json` pour servir `index.html` aux routes p
 - **Moteurs** : logiques partagées (fragments, causalité, grille, chronologie), distinguées dans la page Vision, et non comptées comme Studios.
 - **LE MONDE AIME** : association et présentation maintenues, séparées de la marque mère AIME® et des Studios.
 
+### Signature évolutive AIME
+
+Les variantes de l'acronyme sont définies initialement dans `aimeEditorial.ts` et peuvent maintenant être modifiées via la console privée du manifeste POINTZERO. La configuration est facultative et rétrocompatible ; les éditions sont stockées en **brouillon**, soumises à validation stricte par le client et le serveur, puis explicitement publiées. Les deux premiers mots, « Architecture Intelligente », demeurent fixes.
+
 ## 4. Contenu, provenance et confidentialité
 
 Le fichier `src/lib/aimeEditorial.ts` contient une première édition structurée et versionnable. Les preuves pointent vers des modules du dépôt GitHub ou des PR, lorsqu'elles existent ; certaines descriptions sont **des intentions de concept**, non des fonctions validées en production.
