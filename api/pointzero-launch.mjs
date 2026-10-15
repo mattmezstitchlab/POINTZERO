@@ -21,7 +21,7 @@ export default async function handler(req,res){
     const totals={};
     for(const k of supported)totals[k]=Number(await redis("SCARD",key+":interest:"+k)||0);
     return res.status(200).json({
-      config:await safeConfig(),confirmed:Number(await redis("SCARD",key+":confirmed")||0),
+      config:await safeConfig(),draft:await (async()=>{const d=await redis("GET",key+":draft");try{const c=JSON.parse(d);return validConfig(c)?c:null}catch{return null}})(),confirmed:Number(await redis("SCARD",key+":confirmed")||0),
       interests:totals
     });
    }catch{return error(res,503,"Stockage administrateur indisponible.");}
@@ -34,13 +34,35 @@ export default async function handler(req,res){
  if(req.method!=="POST")return error(res,405,"Méthode non autorisée.");
  if(Number(req.headers["content-length"]||0)>160_000)return error(res,413,"Requête trop volumineuse.");
  const action=req.body?.action;
- if(action==="admin-save"){
+ if(action==="admin-save"||action==="admin-publish"){
   if(!adminReady()||!adminAuthorized(req))return error(res,401,"Code administrateur non valide.");
   if(!validConfig(req.body?.config))return error(res,400,"Configuration invalide.");
   try{
-   await redis("SET",key+":config",JSON.stringify(req.body.config));
-   return res.status(200).json({saved:true});
+   await redis("SET",key+(action==="admin-save"?":draft":":config"),JSON.stringify(req.body.config));
+   return res.status(200).json({saved:true,published:action==="admin-publish"});
   }catch{return error(res,503,"Sauvegarde non disponible.");}
+ }
+ if(action==="unsubscribe-request"){
+  if(!waitlistReady()||!process.env.TURNSTILE_SITE_KEY)return error(res,503,"Service de désinscription indisponible.");
+  const email=normalizeEmail(req.body?.email);
+  if(!validEmail(email))return error(res,400,"Adresse e-mail invalide.");
+  let ok=false;try{ok=await verifyTurnstile(req.body?.turnstile,clientIP(req));}catch{}
+  if(!ok)return error(res,400,"Vérification anti-robot incorrecte.");
+  try{
+   const userHash=hash(email),emailKey=key+":email:"+userHash;
+   const serialized=await redis("GET",emailKey);
+   if(serialized){
+    const data=JSON.parse(serialized);
+    if(data.status==="confirmed"){
+     const token=rand(),old=data.unsubscribeHash;data.unsubscribeHash=hash(token);
+     await redis("SET",emailKey,JSON.stringify(data));
+     await redis("SET",key+":unsubscribe:"+hash(token),userHash,"EX",259200);
+     if(old)await redis("DEL",key+":unsubscribe:"+old);
+     await resendEmail(email,"Désinscription POINTZERO .0","<p>Pour vous désinscrire des informations POINTZERO, ouvrez ce lien : <a href='"+escapeHTML(fullUrl("unsubscribe",token))+"'>Me désinscrire</a>.</p><p>Ce lien expire dans 72 heures.</p>");
+    }
+   }
+   return res.status(200).json({status:"sent",message:"Si cette adresse est inscrite, un lien de désinscription a été envoyé."});
+  }catch{return error(res,503,"Demande de désinscription momentanément indisponible.");}
  }
  if(action!=="subscribe")return error(res,400,"Action inconnue.");
  if(!waitlistReady()||!process.env.TURNSTILE_SITE_KEY)return error(res,503,"Les inscriptions ne sont pas encore activées.");
@@ -71,7 +93,7 @@ export default async function handler(req,res){
    const link=fullUrl("confirm",token);
    const name=data.firstName?escapeHTML(data.firstName)+", ":"";
    await resendEmail(email,"Confirmez votre intérêt pour POINTZERO .0",
-    "<div style='font-family:system-ui;line-height:1.6;max-width:620px'><h1>POINTZERO .0 — Le temps retrouvé.</h1><p>Bonjour "+name+"confirmez votre inscription aux informations d'ouverture des studios.</p><p><a href='"+escapeHTML(link)+"'>Confirmer mon inscription</a></p><p>Ce lien expire dans 72 heures. Sans confirmation, vos informations en attente seront effacées.</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p></div>");
+    "<div style='font-family:system-ui;line-height:1.6;max-width:620px'><h1>POINTZERO .0 — Le temps retrouvé.</h1><p>Bonjour "+name+"confirmez votre inscription aux informations d'ouverture des studios.</p><p><a href='"+escapeHTML(link)+"'>Confirmer mon inscription</a></p><p>Ce lien expire dans 72 heures. Sans confirmation, vos informations en attente seront effacées.</p><p><a href='"+escapeHTML(fullUrl("unsubscribe",unsubscribe))+"'>Lien de désinscription</a> à conserver si vous confirmez.</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p></div>");
   }catch{
    await Promise.allSettled([redis("DEL",emailKey),redis("DEL",key+":confirm:"+hash(token)),redis("DEL",key+":unsubscribe:"+hash(unsubscribe))]);
    return error(res,502,"Le mail de confirmation n'a pas pu être envoyé. Aucune inscription n'a été enregistrée.");
