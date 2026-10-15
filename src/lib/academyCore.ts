@@ -93,6 +93,14 @@ export function validProject(data:unknown):SiteProject|null{
  }
  return p as SiteProject;
 }
+/** Read-through projection: the canonical title is NEVER copied back into a linked site.
+ * Explicit personalization switches titleMode to "custom" and is not overwritten.
+ */
+export function academyDisplayProject(project:SiteProject,source:{id:string;title:string}|null):SiteProject{
+ if(source&&project.dossierBinding?.spaceId===source.id&&project.dossierBinding.titleMode==="linked")
+  return {...project,name:source.title,siteTitle:source.title};
+ return project;
+}
 export const defaultLearning=():LearningState=>({version:1,completedCustom:[],exercises:[],notes:""});
 export function validLearning(data:unknown):LearningState|null{
  if(!data||typeof data!=="object")return null;
