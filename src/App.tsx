@@ -15,6 +15,7 @@ import TopBar from "./components/TopBar";
 import DesignStudio from "./components/DesignStudio";
 import ManifestLanding from "./components/ManifestLanding";
 import AimeEcosystem from "./components/AimeEcosystem";
+import AimeDossier from "./components/AimeDossier";
 import { entryStudio, publicPathFor, type StudioRoute } from "./lib/entryNavigation";
 import ManifestAdminStudio from "./components/ManifestAdminStudio";
 import MetamorphoseStudio from "./components/MetamorphoseStudio";
@@ -93,9 +94,10 @@ export default function App() {
   });
   useEffect(()=>{
     if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
+    else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
     else if(studioMode==="design")document.title="Atelier — POINTZERO";
-    else if(!["aime-home","vision","universe-index","universe-detail","studio-detail"].includes(studioMode)){
+    else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier"].includes(studioMode)){
       document.title="Studios — POINTZERO";
     }
   },[studioMode]);
@@ -120,7 +122,7 @@ export default function App() {
   },[]);
   const switchStudio = (mode: StudioRoute) => {
     if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
-      mode==="universe-index"||mode==="design"){
+      mode==="universe-index"||mode==="reference-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
       setStudioMode(mode); // private admin overlay, no navigable public route
@@ -128,7 +130,7 @@ export default function App() {
       if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
       navigatePage(publicPathFor(mode));
     }
-    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","manifest-admin"].includes(mode)){
+    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","manifest-admin"].includes(mode)){
       try { localStorage.setItem("pointzero:workspace", mode); } catch { /* keep existing data */ }
     }
   };
@@ -448,7 +450,9 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "aime-home" || studioMode === "universe-index" ||
+  return studioMode === "reference-dossier"
+    ? <AimeDossier onNavigate={navigatePage}/>
+    : studioMode === "aime-home" || studioMode === "universe-index" ||
     studioMode === "universe-detail" || studioMode === "studio-detail" || studioMode === "vision"
     ? <AimeEcosystem page={studioMode} onNavigate={navigatePage} onOpenStudio={route=>switchStudio(route as StudioRoute)}/>
     : studioMode === "manifest"
