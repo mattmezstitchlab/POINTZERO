@@ -70,12 +70,11 @@ interface Props {
   onGame?: () => void;
   onLegal?: () => void;
   onArtWorld?: () => void;
-  onAimeLanding?: () => void;
   onManifest?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onAimeLanding, onManifest, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onManifest, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -241,6 +240,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
         <span className="shrink-0 text-[13px] font-bold tracking-tight">× <span className="hidden sm:inline">POINTZERO</span></span>
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
+        {onManifest&&<button type="button" aria-label="Retour à l’accueil POINTZERO" onClick={onManifest} className={action+" whitespace-nowrap"}>Accueil</button>}
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
         <div className="relative">
           <button type="button" aria-label="Ouvrir le menu des studios" aria-expanded={showStudios}
@@ -249,7 +249,6 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
           </button>
           {showStudios&&<div aria-label="Choix du studio" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[220px] max-h-[76dvh] overflow-y-auto p-2">
             {([
-              {name:"POINTZERO .0 · Le manifeste",icon:<Sparkles size={16}/>,onClick:onManifest},
               {name:"Photo",icon:<Camera size={16}/>,onClick:onPhoto},
               {name:"Stylisme",icon:<Shirt size={16}/>,onClick:onFashion},
               {name:"Budget",icon:<Wallet size={16}/>,onClick:onBudget},
@@ -268,8 +267,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               {name:"Studio Game · Confetti 30",icon:<Gamepad2 size={16}/>,onClick:onGame},
               {name:"Studio Causal · RIPPLE",icon:<GitBranch size={16}/>,onClick:onCausal},
               {name:"Juridique & RGPD",icon:<Scale size={16}/>,onClick:onLegal},
-              {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld},
-              {name:"LE MONDE AIME · Présentation",icon:<HeartHandshake size={16}/>,onClick:onAimeLanding}
+              {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld}
             ]).filter(i=>!!i.onClick).map(item=>
               <button type="button" key={item.name} aria-label={"Ouvrir le studio "+item.name}
                 className="flex min-h-11 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs text-white/85 hover:bg-white/10 hover:text-white"
