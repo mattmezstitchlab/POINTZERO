@@ -5,7 +5,7 @@ import { STYLES, type StyleId } from "../lib/promptcraft";
 
 export default function AtelierCreate({
   prompt, onPrompt, onGenerate, onImport, onBlank, onLibrary, compact = false,
-  generation, onGenerationChange, busy = "", error = "", cleanupCount, cleanupVariant, onCleanupVariant, onVariant,
+  generation, onGenerationChange, busy = "", error = "", cleanupCount, cleanupVariant, onCleanupVariant, onVariant, accessCode="", onAccessCode,
 }: {
   prompt: string;
   onPrompt: (value: string) => void;
@@ -22,6 +22,8 @@ export default function AtelierCreate({
   cleanupVariant?: "original" | "cleaned";
   onCleanupVariant?: (next:"original"|"cleaned") => void;
   onVariant?: () => void;
+  accessCode?:string;
+  onAccessCode?: (value:string)=>void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const settings = generation ?? STITCH_DEFAULTS;
@@ -88,6 +90,15 @@ export default function AtelierCreate({
               </select>
             </label>
           </details>
+          {onAccessCode && <details className="rounded-[5px] border border-white/15 p-2 text-[11px] text-white/70">
+            <summary className="cursor-pointer py-1">Connexion au moteur d'images</summary>
+            <label className="mt-2 block">Code privé d'accès au générateur
+              <input aria-label="Code d'accès au générateur" type="password" value={accessCode}
+                autoComplete="off" onChange={e=>onAccessCode(e.target.value)}
+                placeholder="Code défini sur Vercel" className={inputClass} />
+            </label>
+            <p className="mt-2 leading-relaxed text-white/55">Le moteur distant doit être configuré sur le serveur. Le code reste en mémoire pendant cette session, sans être sauvegardé dans le patron.</p>
+          </details>}
         </div>}
         {busy&&<p role="status" aria-live="polite" className="rounded-[5px] border border-white/15 bg-white/5 p-2 text-[11px] leading-relaxed text-white/75">{busy}</p>}
         {error&&<p role="alert" className="rounded-[5px] border border-red-300/30 bg-red-900/20 p-2 text-[11px] text-red-100">{error}</p>}
