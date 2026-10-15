@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CheckSquare, Circle, Eraser, Hand, PaintBucket, Pencil, Pipette, Scan, Rows3, Scissors, MousePointer2, Minus, Plus } from "lucide-react";
+import { CheckSquare, Circle, Eraser, Hand, PaintBucket, Pencil, Pipette, Scan, Rows3, Scissors, Minus, Plus } from "lucide-react";
 import type { Tool } from "../lib/stitch";
 
 interface Props {
