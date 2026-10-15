@@ -1,5 +1,6 @@
 /** POINTZERO common spaces. All permissions here are local planning data, not authentication. */
 import {ACADEMY_KEY,validProject} from "./academyCore";
+import {validUniversalMeta,type UniversalMeta} from "./dossierSchema";
 import {PROGRAMME_STORAGE,safeProgrammeStore} from "./programmeCore";
 import {MUSIC_LABEL_KEY,safeMusicLabel} from "./musicLabelCore";
 import {readExternal} from "./externalProjects";
@@ -18,6 +19,7 @@ export interface CausalSignal {
 export interface WorldSpace {
  id:string;kind:SpaceKind;title:string;description:string;created:string;
  people:SpacePerson[];moments:SpaceMoment[];tiles:SpaceTile[];signals:CausalSignal[];
+ dossier?:UniversalMeta; // optional extension; legacy stored projects remain valid
 }
 export interface WorldStore {version:1;spaces:WorldSpace[];selectedSpaceId:string}
 export const KINDS:SpaceKind[]=["mariage","famille","association","professionnel","personnel"];
@@ -67,7 +69,8 @@ export function safeWorld(raw:unknown):WorldStore|null{
   if(!s||!ident(s.id)||spaceIds.has(s.id)||!KINDS.includes(s.kind)||!bounded(s.title,180)||
    !bounded(s.description,1200)||!bounded(s.created,40)||!Array.isArray(s.people)||s.people.length>200||
    !Array.isArray(s.moments)||s.moments.length>200||!Array.isArray(s.tiles)||s.tiles.length>35||
-   !Array.isArray(s.signals)||s.signals.length>300)return null;
+   !Array.isArray(s.signals)||s.signals.length>300||
+   (s.dossier!==undefined&&!validUniversalMeta(s.dossier)))return null;
   spaceIds.add(s.id);
   const personIds=new Set<string>(),momentIds=new Set<string>(),tileIds=new Set<string>(),signalIds=new Set<string>();
   for(const p of s.people){
