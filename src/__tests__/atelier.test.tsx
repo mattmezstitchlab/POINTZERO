@@ -305,7 +305,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await mount();
     expect(container?.querySelector('.pz-embroidery-header')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]')).toBeTruthy();
-    expect(container?.querySelector('[aria-label="Panneau de réglages broderie"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Inspecteur de broderie"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Outils de broderie"]')).toBeTruthy();
     const rail=container?.querySelector('[aria-label="Fils du motif"]');
     expect(rail?.classList.contains("pz-embroidery-dmc")).toBe(true);
@@ -329,10 +329,10 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await click(button("Afficher la bibliothèque broderie"));
     expect(container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]')?.classList.contains("translate-x-0")).toBe(true);
     await click(button("Afficher les propriétés broderie"));
-    expect(container?.querySelector('[aria-label="Panneau de réglages broderie"]')?.classList.contains("translate-x-0")).toBe(true);
+    expect(container?.querySelector('[aria-label="Inspecteur de broderie"]')?.classList.contains("translate-x-0")).toBe(true);
     expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
     await click(button("Fermer les panneaux de broderie"));
-    expect(container?.querySelector('[aria-label="Panneau de réglages broderie"]')?.classList.contains("translate-x-full")).toBe(true);
+    expect(container?.querySelector('[aria-label="Inspecteur de broderie"]')?.classList.contains("translate-x-full")).toBe(true);
   });
 
   it("ouvre Budget, Programme et Admin depuis le même menu de studios, puis revient aux créations", async () => {
@@ -388,7 +388,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(view.querySelector('[aria-label="Bibliothèque de motifs"]')).toBeTruthy();
     expect(view.querySelector('button[aria-label="Ajouter Fleur rose"]')).toBeTruthy();
     expect(nav()?.querySelectorAll("button")).toHaveLength(4);
-    expect(dialog("Créer")?.classList.contains("is-open")).toBe(false);
+    expect(view.querySelector('[aria-label="Créer un nouveau motif"]')).toBeNull();
   });
   it("ne montre ni guide, ni démarrage automatique, même si l'ancien état subsiste", async () => {
     localStorage.setItem("point-zero:coach", JSON.stringify({ seen: false, dismissed: false }));
@@ -414,15 +414,19 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   it("réunit fils, toile et profil dans le même panneau", async () => {
     await mount();
     await click(category("Fils"));
-    expect(dialog("Fils & toile")?.classList.contains("is-open")).toBe(true);
-    expect(dialog("Fils & toile")?.textContent).toContain("Mon profil brodeuse");
-    expect(dialog("Fils & toile")?.textContent).toContain("Tissu, comptage et dimensions");
+    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
+    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
+    expect(right?.textContent).toContain("Mon profil brodeuse");
+    expect(right?.textContent).toContain("Tissu, comptage et dimensions");
+    expect(dialog("Fils & toile")?.classList.contains("is-open")).toBeFalsy();
   });
   it("donne accès au suivi Broder sans changer de page", async () => {
     await mount();
     await click(category("Broder"));
-    expect(dialog("Broder")?.classList.contains("is-open")).toBe(true);
-    expect(dialog("Broder")?.textContent).toContain("Journal du projet");
+    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
+    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
+    expect(right?.textContent).toContain("Journal du projet");
+    expect(dialog("Broder")?.classList.contains("is-open")).toBeFalsy();
     expect(window.location.hash).toBe("");
   });
   it("garde Bibliothèque, Exporter et Réglages dans l'en-tête", async () => {
@@ -430,45 +434,51 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(button("Bibliothèque")).toBeTruthy();
     expect(button("Exporter et partager")).toBeTruthy();
     await click(button("Réglages et aide"));
-    expect(dialog("Réglages & aide")?.classList.contains("is-open")).toBe(true);
-    expect(dialog("Réglages & aide")?.textContent).not.toContain("Guide pas à pas et questions");
+    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
+    expect(right?.textContent).toContain("Confort et accessibilité");
+    expect(dialog("Réglages & aide")?.classList.contains("is-open")).toBeFalsy();
   });
-  it("ouvre Créer dans un panneau lorsque l'utilisateur le demande", async () => {
+  it("garde Créer dans la colonne gauche sans nouveau panneau flottant", async () => {
     await mount();
     await click(button("POINTZERO : créer un motif"));
-    expect(dialog("Créer")?.classList.contains("is-open")).toBe(true);
-    expect(dialog("Créer")?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
+    const left=container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]');
+    expect(left?.querySelector('[aria-label="Créer un nouveau motif"]')).toBeTruthy();
+    expect(left?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
+    expect(dialog("Créer")?.classList.contains("is-open")).toBeFalsy();
   });
-  it("unifie Créer, Fils et le menu Plus sur une même surface noire", async () => {
+  it("réutilise la colonne droite pour Fils, Suivi et Réglages, sans feuilles superposées", async () => {
     await mount();
-    await click(button("POINTZERO : créer un motif"));
-    const create = dialog("Créer");
-    expect(create?.classList.contains("pz-panel")).toBe(true);
-    expect(create?.classList.contains("pz-surface")).toBe(true);
-    expect(create?.querySelectorAll("h1")).toHaveLength(0); // Pas de titre répété.
-    expect(create?.querySelector("textarea")).toBeTruthy();
-    await click(create?.querySelector('button[aria-label="Fermer"]'));
     await click(category("Fils"));
-    const threads = dialog("Fils & toile");
-    expect(threads?.classList.contains("pz-surface")).toBe(true);
-    expect(threads?.classList.contains("pz-panel")).toBe(true);
-    expect(threads?.querySelector(".pz-panel-body")).toBeTruthy();
+    let right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
+    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
+    expect(right?.textContent).toContain("Mon profil brodeuse");
+    await click(category("Broder"));
+    right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
+    expect(right?.textContent).toContain("Journal du projet");
+    await click(button("Réglages et aide"));
+    right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
+    expect(right?.textContent).toContain("Confort et accessibilité");
+    expect(container?.querySelectorAll(".pz-embroidery-inline")).toHaveLength(1);
     await click(button("Plus d'options"));
     expect(container?.querySelector('[aria-label="Options d\'affichage"]')?.classList.contains("pz-surface")).toBe(true);
   });
-  it("conserve les réglages techniques dans le menu avancé, pas dans la composition", async () => {
+  it("présente les outils à gauche et les réglages techniques dans le panneau noir à droite", async () => {
     await mount();
+    const left=container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]');
+    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
+    expect(left?.querySelector('[aria-label="Outils de broderie"]')).toBeTruthy();
+    expect(right?.querySelector('[aria-label="Outils de broderie"]')).toBeNull();
     await click(button("Plus d'options"));
-    const advanced = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Options de composition"));
+    const advanced=[...(container?.querySelectorAll("button")??[])].find(b=>b.textContent?.includes("Options de composition"));
     await click(advanced);
-    const panel = dialog("Composer");
-    const blocks = Array.from(panel?.querySelectorAll("details") ?? []);
-    expect(panel?.classList.contains("is-open")).toBe(true);
-    expect(blocks.length).toBeGreaterThan(4);
-    expect(blocks.some(b => b.textContent?.includes("Lettrage compté"))).toBe(true);
+    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
+    expect(right?.textContent).toContain("Lettrage compté");
+    expect(right?.textContent).toContain("Symétrie du dessin");
+    expect(dialog("Composer")?.classList.contains("is-open")).toBeFalsy();
   });
   it("autorise un import unique d'images, PDF, JSON et OXS", async () => {
     await mount();
+    await click(category("Créer"));
     const picker = container?.querySelector('input[aria-label="Importer image, PDF ou projet JSON/OXS"]') as HTMLInputElement;
     expect(picker).toBeTruthy();
     expect(picker.accept).toContain("application/pdf");
