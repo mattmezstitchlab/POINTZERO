@@ -116,6 +116,10 @@ export default function ManifestAdminStudio({onBack}:{onBack:()=>void}){
       <label className={small}>Date d'ouverture (optionnelle)<input type="datetime-local" className={field} value={dateLocal(s.openAt)} onChange={e=>studio(s.id,{openAt:toISO(e.target.value)})}/></label>
      </div>
      <label className={small+" mt-3 block"}>Description<textarea className={field+" min-h-[60px]"} maxLength={550} value={s.description} onChange={e=>studio(s.id,{description:e.target.value})}/></label>
+     <label className={small+" mt-3 block"}>Évolutions documentées (une entrée par ligne, maximum 20)
+      <textarea className={field+" min-h-[65px]"} value={s.history.join("\n")}
+        onChange={e=>studio(s.id,{history:e.target.value.split("\n").map(x=>x.trim().slice(0,300)).filter(Boolean).slice(0,20)})}/>
+     </label>
      <div className="mt-4 flex flex-wrap gap-7">
       <label className="flex items-center gap-2 text-xs text-[#777]"><input type="checkbox" checked={s.published} onChange={e=>studio(s.id,{published:e.target.checked})}/>Ouverture validée (uniquement si « Disponible »)</label>
       <label className="flex items-center gap-2 text-xs text-[#777]"><input type="checkbox" checked={s.preview} onChange={e=>studio(s.id,{preview:e.target.checked})}/>Autoriser la prévisualisation expérimentale</label>
