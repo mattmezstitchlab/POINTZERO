@@ -118,7 +118,7 @@ export function updateUniversalField(spaceId:string,field:EditKey,input:string,o
 export function addUniversalMoment(spaceId:string,title:string,time:string):WorldSpace{
  const space=readDossier(spaceId);if(!space)throw Error("Dossier introuvable.");
  if(space.moments.length>=200)throw Error("Limite de moments atteinte.");
- if(title.trim().length<2||title.length>180||!(time===""||/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)))throw Error("Titre ou horaire invalide.");
+ if(title.trim().length<2||title.length>180||!(time===""||/^([01]\d|2[0-3]):[0-5]\d$/.test(time)))throw Error("Titre ou horaire invalide.");
  const moment=newMoment(trim(title,180),time);
  const meta=space.dossier??emptyUniversalMeta(space.description);
  const revision:DossierChange={id:ids(),at:iso(),entityId:moment.id,field:"moments",before:"",after:moment.title+" @ "+moment.time,origin:"utilisateur",validation:"confirmé"};
