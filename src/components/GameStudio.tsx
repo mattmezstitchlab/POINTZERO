@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent } from "react";
 import { ArrowDownToLine, ArrowRight, Focus, Magnet, Music2, Pause, Play, RotateCcw, Volume2, VolumeX, Waves, ZoomIn, ZoomOut } from "lucide-react";
 import { StudioFrame, studioButton } from "./StudioFrame";
+import { loadStored } from "../lib/store";
+import { playableFromPattern, type PlayablePattern } from "../lib/gameFromPattern";
 import { ARTISTS, GAME_SIZE, bestMove, clearGroup, finalScore, newGame, revealPercent, usePower, type Power } from "../lib/confettiGame";
 
 type Phase="ready"|"playing"|"result"|"paused";
@@ -9,6 +11,7 @@ const timeFormat=(n:number)=>"00:"+String(Math.max(0,Math.ceil(n))).padStart(2,"
 const clamp=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,v));
 export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>void;onMetamorphose:()=>void;onCircle:()=>void}){
  const [board,setBoard]=useState(()=>newGame(0,1042));
+ const [custom,setCustom]=useState<PlayablePattern|null>(null);
  const [phase,setPhase]=useState<Phase>("ready");
  const [seconds,setSeconds]=useState(30);
  const [zoom,setZoom]=useState(1);
@@ -28,7 +31,7 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
  const interval=useRef<number|null>(null);
  const audio=useRef<AudioContext|null>(null);
  const beat=useRef<number|null>(null);
- const artist=ARTISTS[board.artist];
+ const artist=custom?{...ARTISTS[board.artist],name:custom.name,genre:"Motif POINTZERO",palette:custom.colors}:ARTISTS[board.artist];
  function stopAudio(){
   if(beat.current!==null)window.clearInterval(beat.current);
   beat.current=null;
@@ -59,7 +62,9 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
   setBest(v=>{const next=Math.max(v,score);try{localStorage.setItem("pointzero:confetti-best",String(next))}catch{}return next});
  }
  function start(){
-  stopTimer();stopAudio();setBoard(newGame(board.artist,Date.now()%1000000));
+  stopTimer();stopAudio();
+  const fresh=newGame(board.artist,Date.now()%1000000);
+  setBoard(custom?{...fresh,portrait:custom.portrait}:fresh);
   setZoom(1);setPan({x:0,y:0});setSeconds(30);setFocus(-1);setMessage("");
   started.current=performance.now();timeLeft.current=30;phaseRef.current="playing";setPhase("playing");audioLoop();
   interval.current=window.setInterval(()=>{
@@ -83,7 +88,7 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
   document.addEventListener("visibilitychange",onVisibility);return()=>document.removeEventListener("visibilitychange",onVisibility);
  },[]);
  function changeArtist(i:number){
-  stopAudio();stopTimer();setBoard(newGame(i,1042+i*100));setPhase("ready");phaseRef.current="ready";
+  stopAudio();stopTimer();setCustom(null);setBoard(newGame(i,1042+i*100));setPhase("ready");phaseRef.current="ready";
   setSeconds(30);setZoom(1);setPan({x:0,y:0});setFocus(-1);setMessage("");
  }
  function activate(kind:Power){
@@ -137,6 +142,16 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
   pointers.current.delete(e.pointerId);lastCell.current=-1;
   if(pointers.current.size<2)gesture.current=null;
  };
+ function loadMyPattern(){
+  const p=loadStored();
+  if(!p){setMessage("Aucun patron enregistré. Créez ou ouvrez un motif dans l'atelier Broderie.");return;}
+  const adapted=playableFromPattern(p);
+  if(!adapted){setMessage("Le patron ne contient aucun point coloré exploitable.");return;}
+  stopAudio();stopTimer();setCustom(adapted);
+  const fresh=newGame(0,23019);setBoard({...fresh,portrait:adapted.portrait});
+  setPhase("ready");phaseRef.current="ready";setSeconds(30);setZoom(1);setPan({x:0,y:0});
+  setMessage("Motif importé depuis la broderie : le fichier d'origine reste intact.");
+ }
  function exportCard(){
   const c=document.createElement("canvas");c.width=1080;c.height=1350;
   const ctx=c.getContext("2d");if(!ctx)return;
@@ -177,6 +192,7 @@ export default function GameStudio({onBack,onMetamorphose,onCircle}:{onBack:()=>
  const left=<div className="space-y-4 text-white">
   <h2 className="text-sm font-semibold">CONFETTI / 30 SECONDS</h2>
   <p className="text-xs leading-relaxed text-white/60">Touchez des groupes de couleur pour enlever les confettis et révéler l'icône cachée.</p>
+  <button onClick={loadMyPattern} className={studioButton+" w-full"}>✳ Jouer avec mon motif de broderie</button>
   <div className="grid gap-1.5">{ARTISTS.map((a,i)=><button key={a.id} type="button" onClick={()=>changeArtist(i)}
    className={"min-h-11 rounded-[5px] border p-3 text-left text-xs "+(board.artist===i?"border-white bg-white text-black":"border-white/15 text-white/75 hover:bg-white/10")}>
    <span className="block font-semibold">{String(i+1).padStart(2,"0")} · {a.name}</span>
