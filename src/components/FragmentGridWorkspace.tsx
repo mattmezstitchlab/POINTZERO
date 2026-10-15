@@ -25,7 +25,7 @@ export default function FragmentGridWorkspace(){
   function toggleLock(id:string){setCollection(c=>({...c,fragments:c.fragments.map(f=>f.id===id?{...f,locked:!f.locked}:f)}))}
   function add(){
     const id=globalThis.crypto?.randomUUID?.()??String(Date.now());
-    setCollection(c=>({...c,fragments:[{id,title:"Nouveau fragment",description:"Fragment libre à composer.",sourceUrl:"",image:"",kind:"Composition",span:1,locked:false,crop:{x:50,y:50,zoom:100},notes:""},...c.fragments].slice(0,120)}));
+    setCollection(c=>({...c,fragments:[{id,title:"Nouveau fragment",description:"Fragment libre à composer.",sourceUrl:"",image:"",kind:"Composition",span:1 as const,locked:false,crop:{x:50,y:50,zoom:100},notes:""},...c.fragments].slice(0,120)}));
     setSelected(id);
   }
   async function importJSON(e:ChangeEvent<HTMLInputElement>){
