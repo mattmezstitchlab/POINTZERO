@@ -13,7 +13,8 @@ export type SiteSection={
 };
 export type SiteProject={
  version:1;id:string;name:string;siteTitle:string;accent:string;background:string;foreground:string;
- font:"sans"|"serif";template:AcademyTemplate;sections:SiteSection[];updated:string
+ font:"sans"|"serif";template:AcademyTemplate;sections:SiteSection[];updated:string;
+ dossierBinding?:{spaceId:string;titleMode:"linked"|"custom"}
 };
 export type CustomExercise={id:string;title:string;instructions:string};
 export type LearningState={version:1;completedCustom:string[];exercises:CustomExercise[];notes:string};
@@ -81,7 +82,8 @@ export function validProject(data:unknown):SiteProject|null{
  if(p.version!==1||!short(p.id,100)||!p.id||!short(p.name,100)||!short(p.siteTitle,100)||
   !color(p.accent)||!color(p.background)||!color(p.foreground)||!["sans","serif"].includes(p.font as string)||
   !templatesIDs.includes(p.template as AcademyTemplate)||!short(p.updated,30)||
-  !Array.isArray(p.sections)||p.sections.length<1||p.sections.length>45)return null;
+  !Array.isArray(p.sections)||p.sections.length<1||p.sections.length>45||
+  (p.dossierBinding!==undefined&&(!p.dossierBinding||!short(p.dossierBinding.spaceId,100)||!p.dossierBinding.spaceId||!["linked","custom"].includes(p.dossierBinding.titleMode))))return null;
  const ids=new Set<string>();
  for(const section of p.sections){
   if(!section||!short(section.id,100)||!section.id||ids.has(section.id)||
