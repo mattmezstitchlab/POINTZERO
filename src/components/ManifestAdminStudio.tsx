@@ -25,7 +25,8 @@ export default function ManifestAdminStudio({onBack}:{onBack:()=>void}){
    const result=await res.json() as Dashboard&{error?:string};
    if(!res.ok)throw Error(result.error||"Accès refusé.");
    setAuthenticated(true);setStats(result);
-   setDraft(validLaunch(result.draft)?result.draft:validLaunch(result.config)?result.config:DEFAULT_LAUNCH);
+   const loaded=result.draft&&validLaunch(result.draft)?result.draft:result.config&&validLaunch(result.config)?result.config:DEFAULT_LAUNCH;
+   setDraft(loaded);
    setMessage("Administration chargée. Les modifications restent privées jusqu'à la publication.");
   }catch(e){setAuthenticated(false);setError(e instanceof Error?e.message:"Connexion impossible.");}
   finally{setBusy(false)}
