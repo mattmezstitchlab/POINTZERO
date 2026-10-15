@@ -1,7 +1,7 @@
 import {useEffect,useState,type MouseEvent,type ReactNode} from "react";
-import {ArrowDownRight,ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Clock3,Grid2X2,Heart,Layers3,MoveUpRight,Volume2} from "lucide-react";
+import {ArrowDownRight,ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Clock3,Heart,Layers3} from "lucide-react";
 import {AIME_EDITORIAL_VERSION,AIME_SIGNATURES,UNIVERSES,UNIVERSE_BY_SLUG,STUDIO_STORIES,STORY_BY_ID, MOTORS,VISION_MILESTONES} from "../lib/aimeEditorial";
-import {DEFAULT_LAUNCH,STATUS_LABELS,canEnter,canPreview,validLaunch,type LaunchConfig,type LaunchStudio} from "../lib/launchManifest";
+import {DEFAULT_LAUNCH,STATUS_LABELS,canEnter,canPreview,validLaunch,type LaunchConfig} from "../lib/launchManifest";
 import "./AimeEcosystem.css";
 
 interface Props {page:"aime-home"|"universe-index"|"universe-detail"|"studio-detail"|"vision";onNavigate:(path:string)=>void;onOpenStudio:(route:string)=>void}
