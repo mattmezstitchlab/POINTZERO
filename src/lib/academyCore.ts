@@ -14,7 +14,7 @@ export type SiteSection={
 export type SiteProject={
  version:1;id:string;name:string;siteTitle:string;accent:string;background:string;foreground:string;
  font:"sans"|"serif";template:AcademyTemplate;sections:SiteSection[];updated:string;
- dossierBinding?:{spaceId:string;titleMode:"linked"|"custom"}
+ dossierBinding?:{spaceId:string;titleMode:"linked"|"custom";objectivesMode?:"linked"|"custom"}
 };
 export type CustomExercise={id:string;title:string;instructions:string};
 export type LearningState={version:1;completedCustom:string[];exercises:CustomExercise[];notes:string};
@@ -83,7 +83,8 @@ export function validProject(data:unknown):SiteProject|null{
   !color(p.accent)||!color(p.background)||!color(p.foreground)||!["sans","serif"].includes(p.font as string)||
   !templatesIDs.includes(p.template as AcademyTemplate)||!short(p.updated,30)||
   !Array.isArray(p.sections)||p.sections.length<1||p.sections.length>45||
-  (p.dossierBinding!==undefined&&(!p.dossierBinding||!short(p.dossierBinding.spaceId,100)||!p.dossierBinding.spaceId||!["linked","custom"].includes(p.dossierBinding.titleMode))))return null;
+  (p.dossierBinding!==undefined&&(!p.dossierBinding||!short(p.dossierBinding.spaceId,100)||!p.dossierBinding.spaceId||!["linked","custom"].includes(p.dossierBinding.titleMode)||
+   (p.dossierBinding.objectivesMode!==undefined&&!["linked","custom"].includes(p.dossierBinding.objectivesMode)))))return null;
  const ids=new Set<string>();
  for(const section of p.sections){
   if(!section||!short(section.id,100)||!section.id||ids.has(section.id)||
@@ -96,10 +97,16 @@ export function validProject(data:unknown):SiteProject|null{
 /** Read-through projection: the canonical title is NEVER copied back into a linked site.
  * Explicit personalization switches titleMode to "custom" and is not overwritten.
  */
-export function academyDisplayProject(project:SiteProject,source:{id:string;title:string}|null):SiteProject{
- if(source&&project.dossierBinding?.spaceId===source.id&&project.dossierBinding.titleMode==="linked")
-  return {...project,name:source.title,siteTitle:source.title};
- return project;
+export function academyDisplayProject(project:SiteProject,source:{id:string;title:string;objectives?:string[]}|null):SiteProject{
+ if(!source||project.dossierBinding?.spaceId!==source.id)return project;
+ const titleLinked=project.dossierBinding.titleMode==="linked";
+ const objectivesLinked=project.dossierBinding.objectivesMode==="linked";
+ return {...project,
+  name:titleLinked?source.title:project.name,
+  siteTitle:titleLinked?source.title:project.siteTitle,
+  sections:objectivesLinked&&source.objectives?.length?
+   project.sections.map(section=>section.kind==="intro"?{...section,body:source.objectives!.map((v,i)=>(i+1)+". "+v).join("\n")}:section):project.sections
+ };
 }
 export const defaultLearning=():LearningState=>({version:1,completedCustom:[],exercises:[],notes:""});
 export function validLearning(data:unknown):LearningState|null{
