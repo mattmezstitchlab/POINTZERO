@@ -71,10 +71,11 @@ interface Props {
   onLegal?: () => void;
   onArtWorld?: () => void;
   onAimeLanding?: () => void;
+  onManifest?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onAimeLanding, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onAimeLanding, onManifest, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -248,6 +249,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
           </button>
           {showStudios&&<div aria-label="Choix du studio" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[220px] max-h-[76dvh] overflow-y-auto p-2">
             {([
+              {name:"POINTZERO .0 · Le manifeste",icon:<Sparkles size={16}/>,onClick:onManifest},
               {name:"Photo",icon:<Camera size={16}/>,onClick:onPhoto},
               {name:"Stylisme",icon:<Shirt size={16}/>,onClick:onFashion},
               {name:"Budget",icon:<Wallet size={16}/>,onClick:onBudget},
