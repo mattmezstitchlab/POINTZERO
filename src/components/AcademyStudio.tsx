@@ -65,9 +65,19 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
  const chosenLesson=ACADEMY_LESSONS.find(t=>t.id===lesson)??ACADEMY_LESSONS[0];
  useEffect(()=>{try{
  const key=linkedDossierId?academyDossierKey(linkedDossierId):ACADEMY_KEY;
+ if(linkedDossierId){
+  if(!readDossier(linkedDossierId))throw Error("Dossier lié introuvable : aucune sauvegarde liée effectuée.");
+  const raw=localStorage.getItem(key);
+  if(raw!==null){
+   let old:SiteProject|null=null;
+   try{old=validProject(JSON.parse(raw));}catch{/* Preserve original bytes. */}
+   if(!old||old.dossierBinding?.spaceId!==linkedDossierId)
+    throw Error("Support Academy stocké invalide ou étranger : contenu original conservé. Exportez votre support avant toute réparation.");
+  }
+ }
  localStorage.setItem(key,JSON.stringify(project));
- if(linkedDossierId&&readDossier(linkedDossierId))attachAcademyResource(linkedDossierId,project.id);
- }catch{setNotice("Stockage local saturé ou dossier introuvable : exportez votre site.");}},[project,linkedDossierId]);
+ if(linkedDossierId)attachAcademyResource(linkedDossierId,project.id);
+ }catch(error){setNotice(error instanceof Error?error.message:"Stockage local indisponible : exportez votre site.");}},[project,linkedDossierId]);
  useEffect(()=>{try{localStorage.setItem(linkedDossierId?ACADEMY_PROGRESS_KEY+":"+linkedDossierId:ACADEMY_PROGRESS_KEY,JSON.stringify(learning));}catch{setNotice("Stockage des exercices impossible : exportez votre projet.");}},[learning,linkedDossierId]);
  const update=(fn:(p:SiteProject)=>SiteProject)=>setProject(p=>({...fn(p),updated:localToday()}));
  const patchSite=(patch:Partial<SiteProject>)=>update(p=>({...p,...patch}));
@@ -247,6 +257,12 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
        <div className="flex flex-wrap gap-2">
        {project.dossierBinding?.titleMode==="custom"&&<button type="button" className={studioButton} onClick={()=>{if(window.confirm("Réutiliser le titre canonique du dossier ? Le titre personnalisé reste conservé dans le projet JSON local."))patchSite({dossierBinding:{...project.dossierBinding!,titleMode:"linked"}})}}>Suivre le titre du dossier</button>}
        {project.dossierBinding?.objectivesMode==="custom"&&<button type="button" className={studioButton} onClick={()=>{if(window.confirm("Afficher les objectifs canonique du dossier ? Le texte personnalisé reste conservé dans le projet JSON local."))patchSite({dossierBinding:{...project.dossierBinding!,objectivesMode:"linked"}})}}>Suivre les objectifs du dossier</button>}
+       {linked.dossier?.references.some(r=>r.studio==="academy"&&r.type==="studio"&&r.targetId!==project.id)&&
+        <button type="button" className={studioButton} onClick={()=>{
+         if(!window.confirm("Le dossier référence déjà un autre support Academy. Remplacer explicitement cette référence ? Le changement sera historisé."))return;
+         try{attachAcademyResource(linked.id,project.id,true);setNotice("Référence Academy remplacée sur validation et historisée.");}
+         catch(error){setNotice(error instanceof Error?error.message:"Réparation refusée.");}
+        }}>Confirmer le remplacement de la référence Academy</button>}
        </div>
      </div>}
      <div className="flex flex-wrap items-center justify-between gap-3">
