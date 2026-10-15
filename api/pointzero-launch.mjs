@@ -31,7 +31,8 @@ export default async function handler(req,res){
    signupReady:waitlistReady()&&!!process.env.TURNSTILE_SITE_KEY,
    turnstileSiteKey:waitlistReady()?process.env.TURNSTILE_SITE_KEY||"":"",
    legalEntity:process.env.POINTZERO_LEGAL_ENTITY||"",
-   privacyContact:process.env.POINTZERO_PRIVACY_EMAIL||""});
+   privacyContact:process.env.POINTZERO_PRIVACY_EMAIL||"",
+   privacyPolicyUrl:process.env.POINTZERO_PRIVACY_POLICY_URL||""});
  }
  if(req.method!=="POST")return error(res,405,"Méthode non autorisée.");
  if(Number(req.headers["content-length"]||0)>160_000)return error(res,413,"Requête trop volumineuse.");
