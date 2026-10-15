@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, CircleDot, GitBranch, Plus, Radio, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowDownToLine, CircleDot, Plus, Radio, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { StudioFrame, saveStudioFile, studioButton, studioInput } from "./StudioFrame";
 import {
   readWorld, writeWorld, selectedWorld, setSpace, newSpace, newMoment, newPerson, newSignal,
