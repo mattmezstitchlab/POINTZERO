@@ -510,7 +510,7 @@ export default function App() {
           }
         }} />
     : studioMode === "aime-landing"
-    ? <AimeLanding onBack={() => switchStudio("aime-home")}
+    ? <AimeLanding onBack={() => switchStudio("aime-home")} onPointzero={() => switchStudio("manifest")}
         onCreate={()=>{setOpenPrivateGallery(false);switchStudio("art-world");}}
         onGallery={()=>{setOpenPrivateGallery(true);switchStudio("art-world");}}
         onMusic={()=>switchStudio("music")}/>
