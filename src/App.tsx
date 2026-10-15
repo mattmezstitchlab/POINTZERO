@@ -32,6 +32,7 @@ import AimeLanding from "./components/AimeLanding";
 import type { MiniSite } from "./lib/miniSiteCore";
 import { loadProjectOptions } from "./lib/budgetCore";
 import AtelierCreate from "./components/AtelierCreate";
+import { STITCH_DEFAULTS, createStitchPattern, type StitchRequest, type StitchResult } from "./lib/stitchGeneration";
 import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
 import MotifLibrary from "./components/MotifLibrary";
 import EmbroideryInspector from "./components/EmbroideryInspector";
@@ -104,6 +105,16 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState<AtelierCategory>("compose");
   const [showWelcome, setShowWelcome] = useState(false);
   const [promptText, setPromptText] = useState("");
+  const [generationSettings, setGenerationSettings] = useState<StitchRequest>(STITCH_DEFAULTS);
+  const [generationStatus,setGenerationStatus]=useState("");
+  const [generationError,setGenerationError]=useState("");
+  const [lastGeneration,setLastGeneration]=useState<StitchResult|null>(null);
+  const [cleanVariant,setCleanVariant]=useState<"original"|"cleaned">("cleaned");
+  const [revealPhase,setRevealPhase]=useState<"wave"|"symbols"|"clean"|"ready"|null>(null);
+  const generationToken=useRef(0);
+  const revealTimers=useRef<number[]>([]);
+  const clearReveal=()=>{revealTimers.current.forEach(id=>window.clearTimeout(id));revealTimers.current=[];};
+  useEffect(()=>()=>{generationToken.current++;revealTimers.current.forEach(id=>window.clearTimeout(id));},[]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const subjectMove = useRef<{ scene: SubjectScene; base: Pattern; id: string; x: number; y: number } | null>(null);
   const [showDrawingTools, setShowDrawingTools] = useState(false);
@@ -406,9 +417,56 @@ export default function App() {
     if (next === "compose") setTool("hand");
     openRightPanel(next === "stitch" ? "follow" : next === "threads" ? "prepare" : "edit");
   };
+  const runPatternGeneration = async (variant = false) => {
+    if (remote) {notify("Le patron partagé est en lecture seule.");return;}
+    if (generationStatus) return;
+    const req:StitchRequest={...generationSettings,prompt:promptText,seed:variant?Math.floor(Math.random()*1_000_000):generationSettings.seed};
+    if(variant)setGenerationSettings(req);
+    if(req.prompt.trim().length<3){setGenerationError("Décrivez votre motif en quelques mots.");return;}
+    const token=++generationToken.current;
+    clearReveal();setRevealPhase(null);setGenerationError("");setGenerationStatus("Préparation du sujet…");setLastGeneration(null);
+    try{
+      const result=await createStitchPattern(req,stage=>{if(generationToken.current===token)setGenerationStatus(stage)});
+      if(token!==generationToken.current)return;
+      await loadPattern(result.original);
+      if(token!==generationToken.current)return;
+      setActiveCategory("create");setWorkspace("create");setView("pattern");setSymbols(true);setTool("hand");
+      setFitKey(n=>n+1);setRevealPhase("wave");setGenerationStatus("Le motif apparaît dans la grille…");
+      // Le patron brut est réellement dessiné dans Canvas avant l'optimisation.
+      await new Promise<void>(resolve=>{revealTimers.current.push(window.setTimeout(resolve,650));});
+      if(token!==generationToken.current)return;
+      setRevealPhase("symbols");setGenerationStatus("Lecture des symboles DMC…");
+      window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:"focus",x:result.original.w/2,y:result.original.h/2,scale:22}}));
+      await new Promise<void>(resolve=>{revealTimers.current.push(window.setTimeout(resolve,550));});
+      if(token!==generationToken.current)return;
+      setPattern(result.cleaned);
+      setRevealPhase("clean");setGenerationStatus("Nettoyage des zones isolées…");
+      setLastGeneration(result);setCleanVariant("cleaned");
+      await new Promise<void>(resolve=>{revealTimers.current.push(window.setTimeout(resolve,450));});
+      if(token!==generationToken.current)return;
+      window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:"fit"}}));
+      setGenerationStatus("");setRevealPhase("ready");
+      revealTimers.current.push(window.setTimeout(()=>setRevealPhase(null),1500));
+      notify(`Patron au centre · ${result.cleaned.w} × ${result.cleaned.h} · ${result.cleaned.palette.length} fils · ${result.changed} points optimisés.`);
+    }catch(e){
+      if(token!==generationToken.current)return;
+      setGenerationStatus("");setRevealPhase(null);
+      const message=e instanceof Error?e.message:"Génération momentanément indisponible.";
+      setGenerationError(message+" Le service d'image externe peut être indisponible ; votre patron précédent est conservé.");
+    }
+  };
+  const chooseCleanup = (variant:"original"|"cleaned") => {
+    if(!lastGeneration||remote)return;
+    setPattern(variant==="original"?lastGeneration.original:lastGeneration.cleaned);
+    setCleanVariant(variant);setView("pattern");setSymbols(true);
+  };
   const createActions = {
     prompt: promptText, onPrompt: setPromptText,
-    onGenerate: () => setPromptOpen(true),
+    onGenerate: () => {void runPatternGeneration();},
+    generation: {...generationSettings,prompt:promptText}, onGenerationChange: setGenerationSettings,
+    busy:generationStatus,error:generationError,
+    cleanupCount:lastGeneration?.changed??null,cleanupVariant:cleanVariant,onCleanupVariant:chooseCleanup,
+    onVariant:()=>{void runPatternGeneration(true);},
     onImport: importAnyFile,
     onBlank: () => { panelActions.new(80, 80); setActiveCategory("compose"); setShowDrawingTools(false); },
     onLibrary: () => { setShowWelcome(false); setPanel("library"); },
@@ -525,6 +583,11 @@ export default function App() {
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
       onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
       onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
+    {revealPhase && <div aria-hidden="true" className={"pz-pattern-reveal pointer-events-none fixed z-[12] overflow-hidden "+(revealPhase==="symbols"?"is-symbols":revealPhase==="clean"?"is-clean":"")}
+      style={{top:insets.top,right:insets.right,bottom:insets.bottom,left:insets.left}}>
+      <div className="pz-pattern-wave"/>
+      <div className="pz-pattern-loupe"/>
+    </div>}
     <TopBar pattern={P} onDesign={() => switchStudio("design")}
       onToggleLeft={() => { setMobileLibraryOpen(v=>!v); setMobileInspectorOpen(false); }}
       onToggleRight={() => { setMobileInspectorOpen(v=>!v); setMobileLibraryOpen(false); }}
