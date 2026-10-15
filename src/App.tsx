@@ -329,6 +329,7 @@ export default function App() {
         Math.max(0, Math.min(P.w - 1, x)), Math.max(0, Math.min(P.h - 1, y)));
       setPattern(recomposeSubjects(next));
       setSelectedSubjectId(next.layers[next.layers.length - 1]?.id ?? null);
+      setRightSection("properties");
       setTool("hand"); setWorkspace("create"); setView("flat");
       setActiveCategory("compose"); setShowWelcome(false); closePanel();
     } catch (error) { notify(error instanceof Error ? error.message : "Impossible d’ajouter ce motif."); }
