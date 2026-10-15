@@ -248,7 +248,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const publicLink=container?.querySelector('a[href="?site=le-monde-aime"]');
     expect(publicLink).toBeTruthy();
     await act(async()=>root?.unmount());
-    root=null;container?.remove();container=null;
+    container?.remove();
     window.history.replaceState(null,"","/?site=le-monde-aime");
     await mount();
     await click(button("Créer une œuvre dans LE MONDE AIME"));
