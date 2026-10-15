@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { ArrowLeft, CalendarDays, CheckCircle2, FilePen, LockKeyhole, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { AIME_SIGNATURES } from "../lib/aimeEditorial";
 import { DEFAULT_LAUNCH, LAUNCH_STATUSES, STATUS_LABELS, validLaunch, type LaunchConfig, type LaunchJournal } from "../lib/launchManifest";
 
 interface Dashboard {config:LaunchConfig|null;draft:LaunchConfig|null;confirmed:number;interests:Record<string,number>}
@@ -102,6 +103,14 @@ export default function ManifestAdminStudio({onBack}:{onBack:()=>void}){
       <span className="mt-1 block text-[11px] font-normal text-[#999]">Vide : aucune date inventée. La date ne déclenche jamais une publication automatique.</span>
      </label>
     </div>
+   </section>
+   <section className="rounded-[7px] border border-[#e6e1de] bg-white p-5 sm:p-7" aria-label="Signatures évolutives AIME">
+    <h2 className="text-xl font-semibold tracking-tight">AIME · Signatures éditoriales</h2>
+    <p className="mt-2 text-xs leading-relaxed text-[#888]">Une signature complète par ligne. Les mots « Architecture Intelligente » restent fixes ; seuls les mots suivants varient. Les changements demeurent en brouillon jusqu'à une publication explicite.</p>
+    <label className={small+" mt-5 block"}>Signatures (1 à 8 lignes)
+     <textarea className={field+" min-h-[150px]"} value={(draft.aimeSignatures??[...AIME_SIGNATURES]).join("\n")}
+       onChange={e=>patch("aimeSignatures",e.target.value.split("\n").map(x=>x.trim()).filter(Boolean).slice(0,8))}/>
+    </label>
    </section>
    <section aria-label="Ouverture progressive des studios" className="rounded-[7px] border border-[#e6e1de] bg-white p-5 sm:p-7">
     <h2 className="text-xl font-semibold tracking-tight">Studios et autorisations de publication</h2>
