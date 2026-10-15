@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, BookOpen, Check, CheckCircle2, ChevronRight, CircleHelp, Clock3, Download, GitBranch, GraduationCap, LayoutGrid, Plus, Shield, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
+import ExternalEmbed from "./ExternalEmbed";
+import {RIPPLECIRCLE,addExternal,externalById,readExternal,writeExternal} from "../lib/externalProjects";
 import {
  KINDS,ROLES,TILES,readWorld,writeWorld,newSpace,newPerson,newMoment,newSignal,selectedWorld,setSpace,
  linkedModuleInfo,sourcesForTile,previewImpact,validateSignal,journeySteps,ids,safeWorld,type WorldSpace,type SpaceKind,type TileKind,type RelationRole,
@@ -13,7 +15,7 @@ const titles:{kind:SpaceKind;label:string}[]=[
  {kind:"association",label:"Association"},{kind:"professionnel",label:"Professionnel"},{kind:"personnel",label:"Personnel"}
 ];
 const truncate=(s:string,n:number)=>s.slice(0,n);
-const icons:Record<TileKind,string>={"academy":"🎓","broderie":"🪡","musique":"♫","programme":"◷","mini-site":"◇","documents":"▤","atelier-art":"✳","causal":"↗","photo":"▧","design":"◈"};
+const icons:Record<TileKind,string>={"academy":"🎓","broderie":"🪡","musique":"♫","programme":"◷","mini-site":"◇","documents":"▤","atelier-art":"✳","causal":"↗","photo":"▧","design":"◈","external":"↗"};
 const stamp=(iso:string)=>Number.isNaN(Date.parse(iso))?iso:new Date(iso).toLocaleString("fr-FR");
 export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:Props){
  const [db,setDb]=useState(readWorld);
@@ -27,6 +29,9 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
  const [delay,setDelay]=useState(20),[message,setMessage]=useState("");
  const [activeSignalId,setActiveSignalId]=useState("");
  const [notice,setNotice]=useState("");
+ const [externalRegistry,setExternalRegistry]=useState(readExternal);
+ const [externalTitle,setExternalTitle]=useState("");
+ const [externalURL,setExternalURL]=useState("");
  const spaceImport=useRef<HTMLInputElement>(null);
  const space=selectedWorld(db);
  const training=journeySteps(space);
@@ -78,6 +83,7 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
   ceremony.personIds=[planner.id,family.id,provider.id];
   cocktail.personIds=[planner.id,family.id,provider.id];cocktail.followsMomentIds=[ceremony.id];
   next.people=[planner,family,provider];next.moments=[ceremony,cocktail];
+  next.tiles.push({id:ids(),kind:"external",title:"RIPPLECIRCLE",visible:true,refId:RIPPLECIRCLE.id});
   setDb(s=>({...s,spaces:[...s.spaces,next],selectedSpaceId:next.id}));
   setMomentId(ceremony.id);setAuthorId(planner.id);setScreen("formation");
   setNotice("Exemple fictif prêt : activez d'abord un consentement avant de préparer une onde.");
@@ -93,10 +99,22 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
  };
  const addTile=(kind:TileKind)=>{
   if(!space||space.tiles.length>=35)return setNotice("Limite de modules atteinte.");
-  const existing=space.tiles.find(t=>t.kind===kind);
+  const existing=kind==="external"?undefined:space.tiles.find(t=>t.kind===kind);
   if(existing){patch(s=>({...s,tiles:s.tiles.map(t=>t.id===existing.id?{...t,visible:true}:t)}));return;}
   const info=TILES.find(t=>t.id===kind)!;
   patch(s=>({...s,tiles:[...s.tiles,{id:ids(),kind,visible:true,title:info.label,refId:""}]}));
+ };
+ const saveExternal=()=>{
+   if(!space)return setNotice("Créez d'abord un espace.");
+   if(space.tiles.length>=35)return setNotice("Cette page a atteint sa limite de modules.");
+   try{
+     const next=addExternal(externalRegistry,externalTitle,externalURL);
+     writeExternal(next);setExternalRegistry(next);
+     const added=next.resources[next.resources.length-1];
+     patch(s=>({...s,tiles:[...s.tiles,{id:ids(),kind:"external",title:added.title,visible:true,refId:added.id}]}));
+     setExternalURL("");setExternalTitle("");
+     setNotice("Projet externe référencé. Le contenu ne sera chargé que sur demande.");
+   }catch(e){setNotice(e instanceof Error?e.message:"URL invalide.");}
  };
  const moveTile=(id:string,dir:-1|1)=>{
   if(!space)return;const i=space.tiles.findIndex(t=>t.id===id),j=i+dir;
@@ -275,7 +293,7 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
      <div className="grid gap-3 sm:grid-cols-2">
        {space.tiles.filter(t=>t.visible).map(t=>{
          const info=TILES.find(v=>v.id===t.kind)!;const linked=linkedModuleInfo(t);const sources=sourcesForTile(t.kind);
-         return <article key={t.id} className="flex min-h-[155px] flex-col justify-between rounded-[8px] border border-white/15 bg-white/5 p-4 hover:bg-white/10">
+         return <article key={t.id} className={"flex min-h-[155px] flex-col justify-between rounded-[8px] border border-white/15 bg-white/5 p-4 hover:bg-white/10 "+(t.kind==="external"?"sm:col-span-2":"")}>
            <div><span className="text-2xl" aria-hidden="true">{icons[t.kind]}</span><h3 className="mt-2 text-sm font-semibold">{t.title}</h3>
              <p className="mt-1 text-[11px] text-white/55">{linked?"Source liée : "+linked.label:info.description}</p></div>
            {sources.length>0&&<label className="mt-3 block text-[11px] text-white/65">Brancher un projet existant
@@ -286,8 +304,10 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
              </select>
            </label>}
            {t.refId&&!linked&&<p className="mt-2 text-[11px] text-[#ffd2a7]">Cette source n'est plus disponible sur l'appareil.</p>}
-           <div className="mt-4 flex items-center justify-between gap-2"><button aria-label={"Ouvrir le module "+t.title} className="inline-flex items-center gap-1.5 text-xs font-semibold text-white underline underline-offset-2"
-               onClick={()=>onStudio(info.studio)}>Ouvrir <ArrowRight size={13}/></button>
+           {t.kind==="external"&&t.refId&&externalById(t.refId)&&
+             <div className="mt-3"><ExternalEmbed key={t.refId} resource={externalById(t.refId)!} compact/></div>}
+           <div className="mt-4 flex items-center justify-between gap-2">{t.kind!=="external"&&<button aria-label={"Ouvrir le module "+t.title} className="inline-flex items-center gap-1.5 text-xs font-semibold text-white underline underline-offset-2"
+               onClick={()=>onStudio(info.studio)}>Ouvrir <ArrowRight size={13}/></button>}
              <button aria-label={"Masquer le module "+t.title} onClick={()=>patch(s=>({...s,tiles:s.tiles.map(v=>v.id===t.id?{...v,visible:false}:v)}))}
                className="text-[11px] text-white/60 hover:text-white">Masquer</button></div>
          </article>;
@@ -308,6 +328,13 @@ export default function OneSpaceStudio({initialScreen="espace",onBack,onStudio}:
        <label className="block text-xs text-white/70">Ajouter un studio
          <select aria-label="Ajouter un studio à ma page" className={studioInput+" mt-2"} defaultValue="" onChange={e=>{if(e.target.value)addTile(e.target.value as TileKind);e.target.value="";}}>
            <option value="">Choisir un module…</option>{TILES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
+       <div className="mt-4 space-y-2 rounded-[6px] border border-white/15 p-3">
+         <h4 className="text-xs font-semibold">Ajouter une application déjà créée</h4>
+         <p className="text-[11px] text-white/60">Une URL HTTPS suffit pour référencer l'application. Aucun accès à ses données internes.</p>
+         <input aria-label="Nom du projet externe" className={studioInput} maxLength={130} placeholder="Nom du projet" value={externalTitle} onChange={e=>setExternalTitle(e.target.value)}/>
+         <input aria-label="URL HTTPS du projet externe" className={studioInput} maxLength={1000} placeholder="https://exemple.vercel.app/" value={externalURL} onChange={e=>setExternalURL(e.target.value)}/>
+         <button aria-label="Brancher un projet externe" type="button" onClick={saveExternal} className={studioButton}><Plus size={14}/> Référencer ce projet</button>
+       </div>
      </section>
      <div className="rounded-[7px] border border-[#aea4d6]/40 bg-[#211e2d] p-4">
        <h3 className="text-sm font-semibold">Un espace vivant, sans duplication.</h3>

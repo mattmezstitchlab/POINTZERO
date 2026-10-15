@@ -4,6 +4,8 @@ import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./Studio
 import { createMiniSite, MINI_DRAFTS, MINI_KEY, MINI_KINDS, miniProjectFile, miniSection, miniSiteToHTML, safeMiniSite, type MiniKind, type MiniSection, type MiniSectionKind, type MiniSite } from "../lib/miniSiteCore";
 import { loadProjectOptions } from "../lib/budgetCore";
 import { LEGAL_ACTIVE_KEY } from "../lib/legalCore";
+import {readExternal,externalById} from "../lib/externalProjects";
+import ExternalEmbed from "./ExternalEmbed";
 import { COACH_PHASES, miniCoachProgress, readMiniCoach, writeMiniCoach, type CoachIssue, type CoachPhase, type MiniCoachProfile } from "../lib/miniSiteLearning";
 const load=():MiniSite=>{try{return safeMiniSite(JSON.parse(localStorage.getItem(MINI_KEY)??"null"))??createMiniSite();}catch{return createMiniSite();}};
 const loadDrafts=():MiniSite[]=>{try {const json=JSON.parse(localStorage.getItem(MINI_DRAFTS)??"[]") as unknown;return Array.isArray(json)?json.map(safeMiniSite).filter((x):x is MiniSite=>!!x).slice(0,12):[];}catch{return [];}};
@@ -18,6 +20,7 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   const [leftMode,setLeftMode]=useState<"plan"|"academy">("plan");
   const [coachPhase,setCoachPhase]=useState<CoachPhase>("intention");
   const [coach,setCoach]=useState<MiniCoachProfile>(()=>readMiniCoach((incomingDraft??load()).id));
+  const [externalRegistry,setExternalRegistry]=useState(readExternal);
   const filePicker=useRef<HTMLInputElement>(null);
   const imagePicker=useRef<HTMLInputElement>(null);
   const section=doc.sections.find(s=>s.id===selected)??null;
@@ -28,6 +31,11 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   useEffect(()=>{try{localStorage.setItem(MINI_KEY,JSON.stringify(doc));}catch{setStatus("Stockage saturé : exportez ce mini-site en HTML ou JSON.");}},[doc]);
   useEffect(()=>{setCoach(readMiniCoach(doc.id));},[doc.id]);
   useEffect(()=>{try{writeMiniCoach(coach);}catch{setStatus("Le parcours pédagogique ne peut pas être conservé dans ce navigateur.");}},[coach]);
+  useEffect(()=>{
+    const changed=()=>setExternalRegistry(readExternal());
+    window.addEventListener("pointzero:external-changed",changed);
+    return ()=>window.removeEventListener("pointzero:external-changed",changed);
+  },[]);
   const editCoach=(patch:Partial<MiniCoachProfile>)=>setCoach(c=>({...c,...patch}));
   const fixIssue=(issue:CoachIssue)=>{
     setSelected(issue.sectionId??null);
@@ -158,7 +166,7 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
             setSelected(next.id);e.target.value="";
           }}>
             <option value="">Choisir…</option>
-            <option value="texte">Texte</option><option value="programme">Programme</option><option value="informations">Informations</option><option value="galerie">Galerie</option><option value="contact">Contact</option>
+            <option value="texte">Texte</option><option value="programme">Programme</option><option value="informations">Informations</option><option value="galerie">Galerie</option><option value="contact">Contact</option><option value="externe">Projet externe</option>
           </select>
         </label>
         <p className="mt-3 border-t border-white/10 pt-3 text-[11px] leading-relaxed text-white/55">Ces éléments sont des ancres dans une seule page HTML. De véritables pages séparées nécessiteront une architecture multipage.</p>
@@ -170,7 +178,17 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
       {section?<div className="space-y-3">
         <button className={studioButton+" w-full"} onClick={()=>setSelected(null)}>Retour aux paramètres du site</button>
         <label className="block text-xs text-white/75">Titre<input aria-label="Titre de section" className={studioInput+" mt-1"} value={section.title} maxLength={300} onChange={e=>updateSection(section.id,{title:e.target.value})}/></label>
-        <label className="block text-xs text-white/75">Contenu<textarea aria-label="Texte de section" className={studioInput+" mt-1"} value={section.body} rows={8} maxLength={5000} onChange={e=>updateSection(section.id,{body:e.target.value})}/></label>
+        <label className="block text-xs text-white/75">Contenu<textarea aria-label="Texte de section" className={studioInput+" mt-1"} value={section.body} rows={section.kind==="externe"?3:8} maxLength={5000} onChange={e=>updateSection(section.id,{body:e.target.value})}/></label>
+        {section.kind==="externe"&&<div className="space-y-2 rounded-[7px] border border-white/15 p-3">
+          <h3 className="text-xs font-semibold">Projet connecté à ma bibliothèque</h3>
+          <p className="text-[11px] leading-relaxed text-white/60">On réutilise une référence existante. Aucun besoin de recopier le code de l'application.</p>
+          <select aria-label="Relier une application externe au mini-site" className={studioInput} value={section.externalRefId??""}
+            onChange={e=>updateSection(section.id,{externalRefId:e.target.value})}>
+            <option value="">Choisir une application…</option>
+            {externalRegistry.resources.map(v=><option key={v.id} value={v.id}>{v.title}</option>)}
+          </select>
+          <p className="text-[11px] leading-relaxed text-white/55">Sur le site exporté, le visiteur choisira explicitement de charger l'iframe. Si l'application l'interdit, un lien dans un nouvel onglet reste disponible. Dans l'aperçu isolé ci-dessous, les scripts sont volontairement désactivés.</p>
+        </div>}
         <p className="text-[11px] text-white/55">Pour une galerie, ajoutez un intitulé par ligne. Le modèle affiche des cartes, pas encore des images indépendantes.</p>
         <button className={studioButton+" w-full"} onClick={()=>{if(!window.confirm("Supprimer cette section ?"))return;setDoc(d=>({...d,sections:d.sections.filter(s=>s.id!==section.id)}));setSelected(null);}}><Trash2 size={14}/> Supprimer la section</button>
       </div>:<div className="space-y-3">
@@ -221,8 +239,12 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
       <div className="flex justify-center rounded-[8px] border border-white/15 bg-[#232326] p-3 sm:p-5">
         <iframe title="Prévisualisation du mini-site" sandbox="" srcDoc={preview} className={"h-[min(78dvh,950px)] min-h-[400px] rounded-[5px] border-0 bg-white shadow-2xl transition-[width] "+(viewport==="phone"?"w-[390px] max-w-full":"w-full")}/>
       </div>
+      {section?.kind==="externe"&&section.externalRefId&&externalById(section.externalRefId)&&<div className="mt-4">
+        <h3 className="mb-2 text-sm font-semibold">Tester l'application externe dans POINTZERO</h3>
+        <ExternalEmbed key={section.externalRefId} resource={externalById(section.externalRefId)!}/>
+      </div>}
       {status&&<p role="status" className="mt-3 rounded-[5px] bg-[#09090b] p-3 text-xs text-white">{status}</p>}
-      <p className="mt-3 text-xs text-white/60">Prévisualisation isolée, responsive. Le fichier HTML exporté est autonome et statique.</p>
+      <p className="mt-3 text-xs text-white/60">Prévisualisation isolée et responsive. Le HTML exporté fonctionne de manière autonome ; un module externe ne se charge qu’à la demande du visiteur et peut être bloqué par le site tiers.</p>
     </div>
     <input ref={filePicker} type="file" accept="application/json,.json" className="sr-only" aria-label="Choisir mini-site JSON" onChange={e=>void importJSON(e)}/>
     <input ref={imagePicker} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" aria-label="Choisir photo de couverture" onChange={importHero}/>

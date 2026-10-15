@@ -1,9 +1,10 @@
 /** POINTZERO mini-sites: responsive static pages generated locally, without hosting or server forms. */
 import {safeHref} from "./academyCore";
+import {externalById,safeExternalURL} from "./externalProjects";
 export type MiniKind = "mariage" | "portfolio" | "evenement" | "presentation";
-export type MiniSectionKind = "texte" | "programme" | "informations" | "galerie" | "contact";
+export type MiniSectionKind = "texte" | "programme" | "informations" | "galerie" | "contact" | "externe";
 export interface MiniSection {
-  id:string;kind:MiniSectionKind;title:string;body:string;visible:boolean;
+  id:string;kind:MiniSectionKind;title:string;body:string;visible:boolean;externalRefId?:string;
 }
 export interface MiniSite {
   version:1;id:string;name:string;kind:MiniKind;title:string;subtitle:string;
@@ -38,8 +39,8 @@ export function createMiniSite(kind:MiniKind="mariage"):MiniSite{
     sections:defaultBlocks[kind].map(([k,t,b])=>section(k,t,b)),projectId:"",heroAlt:"",heroActionLabel:"",heroActionHref:""};
 }
 export const miniSection=(kind:MiniSectionKind):MiniSection=>{
-  const titles:Record<MiniSectionKind,string>={texte:"Nouvelle section",programme:"Programme",informations:"Informations",galerie:"Galerie",contact:"Contact"};
-  return section(kind,titles[kind],"Ajoutez votre contenu ici.");
+  const titles:Record<MiniSectionKind,string>={texte:"Nouvelle section",programme:"Programme",informations:"Informations",galerie:"Galerie",contact:"Contact",externe:"Projet externe"};
+  return {...section(kind,titles[kind],kind==="externe"?"Une application complémentaire à découvrir.":"Ajoutez votre contenu ici."),...(kind==="externe"?{externalRefId:""}:{})};
 };
 export const validHex=(s:unknown)=>typeof s==="string"&&/^#[0-9a-f]{6}$/i.test(s);
 export const safeHero=(src:unknown)=>typeof src==="string"&&(!src||(/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(src)&&src.length<5_500_000));
@@ -57,9 +58,9 @@ export function safeMiniSite(value:unknown):MiniSite|null {
   const ids=new Set<string>();
   for(const s of d.sections){
     if(!s||typeof s.id!=="string"||s.id.length>120||ids.has(s.id)||
-      !["texte","programme","informations","galerie","contact"].includes(s.kind)||
+      !["texte","programme","informations","galerie","contact","externe"].includes(s.kind)||
       typeof s.title!=="string"||s.title.length>300||typeof s.body!=="string"||s.body.length>5000||
-      typeof s.visible!=="boolean")return null;
+      typeof s.visible!=="boolean"||(s.externalRefId!==undefined&&(typeof s.externalRefId!=="string"||s.externalRefId.length>100)))return null;
     ids.add(s.id);
   }
   return d as MiniSite;
@@ -73,12 +74,23 @@ function sectionHTML(s:MiniSection,contact:string){
   if(s.kind==="galerie"){
     content='<div class="gallery">'+s.body.split(/\r?\n/).filter(Boolean).slice(0,12).map(v=>'<div class="gallery-card">'+esc(v)+'</div>').join("")+'</div>';
   }
+  if(s.kind==="externe"){
+    const res=s.externalRefId?externalById(s.externalRefId):null;
+    const url=res?safeExternalURL(res.url):"";
+    content=url?'<div class="external-project" data-external-url="'+esc(url)+'">'+
+      '<p>'+plain(s.body)+'</p><a class="cta" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">Ouvrir '+esc(res!.title)+' ↗</a>'+
+      '<p class="external-note">Application externe : l’aperçu demande votre accord et peut être bloqué par son hébergeur.</p>'+
+      '<button class="cta external-load" type="button">Afficher ici à ma demande</button>'+
+      '<div class="external-embed-target"></div></div>':
+      '<p>Projet externe non relié ou indisponible. Sélectionnez-le dans POINTZERO avant l’export.</p>';
+  }
   if(s.kind==="contact"&&emailOK(contact))content+='<p><a class="cta" href="mailto:'+encodeURIComponent(contact)+'?subject='+encodeURIComponent("Contact mini-site")+'">Écrire un message ↗</a></p>';
   return '<section id="s-'+esc(s.id)+'" class="section"><div class="section-inner"><span class="kicker">'+esc(s.kind)+'</span><h2>'+esc(s.title)+'</h2>'+content+'</div></section>';
 }
 export function miniSiteToHTML(doc:MiniSite):string {
-  // Every visible user field is escaped. No JavaScript, embedded fonts, third-party resources or tracking.
+  // All visible fields are escaped. Optional external section loads third-party content only on a visitor click.
   const sections=doc.sections.filter(s=>s.visible);
+  const hasExternal=sections.some(s=>s.kind==="externe"&&s.externalRefId&&externalById(s.externalRefId));
   const links=sections.map(s=>'<a href="#s-'+esc(s.id)+'">'+esc(s.title)+'</a>').join("");
   const hero=doc.heroImage&&safeHero(doc.heroImage)?'<img class="hero-image" alt="'+esc(doc.heroAlt??"")+'" src="'+doc.heroImage+'">':"";
   const heroCTA=doc.heroActionLabel&&doc.heroActionHref&&safeHref(doc.heroActionHref)?
@@ -95,12 +107,15 @@ export function miniSiteToHTML(doc:MiniSite):string {
     '.subtitle{max-width:650px;margin:25px auto;color:#4b4b50;font-size:clamp(15px,2vw,20px)}.meta{font-size:13px;white-space:pre-wrap}.section{padding:85px 24px;border-top:1px solid #0001}.section:nth-of-type(even){background:#fff8}.section-inner{max-width:810px;margin:0 auto}'+
     'h2{font-size:clamp(31px,4vw,52px);line-height:1.16;letter-spacing:-.035em;font-weight:500;margin:13px 0 25px}.paragraph{white-space:normal;color:#434349;overflow-wrap:anywhere}'+
     'ul{list-style:none;padding:0}li{padding:12px 0;border-bottom:1px solid #0002}.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.gallery-card{display:grid;place-items:center;min-height:160px;padding:20px;text-align:center;background:#ffffff;border:1px solid #0001;border-radius:6px}'+
+    '.external-project{padding:15px 0}.external-note{font-size:13px;color:#555}.external-embed-target iframe{display:block;width:100%;height:min(70vh,690px);min-height:360px;margin-top:22px;border:1px solid #8888;border-radius:6px;background:#fafafa}.external-load{cursor:pointer}.external-load:disabled{opacity:.55;cursor:not-allowed}'+
     '.cta{display:inline-flex;margin-top:22px;padding:13px 21px;background:#171719;color:white;border-radius:5px;text-decoration:none}.hero-cta{font-weight:700}.nav a:focus-visible,.cta:focus-visible,.brand:focus-visible{outline:3px solid #171719;outline-offset:4px}.footer{padding:50px 24px;text-align:center;border-top:1px solid #0002;font-size:12px;color:#666}'+
     '@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}'+
     '@media(max-width:720px){.site-header{height:auto;min-height:64px;padding:12px 18px;display:block}.nav{margin-top:10px}.hero{min-height:440px;padding:72px 18px}.section{padding:58px 20px}.gallery{grid-template-columns:1fr 1fr}.gallery-card{min-height:120px}}'+
     '</style></head><body><header class="site-header"><a class="brand" href="#top">'+esc(doc.title)+'</a><nav class="nav" aria-label="Sections">'+links+'</nav></header>'+
     '<main id="top"><div class="hero">'+hero+'<div><p class="eyebrow">'+esc(doc.eyebrow)+'</p><h1>'+esc(doc.title)+'</h1><p class="subtitle">'+esc(doc.subtitle)+'</p>'+
     '<p class="meta">'+esc([doc.date,doc.place].filter(Boolean).join(" · "))+'</p>'+heroCTA+'</div></div>'+
-    sections.map(s=>sectionHTML(s,doc.contact)).join("")+'</main><footer class="footer">'+safeMail+'</footer></body></html>';
+    sections.map(s=>sectionHTML(s,doc.contact)).join("")+'</main><footer class="footer">'+safeMail+'</footer>'+
+    (hasExternal?'<script>(function(){document.querySelectorAll(".external-project[data-external-url]").forEach(function(card){var button=card.querySelector(".external-load");if(!button)return;button.addEventListener("click",function(){if(card.querySelector("iframe"))return;var frame=document.createElement("iframe");frame.title="Projet externe : "+(card.closest("section").querySelector("h2")?.textContent||"Application");frame.referrerPolicy="no-referrer";frame.loading="lazy";frame.setAttribute("sandbox","allow-scripts allow-same-origin allow-forms");frame.setAttribute("allow","fullscreen");frame.src=card.dataset.externalUrl;card.querySelector(".external-embed-target").appendChild(frame);button.disabled=true;button.textContent="Aperçu demandé";});});})();</script>':"")+
+    '</body></html>';
 }
 export const miniProjectFile=(doc:MiniSite)=>JSON.stringify(doc,null,2);

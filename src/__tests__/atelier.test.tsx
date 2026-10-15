@@ -62,6 +62,25 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("affiche RIPPLECIRCLE comme module externe réutilisable sans chargement automatique", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Mon Espace · Tous les mondes"));
+    await click(button("Démarrer le parcours Jour J"));
+    await click(button("Afficher Ma page"));
+    expect(container?.querySelector('[aria-label="Projet externe RIPPLECIRCLE · Cadran vivant"]')).toBeTruthy();
+    expect(button("Essayer l'aperçu intégré de RIPPLECIRCLE · Cadran vivant")).toBeTruthy();
+    expect(container?.querySelector('iframe[src="https://ripplecircle.vercel.app/"]')).toBeNull();
+    const link=container?.querySelector('a[href="https://ripplecircle.vercel.app/"]');
+    expect(link?.getAttribute("target")).toBe("_blank");
+    expect(link?.getAttribute("rel")).toContain("noopener");
+    await click(button("Retour au studio universel"));
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Ouvrir le studio Mini-site"));
+    expect(container?.querySelector('option[value="externe"]')).toBeTruthy();
+  });
+
   it("relie Mini-site au dossier juridique sans ressaisir le nom de son projet", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
