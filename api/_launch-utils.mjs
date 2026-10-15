@@ -10,7 +10,7 @@ export const escapeHTML=x=>String(x).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&l
 export const setNoStore=res=>{res.setHeader("Cache-Control","no-store, max-age=0");res.setHeader("X-Content-Type-Options","nosniff");};
 export const error=(res,status,message)=>res.status(status).json({error:message});
 export const credentialsReady=()=>!!(process.env.UPSTASH_REDIS_REST_URL&&process.env.UPSTASH_REDIS_REST_TOKEN);
-export const waitlistReady=()=>credentialsReady()&&!!(process.env.RESEND_API_KEY&&process.env.POINTZERO_PUBLIC_ORIGIN&&process.env.TURNSTILE_SECRET_KEY&&process.env.POINTZERO_FROM_EMAIL&&process.env.POINTZERO_PRIVACY_EMAIL&&process.env.POINTZERO_LEGAL_ENTITY);
+export const waitlistReady=()=>credentialsReady()&&!!(process.env.RESEND_API_KEY&&process.env.POINTZERO_PUBLIC_ORIGIN&&process.env.TURNSTILE_SECRET_KEY&&process.env.POINTZERO_FROM_EMAIL&&process.env.POINTZERO_PRIVACY_EMAIL&&process.env.POINTZERO_LEGAL_ENTITY&&process.env.POINTZERO_PRIVACY_POLICY_URL&&/^https:\/\//i.test(process.env.POINTZERO_PRIVACY_POLICY_URL));
 export const adminReady=()=>credentialsReady()&&!!process.env.POINTZERO_LAUNCH_ADMIN_SECRET;
 export const adminAuthorized=req=>{
  const expected=process.env.POINTZERO_LAUNCH_ADMIN_SECRET,got=String(req.headers["x-pointzero-admin"]||"");
