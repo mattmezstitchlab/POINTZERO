@@ -4,7 +4,7 @@ import { DEFAULT_LAUNCH, STATUS_LABELS, canEnter, canPreview, countdown, validLa
 import "./ManifestLanding.css";
 
 interface Props {onStudio:(route:string)=>void;onAdmin:()=>void}
-interface PublicState {config:LaunchConfig|null;signupReady:boolean;turnstileSiteKey:string}
+interface PublicState {config:LaunchConfig|null;signupReady:boolean;turnstileSiteKey:string;legalEntity:string;privacyContact:string}
 const THEME_ICONS=[Fingerprint,ShieldCheck,Grid2X2,Clock3,Sparkles,HeartHandshake,HeartHandshake,Grid2X2,GraduationCap,GitBranch,Sparkles,GitBranch,Sparkles];
 const pad=(n:number)=>String(n).padStart(2,"0");
 const btn="pz-manifest-button";
@@ -166,13 +166,14 @@ function ReuseDemo(){
  </section>;
 }
 export default function ManifestLanding({onStudio,onAdmin}:Props){
- const [state,setState]=useState<PublicState>({config:null,signupReady:false,turnstileSiteKey:""});
+ const [state,setState]=useState<PublicState>({config:null,signupReady:false,turnstileSiteKey:"",legalEntity:"",privacyContact:""});
  const [expanded,setExpanded]=useState<string|null>(null);
  useEffect(()=>{
   let active=true;
   fetch("/api/pointzero-launch").then(r=>r.ok?r.json():Promise.reject()).then((raw:PublicState)=>{
    if(!active)return;setState({
-    config:validLaunch(raw.config)?raw.config:null,signupReady:raw.signupReady===true,turnstileSiteKey:typeof raw.turnstileSiteKey==="string"?raw.turnstileSiteKey:""
+    config:validLaunch(raw.config)?raw.config:null,signupReady:raw.signupReady===true,turnstileSiteKey:typeof raw.turnstileSiteKey==="string"?raw.turnstileSiteKey:"",
+    legalEntity:typeof raw.legalEntity==="string"?raw.legalEntity:"",privacyContact:typeof raw.privacyContact==="string"?raw.privacyContact:""
    });
   }).catch(()=>undefined);
   return()=>{active=false};
@@ -273,12 +274,26 @@ export default function ManifestLanding({onStudio,onAdmin}:Props){
     </div>
    </section>
    <Waitlist state={state}/>
+   <section id="confidentialite" className="pz-manifest-section bg-[#f5f4f2]" aria-labelledby="pz-privacy-title">
+     <div className="pz-manifest-wrap">
+      <p className="pz-manifest-kicker">TRANSPARENCE / DONNÉES PERSONNELLES</p>
+      <h2 id="pz-privacy-title" className="pz-manifest-heading">Vos informations vous appartiennent.</h2>
+      <div className="grid gap-9 md:grid-cols-3">
+       <div><h3 className="text-sm font-semibold">Finalité</h3><p className="mt-3 text-[13px] leading-relaxed text-[#777]">Les adresses e-mail et centres d'intérêt sont utilisés uniquement pour informer des ouvertures sélectionnées. Le prénom est facultatif. Aucun partage commercial de cette liste n'est prévu.</p></div>
+       <div><h3 className="text-sm font-semibold">Consentement et retrait</h3><p className="mt-3 text-[13px] leading-relaxed text-[#777]">L'inscription nécessite une validation de votre adresse. Vous pouvez demander un lien de désinscription depuis le formulaire ci-dessus. Les inscriptions non confirmées expirent après 72 heures.</p></div>
+       <div><h3 className="text-sm font-semibold">Responsable et contact</h3><p className="mt-3 text-[13px] leading-relaxed text-[#777]">{state.legalEntity||"Identité de l'éditeur à renseigner avant l'ouverture des inscriptions."}</p>
+        {state.privacyContact?<a href={"mailto:"+state.privacyContact} className="mt-3 inline-block text-[13px] font-semibold underline">{state.privacyContact}</a>:<p className="mt-3 text-xs text-[#ae8792]">Contact de confidentialité à configurer avant lancement.</p>}
+       </div>
+      </div>
+      <p className="mt-8 max-w-[950px] text-[12px] leading-relaxed text-[#999]">Une politique de confidentialité complète (durées de conservation des inscriptions confirmées, hébergeurs, droits d'accès et suppression) devra être validée et publiée avant la collecte réelle. Le formulaire reste désactivé tant que l'éditeur et son contact ne sont pas configurés.</p>
+     </div>
+   </section>
    <footer className="pz-manifest-footer"><div className="pz-manifest-wrap"><p className="pz-manifest-kicker">POINTZERO .0</p>
     <h2>Le temps retrouvé.</h2>
     <p>Nous avons appris à fabriquer des outils. Puis nous avons appris à les connecter. Aujourd'hui, nous pouvons commencer à leur donner une continuité.</p>
     <p>Non pour aller toujours plus vite. Mais pour retrouver le temps de comprendre, de créer, de transmettre et de vivre.</p>
     <div className="pz-manifest-footerbar"><span>UN POINT DE DÉPART. UNE INFINITÉ DE POSSIBLES.</span>
-     <div className="flex items-center gap-4"><a href="#accueil">Haut de page ↑</a><button onClick={onAdmin} type="button">Administration</button></div>
+     <div className="flex items-center gap-4"><a href="#confidentialite">Confidentialité</a><a href="#accueil">Haut de page ↑</a><button onClick={onAdmin} type="button">Administration</button></div>
     </div>
    </div></footer>
   </main>
