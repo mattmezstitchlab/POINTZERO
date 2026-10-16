@@ -224,7 +224,7 @@ export default function App() {
     if (window.location.hash === "#atelier" || window.location.hash === "#slame") {
       history.replaceState(null, "", window.location.pathname + window.location.search);
     }
-    document.title = `${P.name} | POINTZERO · Atelier`;
+    document.title = `${P.name} | AIME · Broderie`;
   }, [P.name]);
   useEffect(() => {
     try { writeStoredJSON("point-zero:preferences", JSON.stringify(prefs),v=>!!v&&typeof v==="object"&&!Array.isArray(v)); } catch { /* Optional preferences do not block the editor. */ }
