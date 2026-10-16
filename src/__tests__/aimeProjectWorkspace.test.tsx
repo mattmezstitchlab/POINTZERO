@@ -70,6 +70,33 @@ describe("AIME — espace projet construit depuis le Bureau",()=>{
   expect(readProjectDocument(p.id).value.pages[0].items).toHaveLength(1);
 
  });
+ it("installe un modèle éditable sur demande et propage une valeur ME sans écraser les sections",async()=>{
+  const p=newSpace("mariage","Site des mariés");writeWorld({version:1,spaces:[p],selectedSpaceId:p.id});
+  const view=await mount(p.id);
+  expect(localStorage.getItem(projectDocumentKey(p.id))).toBeNull();
+  await click(view.querySelector('button[aria-label="Parcourir les modèles"]'));
+  expect(view.textContent).toContain("Mini-site mariage");
+  expect(readProjectDocument(p.id).value.pages).toHaveLength(0);
+  await click(view.querySelector('button[aria-label="Utiliser le modèle mini-site mariage"]'));
+  const doc=readProjectDocument(p.id).value;
+  expect(doc.pages).toHaveLength(2);
+  expect(doc.pages[0].items).toHaveLength(5);
+  expect(doc.pages[1].items).toHaveLength(3);
+  expect(view.querySelector('[aria-label="Page active"]')?.textContent).toContain("Camille & Gabriel");
+  const field=view.querySelector<HTMLInputElement>('input[aria-label="Information couple"]');
+  expect(field).toBeTruthy();
+  const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")!.set!;
+  await act(async()=>{setter.call(field,"Ana & Léo");field!.dispatchEvent(new Event("input",{bubbles:true}));field!.dispatchEvent(new Event("change",{bubbles:true}));});
+  expect(view.querySelector('[aria-label="Page active"]')?.textContent).toContain("Ana & Léo");
+  expect(readProjectDocument(p.id).value.variables?.couple).toBe("Ana & Léo");
+  expect(readProjectDocument(p.id).value.pages[0].items[0].kind).toBe("section");
+  await click(view.querySelector('button[aria-label="Choisir la composition"]'));
+  await click([...view.querySelectorAll('[role="menuitemradio"]')].find(e=>e.textContent?.includes("Deux colonnes")));
+  expect(view.querySelector('[aria-label="Composition de la page"]')?.className).toContain("grid");
+  await click(view.querySelector('button[aria-label="Sélectionner Ana & Léo"]'));
+  expect(view.querySelector('input[aria-label="Titre de la section"]')).toBeTruthy();
+  expect(view.querySelector('select[aria-label="Disposition de la section"]')).toBeTruthy();
+ });
  it("ne modifie pas les anciennes données et protège le projet illisible",async()=>{
   const p=newSpace("professionnel","Client");
   const q=newSpace("personnel","Privé");
