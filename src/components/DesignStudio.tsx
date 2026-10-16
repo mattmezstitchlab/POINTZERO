@@ -1,7 +1,7 @@
 import {writeStoredJSON,everyStored} from "../lib/storageSafety";
 import {readWorld} from "../lib/oneSpaceCore";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { Accessibility, GraduationCap, GitBranch, Gamepad2, Sparkles, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
+import { Accessibility, GraduationCap, GitBranch, Gamepad2, Sparkles, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import FragmentGridWorkspace from "./FragmentGridWorkspace";
 import {
@@ -81,7 +81,7 @@ interface Props {
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onUniversal, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(()=>restore(projectId));
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -333,6 +333,12 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
             <p className="mt-3 text-[11px] leading-relaxed text-white/65">La grille se recompose lorsque vous agrandissez un fragment. Ce format reste indépendant des points et des fils DMC.</p>
           </>}
           {leftTab==="documents"&&<>
+            <label className="mb-3 block text-[11px] text-white/65">Nouveau document vierge
+              <select aria-label="Créer un nouveau document au format" value="" onChange={e=>{if(e.target.value)newDocument(e.target.value as DesignFormat);}} className={mono+" mt-2 w-full"}>
+                <option value="">Choisir un format…</option>
+                {FORMATS.map(format=><option key={format.id} value={format.id}>{format.label}</option>)}
+              </select>
+            </label>
             <button onClick={saveDraft} className={action+" w-full"}><Save size={15}/> Sauvegarder le projet</button>
             <button onClick={()=>projectPicker.current?.click()} className={action+" mt-2 w-full"}><FolderOpen size={15}/> Importer un JSON</button>
             <h2 className="mb-2 mt-5 text-[12px] font-semibold">Mes créations</h2>
@@ -415,7 +421,7 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
         <div className="mt-5 border-t border-white/10 pt-4">
           <h3 className="mb-2 text-xs font-semibold">Calques</h3>
           {[...layers].reverse().map(e=><button key={e.id} onClick={()=>setSelected(e.id)} className={"mb-1 block min-h-9 w-full truncate rounded-[5px] px-2 text-left text-[11px] "+(selected===e.id?"bg-white text-black":"text-white/75 hover:bg-white/10")}>
-            {e.kind==="text"?(e.text.split("\n")[0]||"Texte"):e.kind==="motif"?(MOTIF_PRESETS.find(p=>p.id===e.presetId)?.name??"Motif"):e.kind==="shape"?"Forme":"Image"}
+            {e.kind==="text"?(e.text.split("\n")[0]||"Texte"):e.kind==="motif"?"Motif existant":e.kind==="shape"?"Forme":"Image"}
           </button>)}
         </div>
       </aside>
