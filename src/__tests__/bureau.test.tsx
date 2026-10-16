@@ -21,8 +21,9 @@ async function click(el:Element|null){
 describe("POINTZERO — Bureau des vrais projets",()=>{
  it("n'ajoute aucun modèle et ne crée rien sans confirmation",async()=>{
   const {host:view}=await mount();
-  expect(view.querySelector('[aria-label="Bureau POINTZERO"]')).toBeTruthy();
+  expect(view.querySelector('[aria-label="Bureau AIME"]')).toBeTruthy();
   expect(view.textContent).not.toContain("Fleur rose");
+  expect(view.querySelector("header")?.textContent).toContain("AIME");
   expect(readWorld().spaces).toHaveLength(0);
   await click([...view.querySelectorAll("button")].find(b=>b.textContent?.includes("Nouveau projet"))??null);
   expect(view.querySelector('form[aria-label="Créer un nouveau projet"]')).toBeTruthy();
