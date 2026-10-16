@@ -2,6 +2,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DesignStudio from "../components/DesignStudio";
+import {createUniversalDossier} from "../lib/universalDossier";
+import {readWorld} from "../lib/oneSpaceCore";
 
 let root: Root | null = null;
 let host: HTMLDivElement | null = null;
@@ -34,6 +36,20 @@ function click(el: Element | null | undefined) {
 }
 const buttonNamed = (host:Element,label:string) => Array.from(host.querySelectorAll("button")).find(b=>b.textContent?.trim().includes(label));
 describe("POINTZERO — studio universel", () => {
+  it("sélectionne un Dossier existant depuis l'Édition, sans altérer la création", () => {
+    const one=createUniversalDossier("Préparer un programme musical accessible pour une cérémonie");
+    const two=createUniversalDossier("Concevoir un motif floral pour un cadeau");
+    const view=mount();
+    const before=localStorage.getItem("pointzero:design-current:v1");
+    click(view.querySelector('button[aria-label="Ouvrir les dossiers"]'));
+    expect(view.querySelector('[aria-label="Dossiers POINTZERO"]')).toBeTruthy();
+    click(view.querySelector('button[aria-label="Sélectionner le dossier '+one.title+'"]'));
+    expect(readWorld().selectedSpaceId).toBe(one.id);
+    expect(readWorld().spaces).toHaveLength(2);
+    expect(localStorage.getItem("pointzero:design-current:v1")).toBe(before);
+    click(view.querySelector('button[aria-label="Ouvrir les dossiers"]'));
+    expect(view.querySelector('button[aria-label="Sélectionner le dossier '+two.title+'"]')).toBeTruthy();
+  });
   it("ouvre la grille de fragments dans le même atelier sans modifier le document graphique", () => {
     const view=mount();
     expect(view.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
