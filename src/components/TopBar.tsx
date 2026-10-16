@@ -36,9 +36,9 @@ export default function TopBar(p: Props) {
     <div className="flex min-w-0 shrink-0 items-center gap-2">
       {p.onDesign && <button type="button" onClick={p.onDesign} aria-label="Créer des supports graphiques" title="Retour aux studios"
         className={iconButton + " border border-white/20"}><ArrowLeft size={17}/></button>}
-      <button type="button" onClick={p.onCreate} aria-label="POINTZERO : créer un motif"
+      <button type="button" onClick={p.onCreate} aria-label="AIME : créer un motif"
         className="min-w-0 text-left text-[13px] font-semibold tracking-tight text-white hover:text-white/80">
-        <span className="hidden sm:inline">× POINTZERO </span><span className="text-white/70">Broderie</span>
+        <span className="hidden sm:inline">AIME </span><span className="text-white/70">Broderie</span>
       </button>
       <span className="hidden max-w-[220px] truncate text-[11px] text-white/45 2xl:inline" title={p.pattern.name}>{p.pattern.name}</span>
     </div>
