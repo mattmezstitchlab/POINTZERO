@@ -51,13 +51,14 @@ describe("AIME — une landing MÉTAMORPHOSE, sans migration",()=>{
   });
   const form=view.querySelector("form.au-intent-form")!;
   await act(async()=>form.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true})));
-  expect(navigate).toHaveBeenCalledWith("/espace?intention="+encodeURIComponent(payload));
+  expect(navigate).toHaveBeenCalledWith("/espace",payload);
   expect(write).not.toHaveBeenCalled();
   expect(entryStudio("?intention="+encodeURIComponent(payload),"","/espace")).toBe("universal-dossier");
  });
  it("préfournit seulement le champ de la page Dossier et préserve son étape de confirmation",async()=>{
   const text="Créer un bouquet floral brodable à partir de mes fragments";
-  window.history.replaceState(null,"","/espace?intention="+encodeURIComponent(text));
+  window.history.replaceState({aimeIntention:text},"","/espace");
+  expect(window.location.search).toBe("");
   const view=await mount(<UniversalDossierStudio onBack={vi.fn()} onOpenAcademy={vi.fn()}/>);
   expect(view.querySelector<HTMLTextAreaElement>("#ud-intent")?.value).toBe(text);
   expect(view.textContent).toContain("Comprendre mon projet");
