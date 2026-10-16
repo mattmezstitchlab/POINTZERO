@@ -3,7 +3,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DesignStudio from "../components/DesignStudio";
 import {createUniversalDossier} from "../lib/universalDossier";
-import {readWorld} from "../lib/oneSpaceCore";
 
 let root: Root | null = null;
 let host: HTMLDivElement | null = null;
@@ -24,7 +23,7 @@ afterEach(() => {
   host?.remove();host=null;root=null;
   localStorage.clear();
 });
-function mount(props?:{incomingPhoto?:{id:string;dataUrl:string};onPhotoConsumed?:()=>void}) {
+function mount(props?:{projectId?:string;incomingPhoto?:{id:string;dataUrl:string};onPhotoConsumed?:()=>void}) {
   host=document.createElement("div");document.body.appendChild(host);
   root=createRoot(host);
   act(()=>root?.render(<DesignStudio onEmbroidery={vi.fn()} {...props}/>));
@@ -36,19 +35,16 @@ function click(el: Element | null | undefined) {
 }
 const buttonNamed = (host:Element,label:string) => Array.from(host.querySelectorAll("button")).find(b=>b.textContent?.trim().includes(label));
 describe("POINTZERO — studio universel", () => {
-  it("sélectionne un Dossier existant depuis l'Édition, sans altérer la création", () => {
-    const one=createUniversalDossier("Préparer un programme musical accessible pour une cérémonie");
-    const two=createUniversalDossier("Concevoir un motif floral pour un cadeau");
-    const view=mount();
-    const before=localStorage.getItem("pointzero:design-current:v1");
-    click(view.querySelector('button[aria-label="Ouvrir les dossiers"]'));
-    expect(view.querySelector('[aria-label="Dossiers POINTZERO"]')).toBeTruthy();
-    click(view.querySelector('button[aria-label="Sélectionner le dossier '+one.title+'"]'));
-    expect(readWorld().selectedSpaceId).toBe(one.id);
-    expect(readWorld().spaces).toHaveLength(2);
-    expect(localStorage.getItem("pointzero:design-current:v1")).toBe(before);
-    click(view.querySelector('button[aria-label="Ouvrir les dossiers"]'));
-    expect(view.querySelector('button[aria-label="Sélectionner le dossier '+two.title+'"]')).toBeTruthy();
+  it("isole le canevas par projet et préserve les anciennes créations",()=>{
+    const project=createUniversalDossier("Créer un programme de cérémonie");
+    localStorage.setItem("pointzero:design-current:v1","ancien document intact");
+    const view=mount({projectId:project.id});
+    expect(view.querySelectorAll("[data-element-id]")).toHaveLength(0);
+    expect(view.textContent).not.toContain("Fleur rose");
+    click(buttonNamed(view,"Texte"));
+    const scoped=localStorage.getItem("pointzero:design:project:"+project.id+":current:v1");
+    expect(scoped).toContain("Votre texte");
+    expect(localStorage.getItem("pointzero:design-current:v1")).toBe("ancien document intact");
   });
   it("ouvre la grille de fragments dans le même atelier sans modifier le document graphique", () => {
     const view=mount();
@@ -60,7 +56,7 @@ describe("POINTZERO — studio universel", () => {
     const select=board?.querySelector("[data-fragment-id]") as HTMLButtonElement;
     click(select);
     expect(view.querySelector('[aria-label="Propriétés du fragment"]')).toBeTruthy();
-    click(buttonNamed(view,"Éléments"));
+    click(buttonNamed(view,"Ajouter"));
     expect(view.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
   });
   it("réintègre une photo ou un vêtement retouché dans la composition sans écraser l'original", () => {
@@ -68,19 +64,20 @@ describe("POINTZERO — studio universel", () => {
     const input={id:"picture-1",dataUrl:"data:image/png;base64,iVBORw0KGgo="};
     const host=mount({incomingPhoto:input,onPhotoConsumed});
     expect(onPhotoConsumed).toHaveBeenCalledOnce();
-    expect(host.querySelectorAll("[data-element-id]")).toHaveLength(5);
+    expect(host.querySelectorAll("[data-element-id]")).toHaveLength(1);
     expect(host.textContent).toContain("Photo retouchée ajoutée");
     const doc=JSON.parse(localStorage.getItem("pointzero:design-current:v1")??"{}") as {elements:Array<{kind:string}>};
     expect(doc.elements.some(e=>e.kind==="image")).toBe(true);
-    expect(doc.elements.some(e=>e.kind==="motif")).toBe(true);
+    expect(doc.elements.every(e=>e.kind==="image")).toBe(true);
   });
 
-  it("ouvre l'éditeur multiformat et permet d'ajouter un vrai motif", () => {
+  it("ouvre l'éditeur vierge et permet d'ajouter du texte sans motif imposé", () => {
     const host=mount();
     expect(host.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
     expect(host.querySelector('[aria-label="Ressources et formats"]')).toBeTruthy();
     const before=host.querySelectorAll("[data-element-id]").length;
-    click(buttonNamed(host,"Fleur rose"));
+    expect(host.textContent).not.toContain("Bibliothèque florale et graphique");
+    click(buttonNamed(host,"Texte"));
     expect(host.querySelectorAll("[data-element-id]").length).toBe(before+1);
     expect(host.querySelector('[aria-label="Propriétés de la création"]')).toBeTruthy();
   });
@@ -91,14 +88,14 @@ describe("POINTZERO — studio universel", () => {
     expect(host.textContent).toContain("Story · 540 × 960 px");
     const saved=JSON.parse(localStorage.getItem("pointzero:design-drafts:v1")??"[]") as Array<{format:string}>;
     expect(saved.length).toBeGreaterThan(0);
-    expect(saved[0].format).toBe("affiche");
+    expect(saved[0].format).toBe("maquette");
   });
   it("autorise la sauvegarde locale et les sept formats prédéfinis", () => {
     const host=mount();
     click(host.querySelector('button[aria-label="Enregistrer dans Mes créations"]'));
     const projects=JSON.parse(localStorage.getItem("pointzero:design-drafts:v1")??"[]") as unknown[];
     expect(projects.length).toBe(1);
-    click(buttonNamed(host,"Formats"));
+    click(buttonNamed(host,"Décliner"));
     expect(buttonNamed(host,"Faire-part")).toBeTruthy();
     expect(buttonNamed(host,"Mini-site")).toBeTruthy();
   });
