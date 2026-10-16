@@ -36,7 +36,7 @@ let root: Root | null = null;
 let container: HTMLElement | null = null;
 async function mount(publicHome=false) {
   // Legacy atelier regression tests now use the explicit studio deep link.
-  // The real domain root is reserved for the POINTZERO public manifesto.
+  // Legacy studio tests use explicit deep links; the root is now the real editor.
   const requested=localStorage.getItem("pointzero:workspace");
   if(!publicHome&&requested&&!window.location.search){
     window.history.replaceState(null,"","/?studio="+encodeURIComponent(requested));
@@ -68,23 +68,24 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
-  it("ouvre AIME à la racine, puis POINTZERO et l'Atelier sans perdre le projet", async () => {
-    localStorage.setItem("pointzero:workspace","design");
+  it("ouvre le Studio Édition directement et le Dossier à la demande", async () => {
+    localStorage.setItem("pointzero:workspace","embroidery");
     await mount(true);
-    expect(container?.querySelector('[aria-label="AIME — Architecture mère"]')).toBeTruthy();
-    expect(container?.textContent).toContain("LETTRE OUVERTE");
-    await click(container?.querySelector('a[href="/pointzero"]'));
-    expect(container?.querySelector('[aria-label="POINTZERO .0 — Le temps retrouvé"]')).toBeTruthy();
-    const opener=[...(container?.querySelectorAll("button")??[])].find(x=>x.textContent?.includes("Ouvrir l’Atelier"));
-    await click(opener);
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="AIME — Architecture mère"]')).toBeNull();
+    expect(window.location.pathname).toBe("/");
+    expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
+    await click(button("Ouvrir les dossiers"));
+    expect(container?.querySelector('[aria-label="Dossiers POINTZERO"]')).toBeTruthy();
+    await click(button("Créer un dossier"));
+    expect(container?.querySelector('[aria-label="Dossier Universel AIME"]')).toBeTruthy();
+    expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
+    await click(button("Retour à AIME"));
     expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
     await click(button("Ouvrir le menu des studios"));
     expect(container?.querySelector('[aria-label="Choix du studio"]')).toBeTruthy();
-    expect(button("Ouvrir le studio LE MONDE AIME · Présentation")).toBeNull();
+    expect(button("Ouvrir le studio Dossier Universel AIME")).toBeNull();
     expect(button("Ouvrir le studio LE MONDE AIME · Atelier libre")).toBeTruthy();
-    await click(button("Retour à l’accueil POINTZERO"));
-    expect(container?.textContent).toContain("Le temps retrouvé.");
-    expect(container?.querySelector('a[href="/le-monde-aime"]')).toBeTruthy();
   });
 
 
@@ -246,9 +247,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await click(button("Ouvrir le menu des studios"));
     expect(button("Ouvrir le studio LE MONDE AIME · Présentation")).toBeNull();
     await click(button("Ouvrir le menu des studios"));
-    await click(button("Retour à l’accueil POINTZERO"));
-    const publicLink=container?.querySelector('a[href="/le-monde-aime"]');
-    expect(publicLink).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
     await act(async()=>root?.unmount());
     container?.remove();
     window.history.replaceState(null,"","/?site=le-monde-aime");
