@@ -1,11 +1,10 @@
-import AimeDomainNavigation from "./AimeDomainNavigation";
 import AimeSymbol from "./AimeSymbol";
 import {DESIGN_SYSTEM,designCSS} from "../lib/designSystem";
 import "../design/components.css";
-import AimeProductVisual from "./AimeProductVisual";
+import AimeUnifiedHome from "./AimeUnifiedHome";
 import {useEffect,useRef,useState,type MouseEvent,type ReactNode} from "react";
 import {ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Clock3,Heart,Layers3} from "lucide-react";
-import {AIME_EDITORIAL_VERSION,AIME_SIGNATURES,UNIVERSES,UNIVERSE_BY_SLUG,STUDIO_STORIES,STORY_BY_ID, MOTORS,VISION_MILESTONES} from "../lib/aimeEditorial";
+import {AIME_EDITORIAL_VERSION,UNIVERSES,UNIVERSE_BY_SLUG,STUDIO_STORIES,STORY_BY_ID, MOTORS,VISION_MILESTONES} from "../lib/aimeEditorial";
 import {DEFAULT_LAUNCH,STATUS_LABELS,canEnter,canPreview,validLaunch,type LaunchConfig} from "../lib/launchManifest";
 import "./AimeEcosystem.css";
 
@@ -21,79 +20,12 @@ function SiteHeader({onNavigate}:{onNavigate:(path:string)=>void}){
  return <header className="ae-header">
   <Jump href="/" onNavigate={onNavigate} className="ae-brand" ><AimeSymbol name="continuite"/>AIME<span className="ae-brand-dot">®</span></Jump>
   <nav aria-label="Navigation générale AIME">
-   <Jump href="/univers" onNavigate={onNavigate}>Univers</Jump>
-   <Jump href="/vision" onNavigate={onNavigate}>La vision</Jump>
-   <Jump href="/dossier" onNavigate={onNavigate}>Dossier</Jump>
-   <Jump href="/espace" onNavigate={onNavigate}>Créer</Jump>
-   <Jump href="/le-monde-aime" onNavigate={onNavigate}>Le Monde Aime</Jump>
-  </nav>
-  <Jump href="/pointzero" onNavigate={onNavigate} className="ae-header-cta">POINTZERO <ArrowUpRight size={14}/></Jump>
- </header>;
-}
-function Signature({signatures}:{signatures:readonly string[]}){
- const [index,setIndex]=useState(0);
- useEffect(()=>{
-  if(typeof matchMedia!=="undefined"&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-  const timer=window.setInterval(()=>setIndex(i=>(i+1)%signatures.length),7000);
-  return()=>window.clearInterval(timer);
- },[signatures]);
- return <div className="ae-signature" aria-label={signatures[0]}>
-  <span>Architecture Intelligente</span>
-  <span className="ae-signature-variable" aria-hidden="true" key={index}>{(signatures[index%signatures.length]||signatures[0]).replace(/^Architecture Intelligente\s*/,"")}</span>
- </div>;
-}
-function MainHome({onNavigate,signatures}:{onNavigate:(path:string)=>void;signatures:readonly string[]}){
- return <main id="aime" className="ai-home">
-  <section className="ai-opening" data-aime-sequence="aime" aria-labelledby="ai-opening-title">
-   <div className="ai-copy"><p className="ae-kicker">AIME / UN MÊME PROJET. PLUSIEURS USAGES.</p>
-    <h1 id="ai-opening-title">Et si les systèmes<br/>s’adaptaient enfin<br/><em>aux personnes ?</em></h1>
-    <Signature signatures={signatures}/>
-    <p>Une intention pour commencer. Des outils pour créer. Une mémoire pour continuer.</p>
-    <div className="ai-actions"><Jump href="/espace" onNavigate={onNavigate} className="ae-primary">Que souhaitez-vous accomplir ? <ArrowRight size={18}/></Jump><Jump href="/atelier" onNavigate={onNavigate} className="ai-text-link">Explorer l’Atelier <ArrowUpRight size={16}/></Jump></div>
-   </div>
-   <img className="ai-connections" src="/aime-connections.svg" width="1800" height="1000" fetchPriority="high" alt="Composition originale : trois personnes distinctes reliées par des lignes qui se croisent"/>
-  </section>
-  <section className="ai-transformation" data-aime-sequence="pointzero" aria-labelledby="ai-intention-title">
-   <div className="ai-copy"><p className="ae-kicker">01 / POINTZERO</p><h2 id="ai-intention-title">Tout commence<br/>par ce qui vous anime.</h2><p>Décrivez un projet. Relisez les propositions. Préparez votre dossier local, puis choisissez le prochain geste.</p></div>
-   <div className="ai-intention-stage" aria-label="Parcours actuel du Dossier Universel">
-    <blockquote>« Je souhaite transmettre<br/>l’improvisation à dix débutants. »</blockquote><span className="ai-flow-line" aria-hidden="true"/>
-    <div className="ai-dossier-sample"><span>DOSSIER UNIVERSEL / EXEMPLE</span><h3>Un atelier pour transmettre.</h3><dl><div><dt>Public proposé</dt><dd>10 débutants</dd></div><div><dt>Prochaine étape</dt><dd>Relire les objectifs</dd></div><div><dt>Support</dt><dd>Préparer dans Academy</dd></div></dl><p>Heuristique locale à confirmer · pas une analyse IA</p></div>
-   </div>
-   <Jump href="/espace" onNavigate={onNavigate} className="ai-text-link">Essayer avec mon intention <ArrowUpRight size={16}/></Jump>
-  </section>
-  <section className="ai-studios" data-aime-sequence="studios" aria-labelledby="ai-studios-title">
-   <div className="ai-copy"><p className="ae-kicker">02 / LES STUDIOS</p><h2 id="ai-studios-title">Des instruments.<br/>Pas des silos.</h2><p>Design, mini-site, musique, broderie, chronologie, documents et Métamorphose : des moteurs à explorer, avec leurs limites réelles.</p></div>
-   <AimeProductVisual/>
-   <nav className="ai-studio-links" aria-label="Explorer les moteurs existants">{[['design','Design'],['mini-site','Mini-site'],['programme','Chronologie'],['admin','Documents'],['music','Musique'],['embroidery','Broderie'],['metamorphose','Métamorphose']].map(([id,label])=><Jump key={id} href={'/atelier?studio='+id} onNavigate={onNavigate}>{label} <ArrowUpRight size={14}/></Jump>)}</nav>
-  </section>
-  <section className="ai-source" data-aime-sequence="dossier" aria-labelledby="ai-source-title">
-   <div className="ai-copy"><p className="ae-kicker">03 / LE DOSSIER UNIVERSEL</p><h2 id="ai-source-title">Une source.<br/>Plusieurs expressions.</h2><p>Le dossier porte l’identité du projet. Formation en propose une lecture ; Academy peut suivre son titre et ses objectifs, ou conserver vos personnalisations.</p></div>
-   <div className="ai-source-map" role="img" aria-label="Le dossier canonique alimente la projection Formation, le support Academy et l’export JSON"><div className="ai-source-center">Un même dossier<span>Intention · objectifs · mémoire</span></div><div className="ai-source-rays" aria-hidden="true"><span>Formation<small>Projection</small></span><span>Academy<small>Support spécialisé</small></span><span>JSON<small>Export du dossier</small></span></div></div>
-   <p className="ai-note">Prototype local. Le JSON du dossier n’inclut pas automatiquement les contenus de tous les Studios.</p>
-  </section>
-  <section className="ai-relations" data-aime-sequence="relations" aria-labelledby="ai-relations-title">
-   <div className="ai-copy"><p className="ae-kicker">04 / VISION — PARTAGE SÉCURISÉ NON DISPONIBLE</p><h2 id="ai-relations-title">Se relier.<br/>Sans se confondre.</h2><p>Demain, des espaces personnels pourraient coopérer par choix, avec des droits précis et révocables. Aujourd’hui, ces garanties de partage multi-utilisateur ne sont pas implémentées.</p><Jump href="/vision" onNavigate={onNavigate} className="ai-text-link">Voir la feuille de route <ArrowUpRight size={16}/></Jump></div>
-   <div className="ai-orbits" aria-hidden="true"><span>Mon espace</span><span>Nos choix</span><span>Votre espace</span></div>
-  </section>
-  <section className="ai-continuity" data-aime-sequence="temps" aria-labelledby="ai-continuity-title">
-   <div className="ai-time-track" aria-hidden="true"><span>Ce qui nous précède</span><i/><span>Ce qui nous rassemble</span><i/><span>Ce qui devient possible</span></div>
-   <div className="ai-copy"><p className="ae-kicker">05 / LE TEMPS RETROUVÉ</p><h2 id="ai-continuity-title">Relier ce qui est séparé.<br/>Préserver ce qui compte.<br/><em>Rendre possible ce qui manque.</em></h2><p>AIME est une architecture en construction. Explorez les outils, gardez une copie de vos créations et décidez de la suite.</p><div className="ai-actions"><Jump href="/espace" onNavigate={onNavigate} className="ae-primary">Commencer un projet <ArrowRight size={18}/></Jump><Jump href="/pointzero" onNavigate={onNavigate} className="ai-text-link">Découvrir POINTZERO <ArrowUpRight size={16}/></Jump></div></div>
-  </section>
-  <AimeDomainNavigation onNavigate={onNavigate}/>
-  <details className="ai-letter-details"><summary>LETTRE OUVERTE — Lire les principes fondateurs</summary>  <section className="ae-letter" id="lettre" aria-labelledby="ae-letter-title">
-   <div className="ae-narrow">
-    <p className="ae-kicker">UNE LETTRE À CEUX QUI CRÉENT, VIVENT ET TRANSMETTENT</p>
-    <h2 id="ae-letter-title">Nous avons construit tant de choses. Mais elles ne se parlent pas encore.</h2>
-    <p>Au fil des années, les idées, les observations, les rencontres et les expériences ont façonné des outils. Chacun a répondu à un besoin. Chacun a créé son propre langage, sa propre mémoire, son propre espace.</p>
-    <p>Et pourtant, une question demeure : pourquoi une expérience devrait-elle recommencer à zéro dès qu'elle change de contexte&nbsp;?</p>
-    <p>Pourquoi faudrait-il ressaisir ce que nous savons déjà, redécouvrir ce que d'autres ont compris, ou perdre la trace d'une intention lorsqu'elle devient un document, une œuvre, une rencontre ou une action&nbsp;?</p>
-    <blockquote>« Il ne s’agit plus de recommencer à zéro. Il s’agit de relier ce qui existe, de comprendre ce qui manque et de rendre visible ce qui devient possible. »</blockquote>
-    <p>AIME est le nom donné à cette recherche de continuité. Ce n'est pas un système achevé, ni une promesse que tout est automatisé. C'est une architecture que nous construisons, éprouvons et documentons progressivement.</p>
-   </div>
-  </section>
-</details>
-  <div className="ai-reference-links"><Jump href="/univers" onNavigate={onNavigate}>Explorer les Univers</Jump><Jump href="/dossier" onNavigate={onNavigate}>Dossier de référence</Jump><Jump href="/le-monde-aime" onNavigate={onNavigate}>Le Monde Aime</Jump></div>
- </main>;
+    <Jump href="/atelier?studio=metamorphose" onNavigate={onNavigate}>L’Atelier</Jump>
+    <Jump href="/univers" onNavigate={onNavigate}>Univers</Jump>
+    <Jump href="/vision" onNavigate={onNavigate}>La méthode</Jump>
+   </nav>
+   <Jump href="/atelier?studio=metamorphose" onNavigate={onNavigate} className="ae-header-cta">MÉTAMORPHOSE <ArrowUpRight size={14}/></Jump>
+  </header>;
 }
 function PublicLayout({title,kicker,lead,children}:{title:string;kicker:string;lead:string;children:ReactNode}){
  return <main className="ae-content"><div className="ae-wrap">
@@ -180,11 +112,11 @@ export default function AimeEcosystem({page,onNavigate,onOpenStudio}:Props){
  },[]);
  const slug=(typeof window!=="undefined"?window.location.pathname:"/").split("/")[2]||"";
  useEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=0;
-  document.title=(page==="aime-home"?"AIME® — Une architecture de continuité.":page==="vision"?"La vision · AIME®":page==="studio-detail"?((config.studios.find(x=>x.id===slug)?.title||"Studio")+" · AIME®"):page==="universe-detail"?((UNIVERSE_BY_SLUG.get(slug)?.name||"Univers")+" · AIME®"):"Les Univers · AIME®");
+  document.title=(page==="aime-home"?"AIME® — MÉTAMORPHOSE, l’Atelier universel.":page==="vision"?"La vision · AIME®":page==="studio-detail"?((config.studios.find(x=>x.id===slug)?.title||"Studio")+" · AIME®"):page==="universe-detail"?((UNIVERSE_BY_SLUG.get(slug)?.name||"Univers")+" · AIME®"):"Les Univers · AIME®");
  },[page,slug,config.studios]);
  return <div ref={scrollRef} className="ae-shell" data-aime-design={DESIGN_SYSTEM.version} aria-label="AIME — Architecture mère"><style>{designCSS()}</style>
   <SiteHeader onNavigate={onNavigate}/>
-  {page==="aime-home"?<MainHome onNavigate={onNavigate} signatures={config.aimeSignatures??AIME_SIGNATURES}/>:
+  {page==="aime-home"?<AimeUnifiedHome onNavigate={onNavigate}/>:
    page==="universe-index"?<Universes onNavigate={onNavigate}/>:
    page==="universe-detail"?<UniverseDetail slug={slug} onNavigate={onNavigate}/>:
    page==="studio-detail"?<StudioDetail slug={slug} config={config} onNavigate={onNavigate} onOpenStudio={onOpenStudio}/>:
