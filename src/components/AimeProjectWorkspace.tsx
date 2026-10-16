@@ -238,7 +238,7 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
        <button type="button" aria-label="Ajouter une page" disabled={blocked||doc.pages.length>=40} onClick={addPage} className={quiet+" w-full disabled:opacity-30"}>Nouvelle page</button>
        <button type="button" aria-label="Ajouter du texte" disabled={blocked||!page||page.items.length>=200} onClick={addText} className={quiet+" w-full disabled:opacity-30"}>Texte</button>
        <button type="button" aria-label="Ajouter une section" disabled={blocked||!page||page.items.length>=200} onClick={addSection} className={quiet+" w-full disabled:opacity-30"}>Section</button>
-       {!page&&!blocked&&<button type="button" aria-label="Ouvrir les modèles" onClick={()=>{setTemplatePicker(true);setAddOpen(false);}} className={quiet+" w-full"}>Modèles éditables</button>
+       {!page&&!blocked&&<button type="button" aria-label="Ouvrir les modèles" onClick={()=>{setTemplatePicker(true);setAddOpen(false);}} className={quiet+" w-full"}>Modèles éditables</button>}
        {!page&&<p className="px-3 py-2 text-[10px] text-white/40">Créez une page avant d'ajouter du texte.</p>}
       </div>}
       <div className="flex min-h-11 items-center gap-0.5 rounded-full border border-white/20 bg-[#242427] px-2 shadow-lg">
