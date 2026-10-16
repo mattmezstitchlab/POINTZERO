@@ -1,3 +1,4 @@
+import AimeDomainNavigation from "./AimeDomainNavigation";
 import AimeSymbol from "./AimeSymbol";
 import {DESIGN_SYSTEM,designCSS} from "../lib/designSystem";
 import "../design/components.css";
@@ -78,6 +79,7 @@ function MainHome({onNavigate,signatures}:{onNavigate:(path:string)=>void;signat
    <div className="ai-time-track" aria-hidden="true"><span>Ce qui nous précède</span><i/><span>Ce qui nous rassemble</span><i/><span>Ce qui devient possible</span></div>
    <div className="ai-copy"><p className="ae-kicker">05 / LE TEMPS RETROUVÉ</p><h2 id="ai-continuity-title">Relier ce qui est séparé.<br/>Préserver ce qui compte.<br/><em>Rendre possible ce qui manque.</em></h2><p>AIME est une architecture en construction. Explorez les outils, gardez une copie de vos créations et décidez de la suite.</p><div className="ai-actions"><Jump href="/espace" onNavigate={onNavigate} className="ae-primary">Commencer un projet <ArrowRight size={18}/></Jump><Jump href="/pointzero" onNavigate={onNavigate} className="ai-text-link">Découvrir POINTZERO <ArrowUpRight size={16}/></Jump></div></div>
   </section>
+  <AimeDomainNavigation onNavigate={onNavigate}/>
   <details className="ai-letter-details"><summary>LETTRE OUVERTE — Lire les principes fondateurs</summary>  <section className="ae-letter" id="lettre" aria-labelledby="ae-letter-title">
    <div className="ae-narrow">
     <p className="ae-kicker">UNE LETTRE À CEUX QUI CRÉENT, VIVENT ET TRANSMETTENT</p>

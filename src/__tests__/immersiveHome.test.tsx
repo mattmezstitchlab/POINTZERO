@@ -22,6 +22,6 @@ it('six séquences honnêtes, rendu des moteurs sans écriture et accès manuel'
  const link=node.querySelector('a[href="/atelier?studio=mini-site"]')!;
  await act(async()=>link.dispatchEvent(new MouseEvent('click',{bubbles:true})));
  expect(navigate).toHaveBeenCalledWith('/atelier?studio=mini-site');
- expect(node.querySelector('details')?.textContent).toContain('Nous avons construit tant de choses');
+ expect(node.querySelector('details.ai-letter-details')?.textContent).toContain('Nous avons construit tant de choses');
  }finally{await act(async()=>root.unmount());node.remove()}
 });
