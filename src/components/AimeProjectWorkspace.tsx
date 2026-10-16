@@ -1,5 +1,5 @@
-import {useEffect,useState} from "react";
-import {ArrowLeft,Download,FileText,FolderOpen,Plus,Type,X,PanelLeft,PanelRight} from "lucide-react";
+import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from "react";
+import {ArrowLeft,ChevronDown,Download,Eraser,FileText,FolderOpen,Hand,MousePointer2,Plus,Type,X,PanelLeft,PanelRight} from "lucide-react";
 import {ids,readWorld,writeWorld,type WorldSpace} from "../lib/oneSpaceCore";
 import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
 import {readProjectDocument,saveProjectDocument,type AimeProjectDocument,type AimePage} from "../lib/aimeProjectDocument";
@@ -25,6 +25,13 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
  const [leftVisible,setLeftVisible]=useState(false);
  const [rightVisible,setRightVisible]=useState(false);
  const [notice,setNotice]=useState("");
+ const [tool,setTool]=useState<"select"|"hand"|"erase">("select");
+ const [addOpen,setAddOpen]=useState(false);
+ const [pendingRemove,setPendingRemove]=useState(false);
+ const [frame,setFrame]=useState<"Auto"|"Ordinateur"|"Tablette"|"Mobile">("Auto");
+ const [zoom,setZoom]=useState(100);
+ const viewport=useRef<HTMLElement|null>(null);
+ const panOrigin=useRef<{x:number;y:number;scrollLeft:number;scrollTop:number}|null>(null);
  const page=doc.pages.find(p=>p.id===doc.activePageId)??null;
  const item=page?.items.find(v=>v.id===selectedItem)??null;
  useEffect(()=>{
@@ -52,11 +59,11 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
   const id=ids(),created=new Date().toISOString();
   const createdPage:AimePage={id,title:"Page "+(doc.pages.length+1),created,items:[]};
   commit({...doc,pages:[...doc.pages,createdPage],activePageId:id});
-  setSelectedItem(null);setInspect("page");setLeftVisible(false);
+  setSelectedItem(null);setInspect("page");setLeftVisible(false);setAddOpen(false);
  }
  function setPage(id:string){
   if(!doc.pages.some(p=>p.id===id))return;
-  commit({...doc,activePageId:id});setSelectedItem(null);setInspect("page");setLeftVisible(false);
+  commit({...doc,activePageId:id});setSelectedItem(null);setPendingRemove(false);setInspect("page");setLeftVisible(false);
  }
  function renamePage(title:string){
   if(!page)return;
@@ -67,7 +74,7 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
   if(page.items.length>=200){setNotice("Limite d'éléments atteinte.");return;}
   const id=ids();
   commit({...doc,pages:doc.pages.map(p=>p.id===page.id?{...p,items:[...p.items,{id,kind:"text",text:"Votre texte"}]}:p)});
-  setSelectedItem(id);setInspect("item");setLeftVisible(false);
+  setSelectedItem(id);setPendingRemove(false);setInspect("item");setLeftVisible(false);setAddOpen(false);
  }
  function changeText(text:string){
   if(!page||!item)return;
@@ -76,7 +83,27 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
  function removeText(){
   if(!page||!item)return;
   commit({...doc,pages:doc.pages.map(p=>p.id===page.id?{...p,items:p.items.filter(e=>e.id!==item.id)}:p)});
-  setSelectedItem(null);setInspect("page");
+  setSelectedItem(null);setPendingRemove(false);setInspect("page");
+ }
+ function chooseItem(id:string){
+  if(tool==="hand")return;
+  setSelectedItem(id);setInspect("item");setRightVisible(true);
+  setPendingRemove(tool==="erase");setLeftVisible(false);
+ }
+ function onPanStart(e:ReactPointerEvent<HTMLElement>){
+  if(tool!=="hand"||!viewport.current||e.button!==0)return;
+  panOrigin.current={x:e.clientX,y:e.clientY,scrollLeft:viewport.current.scrollLeft,scrollTop:viewport.current.scrollTop};
+  e.currentTarget.setPointerCapture(e.pointerId);
+ }
+ function onPanMove(e:ReactPointerEvent<HTMLElement>){
+  const from=panOrigin.current,view=viewport.current;
+  if(!from||!view)return;
+  view.scrollLeft=from.scrollLeft-(e.clientX-from.x);
+  view.scrollTop=from.scrollTop-(e.clientY-from.y);
+ }
+ function onPanEnd(){panOrigin.current=null;}
+ function changeTool(next:"select"|"hand"|"erase"){
+  setTool(next);setAddOpen(false);setPendingRemove(false);
  }
  function exportPages(){
   try{downloadJSON("aime-pages-"+projectId+".json",JSON.stringify({projectId,projectTitle:project?.title??"",document:doc},null,2));setNotice("");}
