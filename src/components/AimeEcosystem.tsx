@@ -1,3 +1,5 @@
+import {DESIGN_SYSTEM,designCSS} from "../lib/designSystem";
+import "../design/components.css";
 import AimeProductVisual from "./AimeProductVisual";
 import {useEffect,useRef,useState,type MouseEvent,type ReactNode} from "react";
 import {ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Clock3,Heart,Layers3} from "lucide-react";
@@ -177,7 +179,7 @@ export default function AimeEcosystem({page,onNavigate,onOpenStudio}:Props){
  useEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=0;
   document.title=(page==="aime-home"?"AIME® — Une architecture de continuité.":page==="vision"?"La vision · AIME®":page==="studio-detail"?((config.studios.find(x=>x.id===slug)?.title||"Studio")+" · AIME®"):page==="universe-detail"?((UNIVERSE_BY_SLUG.get(slug)?.name||"Univers")+" · AIME®"):"Les Univers · AIME®");
  },[page,slug,config.studios]);
- return <div ref={scrollRef} className="ae-shell" aria-label="AIME — Architecture mère">
+ return <div ref={scrollRef} className="ae-shell" data-aime-design={DESIGN_SYSTEM.version} aria-label="AIME — Architecture mère"><style>{designCSS()}</style>
   <SiteHeader onNavigate={onNavigate}/>
   {page==="aime-home"?<MainHome onNavigate={onNavigate} signatures={config.aimeSignatures??AIME_SIGNATURES}/>:
    page==="universe-index"?<Universes onNavigate={onNavigate}/>:

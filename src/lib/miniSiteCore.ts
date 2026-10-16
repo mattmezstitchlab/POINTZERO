@@ -1,3 +1,4 @@
+import {DESIGN_SYSTEM,standaloneDesignCSS} from "./designSystem";
 /** POINTZERO mini-sites: responsive static pages generated locally, without hosting or server forms. */
 import {safeHref} from "./academyCore";
 import {externalById,safeExternalURL} from "./externalProjects";
@@ -8,6 +9,7 @@ export interface MiniSection {
 }
 export interface MiniSite {
   version:1;id:string;name:string;kind:MiniKind;title:string;subtitle:string;
+  designVersion?:"1.0.0";
   dossierBinding?:{version:1;spaceId:string;programmeSectionId:string;programmeMode:"linked"|"custom"};
   eyebrow:string;date:string;place:string;contact:string;
   primaryColor:string;background:string;heroImage:string;
@@ -29,14 +31,14 @@ const defaultBlocks:Record<MiniKind,Array<[MiniSectionKind,string,string]>>={
   presentation:[["texte","Notre vision","La présentation de votre activité, tout simplement."],["galerie","Nos projets","Une sélection de créations."],["informations","Informations","Retrouvez ici les informations essentielles."],["contact","Nous contacter","Prenons contact pour en discuter."]]
 };
 const defaults:Record<MiniKind,[string,string,string,string,string]>={
-  mariage:["Camille & Gabriel","Nous avons le bonheur de vous inviter","LE GRAND JOUR","#9d6e6a","#faf5ef"],
+  mariage:["Camille & Gabriel","Nous avons le bonheur de vous inviter","LE GRAND JOUR",DESIGN_SYSTEM.tokens.petrol,DESIGN_SYSTEM.tokens.subtle],
   portfolio:["Une signature singulière","Découvrez mes créations et mon univers","PORTFOLIO","#726763","#faf8f5"],
   evenement:["Une rencontre à vivre","Toutes les informations au même endroit","ÉVÉNEMENT","#526b78","#f7f8f8"],
   presentation:["Votre univers prend forme","Une page simple pour présenter l'essentiel","BIENVENUE","#655f7b","#f8f7fa"]
 };
 export function createMiniSite(kind:MiniKind="mariage"):MiniSite{
   const [title,subtitle,eyebrow,primaryColor,background]=defaults[kind];
-  return {version:1,id:id(),name:MINI_KINDS.find(x=>x.id===kind)!.name+" sans titre",kind,title,subtitle,eyebrow,date:"",place:"",contact:"",primaryColor,background,heroImage:"",
+  return {version:1,designVersion:DESIGN_SYSTEM.version as "1.0.0",id:id(),name:MINI_KINDS.find(x=>x.id===kind)!.name+" sans titre",kind,title,subtitle,eyebrow,date:"",place:"",contact:"",primaryColor,background,heroImage:"",
     sections:defaultBlocks[kind].map(([k,t,b])=>section(k,t,b)),projectId:"",heroAlt:"",heroActionLabel:"",heroActionHref:""};
 }
 export const miniSection=(kind:MiniSectionKind):MiniSection=>{
@@ -48,6 +50,7 @@ export const safeHero=(src:unknown)=>typeof src==="string"&&(!src||(/^data:image
 export function safeMiniSite(value:unknown):MiniSite|null {
   if(!value||typeof value!=="object")return null;
   const d=value as Partial<MiniSite>;
+  if(d.designVersion!==undefined&&d.designVersion!=="1.0.0")return null;
   if(d.version!==1||typeof d.id!=="string"||d.id.length>120||!MINI_KINDS.some(k=>k.id===d.kind)||
     !["name","title","subtitle","eyebrow","date","place","contact","projectId"].every(k=>{
       const v=d[k as keyof MiniSite];return typeof v==="string"&&v.length<1000;
@@ -98,9 +101,9 @@ export function miniSiteToHTML(doc:MiniSite):string {
   const heroCTA=doc.heroActionLabel&&doc.heroActionHref&&safeHref(doc.heroActionHref)?
     '<a class="cta hero-cta" href="'+esc(safeHref(doc.heroActionHref))+'">'+esc(doc.heroActionLabel)+'</a>':"";
   const safeMail=emailOK(doc.contact)?'<a href="mailto:'+encodeURIComponent(doc.contact)+'">'+esc(doc.contact)+'</a>':esc(doc.contact);
-  return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+  return '<!doctype html><html lang="fr" data-aime-design-version="'+(doc.designVersion==='1.0.0'?DESIGN_SYSTEM.version:'legacy')+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
     '<meta name="description" content="'+esc(doc.subtitle)+'"><title>'+esc(doc.title)+'</title>'+
-    '<style>:root{--accent:'+doc.primaryColor+';--paper:'+doc.background+'}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:#171719;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif}'+
+    '<style>'+(doc.designVersion==='1.0.0'?standaloneDesignCSS():'')+':root{--accent:'+doc.primaryColor+';--paper:'+doc.background+'}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:#171719;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif}'+
     '.site-header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:30px;padding:0 max(24px,calc((100vw - 1120px)/2));background:var(--paper);position:sticky;top:0;z-index:3;border-bottom:1px solid #0001}'+
     '.brand{font-size:15px;font-weight:700;text-decoration:none;color:inherit}.nav{display:flex;gap:20px;overflow:auto;white-space:nowrap}.nav a{font-size:12px;color:#333;text-decoration:none}.nav a:hover{text-decoration:underline}'+
     '.hero{min-height:550px;display:grid;place-items:center;text-align:center;padding:95px 24px;position:relative;isolation:isolate;overflow:hidden}'+
@@ -113,6 +116,7 @@ export function miniSiteToHTML(doc:MiniSite):string {
     '.cta{display:inline-flex;margin-top:22px;padding:13px 21px;background:#171719;color:white;border-radius:5px;text-decoration:none}.hero-cta{font-weight:700}.nav a:focus-visible,.cta:focus-visible,.brand:focus-visible{outline:3px solid #171719;outline-offset:4px}.footer{padding:50px 24px;text-align:center;border-top:1px solid #0002;font-size:12px;color:#666}'+
     '@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}'+
     '@media(max-width:720px){.site-header{height:auto;min-height:64px;padding:12px 18px;display:block}.nav{margin-top:10px}.hero{min-height:440px;padding:72px 18px}.section{padding:58px 20px}.gallery{grid-template-columns:1fr 1fr}.gallery-card{min-height:120px}}'+
+    (doc.designVersion==='1.0.0'?'body{font-family:var(--aime-body)}h1,h2{font-family:var(--aime-heading)}.cta{border-radius:var(--aime-pill);background:var(--aime-button);color:var(--aime-buttonText);min-height:48px}.hero{min-height:clamp(500px,82vh,850px);padding:clamp(72px,10vw,150px) var(--aime-gutter)}.hero-image{opacity:.32}.section-inner{max-width:1000px}.section{padding:clamp(60px,8vw,120px) var(--aime-gutter)}.hero:has(.hero-image){background:#161616;color:white}.hero:has(.hero-image) .subtitle,.hero:has(.hero-image) .eyebrow{color:white}.hero:has(.hero-image) .cta{background:white;color:#161616}':'')+
     '</style></head><body><header class="site-header"><a class="brand" href="#top">'+esc(doc.title)+'</a><nav class="nav" aria-label="Sections">'+links+'</nav></header>'+
     '<main id="top"><div class="hero">'+hero+'<div><p class="eyebrow">'+esc(doc.eyebrow)+'</p><h1>'+esc(doc.title)+'</h1><p class="subtitle">'+esc(doc.subtitle)+'</p>'+
     '<p class="meta">'+esc([doc.date,doc.place].filter(Boolean).join(" · "))+'</p>'+heroCTA+'</div></div>'+

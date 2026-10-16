@@ -1,3 +1,4 @@
+import DesignFoundation from "./DesignFoundation";
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Contrast, Download, Eye, FileCheck2, FileDown, LockKeyhole, Palette, RotateCcw, ScanSearch, Shield, Sparkles, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
@@ -161,6 +162,7 @@ export default function AccessibilityStudio({onBack}:{onBack:()=>void}){
        </div>
      </>}
      {section==="colors"&&<>
+       <DesignFoundation/>
        <div className="space-y-4 rounded-[8px] border border-white/15 bg-white/5 p-4">
          <h3 className="text-sm font-semibold">Couleurs de marque</h3>
          <p className="text-xs text-white/60">Gamme inspirée du principe des rampes de Dabbit. Chaque teinte peut générer dix nuances et être évaluée sur fond blanc et fond noir.</p>

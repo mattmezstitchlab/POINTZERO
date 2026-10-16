@@ -1,3 +1,5 @@
+import {DESIGN_SYSTEM,designCSS} from "../lib/designSystem";
+import "../design/components.css";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight, Clock3, Fingerprint, GitBranch, Grid2X2, GraduationCap, HeartHandshake, Mail, Music2, ShieldCheck, Sparkles } from "lucide-react";
 import { DEFAULT_LAUNCH, STATUS_LABELS, countdown, validLaunch, type LaunchConfig } from "../lib/launchManifest";
@@ -179,7 +181,7 @@ export default function ManifestLanding({onDetails,onAime,onOpenAtelier,onUniver
  },[]);
  const config=state.config??DEFAULT_LAUNCH;
  const heroIntro=(config.introduction||DEFAULT_LAUNCH.introduction);
- return <div className="pz-manifest" aria-label="POINTZERO .0 — Le temps retrouvé">
+ return <div className="pz-manifest" data-aime-design={DESIGN_SYSTEM.version} aria-label="POINTZERO .0 — Le temps retrouvé"><style>{designCSS()}</style>
   <header className="pz-manifest-nav"><button type="button" onClick={onAime} className="pz-manifest-mark" aria-label="Retour à AIME, maison mère"><span className="pz-manifest-logo" aria-hidden="true">×</span> POINTZERO <span className="pz-manifest-zero">.0</span></button>
    <nav aria-label="Navigation du manifeste"><button type="button" onClick={onAime}>AIME</button><a href="#manifeste">Manifeste</a><a href="#studios">Studios</a><a href="#continuite" className="hidden sm:inline">Continuité</a></nav>
    <button className="pz-manifest-nav-cta" type="button" onClick={onOpenAtelier}>Ouvrir l’Atelier <ArrowUpRight size={15}/></button>

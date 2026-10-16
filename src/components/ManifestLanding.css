@@ -189,3 +189,6 @@
  .pz-manifest *{animation:none!important;transition:none!important}
  .pz-manifest-button:hover,.pz-manifest-studio:hover,.pz-manifest-node:hover{transform:none}
 }
+
+.pz-manifest[data-aime-design] .pz-manifest-button{border-radius:var(--aime-pill);background:var(--aime-button);color:var(--aime-buttonText);min-height:48px}
+.pz-manifest[data-aime-design] :focus-visible{outline:2px solid var(--pz-accent,var(--aime-focus));outline-offset:4px}

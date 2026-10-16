@@ -9,7 +9,7 @@ export default function AimeProductVisual(){
   return {design:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(designToSVG(design)),site:miniSiteToHTML(site)};
  },[]);
  return <figure className="ai-product-visual">
-  <div className="ai-product-strip"><span>POINTZERO / Atelier</span><span>Créer · Composer · Exporter</span></div>
+  <div className="ai-product-strip"><span>Rendus exportés · Design / Mini-site</span><span>Ce panneau n’est pas l’interface de l’Atelier</span></div>
   <div className="ai-product-stage">
    <img src={visual.design} alt="Faire-part fictif rendu par le moteur Design existant" width="800" height="1100" loading="lazy"/>
    <iframe title="Mini-site de mariage fictif — rendu du moteur existant" sandbox="" srcDoc={visual.site} loading="lazy" tabIndex={-1}/>
