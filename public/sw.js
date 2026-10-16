@@ -1,8 +1,11 @@
+const BUILD_ASSETS = [];
 const CACHE = "point-zero-aime-v1";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./app-icon.svg", "./images/grille-roses.png", "./images/papillon.png", "./images/hero-ipad-broderie.jpg"];
+const SHELL = [...BUILD_ASSETS,"./", "./index.html", "./manifest.webmanifest", "./app-icon.svg", "./images/grille-roses.png", "./images/papillon.png", "./images/hero-ipad-broderie.jpg"];
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then(async (cache) => {
-    await Promise.all(SHELL.map((path) => cache.add(path).catch(() => undefined)));
+    // A failed critical asset must reject installation: keep the previous offline shell.
+    await cache.addAll([...BUILD_ASSETS, "./", "./index.html"]);
+    await Promise.all(SHELL.filter(path=>!BUILD_ASSETS.includes(path)&&path!=="./"&&path!=="./index.html").map(path=>cache.add(path).catch(()=>undefined)));
     await self.skipWaiting();
   }));
 });

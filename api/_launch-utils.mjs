@@ -95,4 +95,6 @@ export const respondPage=(res,title,body)=>{
  res.setHeader("Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
  return res.status(200).end("<!doctype html><html lang='fr'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+escapeHTML(title)+" · POINTZERO</title><body style='font:16px system-ui;background:#f8f8f7;color:#222;margin:0;padding:8vh 24px;text-align:center'><main style='max-width:480px;margin:auto'><p>POINTZERO .0</p><h1>"+escapeHTML(title)+"</h1>"+body+"<p style='margin-top:35px'><a href='/'>Retour à POINTZERO</a></p></main></body></html>");
 };
-\n// Prevent any accidental direct invocation of the shared server utility route.\nexport default function notAnEndpoint(_req,res){return res.status(404).end();}\n
+
+// Shared helper is not a public endpoint.
+export default function notAnEndpoint(_req,res){return res.status(404).end();}

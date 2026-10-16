@@ -40,7 +40,8 @@ export async function openPdf(file: File): Promise<PdfHandle> {
     pdfjs.GlobalWorkerOptions.workerSrc = worker;
   }
   const data = new Uint8Array(await file.arrayBuffer());
-  const doc = await pdfjs.getDocument({ data }).promise;
+  const task = pdfjs.getDocument({ data });
+  const doc = await task.promise;
   return {
     pages: doc.numPages,
     async dims(n) {
@@ -97,7 +98,7 @@ export async function openPdf(file: File): Promise<PdfHandle> {
       return out;
     },
     destroy: () => {
-      void doc.destroy();
+      void task.destroy();
     },
   };
 }
