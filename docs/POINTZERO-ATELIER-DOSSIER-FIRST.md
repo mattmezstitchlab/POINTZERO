@@ -1,32 +1,40 @@
-# POINTZERO — Atelier d'abord, Dossier comme point d'entrée
+# POINTZERO — Architecture Bureau → Projet → Édition
 
-## Décision de produit
+## Décision de conception
 
-Une application se présente par son **outil réel**, pas par une succession de landings.
-La racine `/` ouvre le **Studio Édition** existant : canevas, éléments, formats, projets, grille et actions d'export. Le bouton **Broderie** et le menu **Studios** restent opérationnels.
+Les landing pages ne sont plus l'interface d'accueil. La racine `/` ouvre un **Bureau** de projets réels, inspiré par la hiérarchie fonctionnelle d'un éditeur professionnel (sans copier l'identité ou les visuels de Framer). Le **Dossier est le projet**, pas un Studio supplémentaire.
 
-## Nouveau parcours canonique
+## Parcours de la première passe
 
-1. `/` — l'Atelier Édition est visible directement, sans hero, introduction ou manifeste préalable.
-2. **Dossier** dans l'en-tête — afficher les dossiers locaux existants, sélectionner celui qui est actif, ou choisir **Nouveau dossier**.
-3. **Nouveau dossier** / **Gérer le Dossier Universel** — utiliser **le moteur existant** à `/espace`, avec confirmation avant toute création. Retour vers `/`.
-4. **Studios** — ouvrir les outils métiers existants (MÉTAMORPHOSE, Mini-site, Broderie, PDF, Accessibilité, etc.). Le Dossier n'apparaît plus en doublon dans ce menu.
+1. `/` : Bureau sombre ; projets locaux issus de `WorldSpace.id` (clé existante `pointzero:one-space:v1`), recherche, archivage local réversible, création d'un projet nommé et typé, sans modèles pré-remplis.
+2. `/atelier` : éditeur réel du projet sélectionné. Le document graphique est vierge (aucune fleur rose ni décoration automatique) et stocké sous une clé propre à ce projet.
+3. Colonne gauche : Ajouter (texte, forme, image), Calques (vrais éléments sélectionnables), Fichiers (créations du projet), Grille (moteur de fragments). Inspecteur à droite, canvas au centre.
+4. Broderie et autres moteurs restent ouverts depuis le menu Studios existant pour assurer la continuité des travaux, **sans prétendre qu'ils utilisent déjà tous le même document**.
+5. Retour Bureau : navigation explicite depuis l'éditeur, sans destruction.
+6. Les anciennes routes documentaires (`/vision`, `/univers`, `/pointzero`, `/le-monde-aime`, `/dossier`, `/espace`) restent consultables pour éviter de casser les liens externes et préserver l'association.
 
-## Garanties et limites
+## Politique anti-friction
 
-- Aucune suppression ni migration du contenu existant. Les anciennes URL éditoriales (`/pointzero`, `/vision`, `/univers`, `/le-monde-aime`, `/dossier`) restent lisibles par liens directs pour ne pas casser les références ni supprimer l'identité associative.
-- Ces anciennes pages ne sont **plus le point d'entrée**, ni l'objet d'une nouvelle campagne de landing.
-- Dossiers = stockage canonique `pointzero:one-space:v1` avec `WorldSpace.id`; le sélecteur refuse d'écraser un stockage illisible/incompatible. Créations Édition = stockage spécialisé distinct et conservé.
-- Choisir un Dossier détermine le contexte courant ; cela ne relie **pas encore** un document Édition, un patron ou un mini-site au Dossier. Cette association doit faire l'objet d'une action explicite dans un prochain chantier.
-- Aucun agent n'est automatiquement exécuté, aucune donnée n'est publiée. Les utilisateurs restent responsables de leurs sauvegardes et exports.
-- L'Atelier Édition continue de sauvegarder localement son propre document comme auparavant.
+- Ne montrer aucune fleur, grille DMC ou maquette de mariage non demandée dans les nouveaux documents graphiques.
+- Ne pas supprimer les presets dans le vrai moteur Broderie : ils font partie de son métier.
+- Ne pas réécrire les anciens documents graphiques ; leurs motifs et rendus restent pris en charge par le moteur existant.
+- Ne pas modifier ou migrer implicitement les autres clés : `pointzero:design-current:v1` et `pointzero:design-drafts:v1` restent inchangées, avec un accès « Anciennes créations » dans le Bureau.
+- Le nouvel éditeur par projet utilise `pointzero:design:project:<id>:current:v1` et `...:drafts:v1`. Il s'agit d'une **première liaison locale**, pas encore d'une véritable synchronisation multi-Studio.
 
-## Recette avant fusion
+## Feuille de route — encore à implémenter
 
-- Vérifier les parcours `/`, `/atelier`, `/?studio=embroidery` et `/espace`.
-- Dossier absent : menu vide, clic Nouveau dossier, formulaire existant, aucune création avant confirmation.
-- Dossier existant : sélection, conservation des autres dossiers et du document graphique, retour à l'Atelier.
-- Vérifier les boutons Broderie, Studios, Projets, Grille et Export, ainsi que les accès historiques.
-- Valider visuellement clavier, zoom 200 %, mobile 390px, tablette 768px et desktop 1440px dans une preview Vercel.
+- **Modèle de document commun** : identifiants canoniques, pages, calques, médias, fragments et références aux sources ; schéma versionné et import/export non destructif.
+- **Commandes transversales** : Annuler, rétablir, importer, exporter, zoom, aligner, dupliquer, commentaires et validations ; adaptation métier plutôt que duplications.
+- **Moteurs/Plugins** : Broderie, Design, Mini-site, PDF, Accessibilité, Musique, Chronologie et Causalité partagent contexte, fichiers et commandes, mais gardent les formats de sortie spécialisés.
+- **Catalogue de capacités** : une fonction apparaît dans l'Atelier selon l'objet sélectionné ; pas de vingt interfaces concurrentes.
 
-Ce changement ne supprime pas physiquement les anciens composants de landing dans Git : ils restent archivables, sans être le parcours par défaut. Leur suppression technique définitive nécessite un inventaire des références et des liens entrants.
+## Recette
+
+- `npm run verify` (API + TS + Vitest + Vite + offline) et SHA Vercel.
+- Bureau sans projets, nouveau projet, sélection, recherche, archivage/restauration ; vérifier l'absence d'écriture avant confirmation.
+- Ouvrir deux projets : les deux documents de l'éditeur restent séparés. Revenir au Bureau puis rouvrir et vérifier les données.
+- Vérifier l'absence des presets floraux dans Ajouter et sur les nouveaux canevas, tout en ouvrant de vieux documents avec motifs.
+- Tester Broderie, Studios et les anciennes URLs sans redirection destructive.
+- Tests manuels de rendu 390/768/1440 px, clavier, zoom 200 %, lecteur d'écran.
+
+**Statut :** prototype structurel en PR Draft ; ne pas fusionner dans `main` ni publier en production sans recette fonctionnelle et visuelle.
