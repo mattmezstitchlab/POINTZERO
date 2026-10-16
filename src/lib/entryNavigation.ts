@@ -2,7 +2,7 @@
  * This module never reads or clears a user's saved projects.
  */
 export const STUDIO_ROUTES=[
- "design","embroidery","photo","fashion","budget","programme","admin",
+ "bureau","project","design","embroidery","photo","fashion","budget","programme","admin",
  "mini-site","pdf","generation","music","art-world","aime-landing",
  "music-production","accessibility","academy","one-space","causal",
  "legal","metamorphose","ripplecircle","game","manifest","manifest-admin",
@@ -21,8 +21,11 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
  const path=decodeURI(pathname).replace(/\/+$/,"")||"/";
  if(path==="/") {
   const legacy=params.get("studio");
-  return isStudioRoute(legacy)&&legacy!=="manifest-admin"?legacy:"aime-home";
+  return isStudioRoute(legacy)&&!["manifest-admin","bureau","project"].includes(legacy)?legacy:"bureau";
  }
+ if(path==="/bureau")return "bureau";
+ if(path==="/aime")return "aime-home";
+ if(/^\/projet\/[a-zA-Z0-9-]{1,100}$/.test(path))return "project";
  if(path==="/pointzero")return "manifest";
  if(path==="/le-monde-aime")return "aime-landing";
  if(path==="/vision")return "vision";
@@ -33,12 +36,15 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
  if(/^\/studios\/[a-z0-9-]+$/.test(path))return "studio-detail";
  if(path==="/atelier"){
   const chosen=params.get("studio");
+  if(!chosen&&params.get("project")&&params.get("legacy")!=="1")return "project";
   return isStudioRoute(chosen)&&!["manifest-admin","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier","manifest","aime-landing"].includes(chosen)?chosen:"design";
  }
- return "aime-home";
+ return "bureau";
 }
 export function publicPathFor(mode:StudioRoute){
- if(mode==="aime-home")return "/";
+ if(mode==="bureau")return "/";
+ if(mode==="aime-home")return "/aime";
+ if(mode==="project")return "/";
  if(mode==="manifest")return "/pointzero";
  if(mode==="aime-landing")return "/le-monde-aime";
  if(mode==="vision")return "/vision";
