@@ -71,7 +71,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   it("ouvre un Bureau vide et ne crée aucun projet avant confirmation", async () => {
     localStorage.setItem("pointzero:workspace","embroidery");
     await mount(true);
-    expect(container?.querySelector('[aria-label="Bureau POINTZERO"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Bureau AIME"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeNull();
     expect(window.location.pathname).toBe("/");
     expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
@@ -180,7 +180,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
     await click(button("Ouvrir le menu des studios"));
-    await click(button("Ouvrir le studio POINTZERO Academy · UI/UX & No Code"));
+    await click(button("Ouvrir le studio AIME Academy · UI/UX & No Code"));
     expect(container?.querySelector('[aria-label="Espace UI/UX & Academy"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Prévisualisation du site No Code"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Progression du parcours UI UX"]')).toBeTruthy();
