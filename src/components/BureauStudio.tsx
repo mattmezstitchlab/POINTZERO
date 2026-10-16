@@ -55,7 +55,8 @@ export default function BureauStudio({onOpenProject,onLegacyEditor}:Props){
    const current=writableWorld();
    if(current.spaces.length>=30)throw Error("Limite de 30 projets locaux atteinte. Exportez vos projets avant d'en créer d'autres.");
    const project=newSpace(kind,title);
-   // This is the real Dossier identity; no fictitious intention or template.
+   // AIME starts genuinely empty: do not seed legacy modules or templates for new projects.
+   project.tiles=[];
    project.dossier=emptyUniversalMeta("",kind);
    writeWorld({...current,spaces:[...current.spaces,project],selectedSpaceId:project.id});
    window.dispatchEvent(new Event(AIME_WORLD_CHANGED));
