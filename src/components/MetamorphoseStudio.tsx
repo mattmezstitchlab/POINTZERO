@@ -1,8 +1,8 @@
 import ZoomCodePrototype from "./ZoomCodePrototype";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, FileSearch, GitBranch, Grid2X2, ShieldAlert } from "lucide-react";
 import FragmentGridWorkspace from "./FragmentGridWorkspace";
-import { allowedFragmentUrl, readFragments, type FragmentCollection } from "../lib/fragmentGrid";
+import { allowedFragmentUrl, demoFragments, readFragments, type FragmentCollection } from "../lib/fragmentGrid";
 
 interface ScanObservation {id:string;title:string;evidence:string;status:string}
 interface ScanResult {title:string;url:string;fragments:unknown[];findings:ScanObservation[];limitations:string[]}
@@ -15,7 +15,26 @@ export default function MetamorphoseStudio({onBack,onCircle,onGame}:{onBack:()=>
  const [error,setError]=useState("");
  const [collection,setCollection]=useState<FragmentCollection|null>(null);
  const [report,setReport]=useState<ScanResult|null>(null);
- const [section,setSection]=useState<"source"|"report">("source");
+ const [section,setSection]=useState<"explore"|"source"|"report">("explore");
+ const [workspaceMode,setWorkspaceMode]=useState<"composition"|"research">("composition");
+ const [pendingFocus,setPendingFocus]=useState<string|null>(null);
+ const [items,setItems]=useState(()=>{
+  try{return readFragments(JSON.parse(localStorage.getItem("pointzero:universal-fragments:v1")??"null"))??demoFragments()}
+  catch{return demoFragments()}
+ });
+ useEffect(()=>{
+  const sync=()=>{try{const raw=localStorage.getItem("pointzero:universal-fragments:v1");
+    if(raw!==null){const parsed=readFragments(JSON.parse(raw));if(parsed)setItems(parsed)}
+  }catch{/* Keep original corrupt bytes untouched */}};
+  window.addEventListener("aime:fragments-changed",sync);window.addEventListener("storage",sync);
+  return()=>{window.removeEventListener("aime:fragments-changed",sync);window.removeEventListener("storage",sync)};
+ },[]);
+ useEffect(()=>{
+  if(workspaceMode==="composition"&&pendingFocus){
+   window.dispatchEvent(new CustomEvent("aime:fragment-focus",{detail:{id:pendingFocus}}));
+   setPendingFocus(null);
+  }
+ },[workspaceMode,pendingFocus]);
  async function scan(e:FormEvent){
   e.preventDefault();
   if(!allowedFragmentUrl(url)){setError("URL HTTPS publique requise.");return}
@@ -49,12 +68,22 @@ export default function MetamorphoseStudio({onBack,onCircle,onGame}:{onBack:()=>
   </header>
   <div className="flex min-h-0 flex-1">
    <aside aria-label="Point Zéro Métamorphose" className="thin-scroll hidden w-[252px] shrink-0 overflow-y-auto border-r border-white/15 p-3 text-white lg:block">
-    <div className="mb-4 flex items-center justify-between"><h2 className="text-[12px] font-semibold">POINT ZÉRO</h2><Grid2X2 size={15} className="text-white/50"/></div>
+    <div className="mb-4 flex items-center justify-between"><h2 className="text-[12px] font-semibold">EXPLORER</h2><Grid2X2 size={15} className="text-white/50"/></div>
     <div className="mb-4 flex gap-1">
+      <button aria-pressed={section==="explore"} onClick={()=>setSection("explore")} className={"flex-1 rounded-[4px] px-2 py-2 text-xs "+(section==="explore"?"bg-white text-black":"border border-white/20")}>Objets</button>
       <button aria-pressed={section==="source"} onClick={()=>setSection("source")} className={"flex-1 rounded-[4px] px-2 py-2 text-xs "+(section==="source"?"bg-white text-black":"border border-white/20")}>Source</button>
       <button aria-pressed={section==="report"} onClick={()=>setSection("report")} className={"flex-1 rounded-[4px] px-2 py-2 text-xs "+(section==="report"?"bg-white text-black":"border border-white/20")}>Diagnostic</button>
     </div>
-    {section==="source"?<form className="space-y-3" onSubmit={e=>void scan(e)}>
+    {section==="explore"?<nav aria-label="Objets de la composition" className="space-y-1">
+      <p className="mb-3 text-[11px] text-white/60">{items.fragments.length} fragments · collection commune, aucune duplication.</p>
+      {items.fragments.map(f=><button key={f.id} type="button" onClick={()=>{
+       setWorkspaceMode("composition");setPendingFocus(f.id);
+      }} className="block min-h-10 w-full rounded-[5px] border border-white/10 p-2 text-left text-[11px] hover:bg-white/10">
+       <span className="block truncate font-semibold">{f.title}</span>
+       <span className="text-white/50">{f.kind} · {f.source?"Design lié":f.locked?"Verrouillé":"Fragment"}</span>
+      </button>)}
+      <p className="mt-4 text-[10px] leading-relaxed text-white/50">Design, Broderie et Documents conservent leurs données spécialisées. L'Atelier référence uniquement les capacités déjà compatibles.</p>
+     </nav>:section==="source"?<form className="space-y-3" onSubmit={e=>void scan(e)}>
       <p className="text-[11px] leading-relaxed text-white/60">Entrez l'adresse de votre site. Le titre et les en-têtes HTML reconnus deviennent des fragments ; ce n’est pas une copie des composants interactifs.</p>
       <p className="text-xs leading-relaxed text-white/80">Activation requise en Preview : POINTZERO_SCAN_ACCESS_CODE (secret) et POINTZERO_SCAN_ALLOWED_HOSTS (domaines possédés). À configurer par le propriétaire dans Vercel Settings → Environment Variables, puis reconstruire uniquement cette preview. Ne partagez pas votre code.</p>
       <label className="block text-[11px] text-white/70">URL du site
@@ -85,6 +114,13 @@ export default function MetamorphoseStudio({onBack,onCircle,onGame}:{onBack:()=>
    </aside>
    <div className="flex min-w-0 flex-1 flex-col">
     <div className="border-b border-white/15 p-2 lg:hidden">
+      <details className="mb-2 rounded-[5px] border border-white/15 p-2">
+       <summary className="cursor-pointer text-xs">Explorer · Fragments ({items.fragments.length})</summary>
+       <nav aria-label="Explorer sur mobile" className="mt-2 grid grid-cols-2 gap-2">
+       {items.fragments.map(f=><button key={f.id} type="button" className="min-h-10 rounded border border-white/20 p-2 text-left text-xs"
+        onClick={()=>{setWorkspaceMode("composition");setPendingFocus(f.id)}}>{f.title}</button>)}
+       </nav>
+      </details>
       <details className="rounded-[5px] border border-white/15 p-2"><summary className="cursor-pointer text-xs">Point Zéro · Scanner une URL</summary>
       <form className="mt-3 grid gap-2" onSubmit={e=>void scan(e)}>
        <input aria-label="URL à décomposer" className={field} type="url" placeholder="https://mon-site.fr" value={url} onChange={e=>setUrl(e.target.value)}/>
@@ -93,8 +129,16 @@ export default function MetamorphoseStudio({onBack,onCircle,onGame}:{onBack:()=>
        <button disabled={busy} className="rounded-[5px] bg-white p-2 text-xs text-black">Propager</button>{error&&<p role="alert" className="text-xs text-red-200">{error}</p>}
       </form></details>
     </div>
+    <div className="flex flex-wrap gap-2 border-b border-white/15 p-2" role="group" aria-label="Mode d'Atelier">
+      <button type="button" aria-pressed={workspaceMode==="composition"} onClick={()=>setWorkspaceMode("composition")}
+       className={"rounded-[5px] px-3 py-2 text-xs "+(workspaceMode==="composition"?"bg-white text-black":"border border-white/20")}>Composer · Grille universelle</button>
+      <button type="button" aria-pressed={workspaceMode==="research"} onClick={()=>setWorkspaceMode("research")}
+       className={"rounded-[5px] px-3 py-2 text-xs "+(workspaceMode==="research"?"bg-white text-black":"border border-white/20")}>Recherche · Zoom Code broderie</button>
+    </div>
     <div className="flex min-h-0 flex-1">
-     <div style={{minWidth:0,flex:1,overflow:"auto"}}><ZoomCodePrototype/><div style={{display:"flex",minHeight:600}}><FragmentGridWorkspace incoming={collection}/></div></div>
+     <div style={{minWidth:0,flex:1,overflow:"auto"}}>{workspaceMode==="composition"
+      ?<div style={{display:"flex",minHeight:600}}><FragmentGridWorkspace incoming={collection}/></div>
+      :<ZoomCodePrototype/>}</div>
     </div>
    </div>
   </div>
