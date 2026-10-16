@@ -27,7 +27,7 @@ function LocalLink({href,onNavigate,children,className=""}:{href:string;onNaviga
  };
  return <a href={href} onClick={click} className={className}>{children}</a>;
 }
-export default function AimeUnifiedHome({onNavigate}:{onNavigate:(path:string)=>void}){
+export default function AimeUnifiedHome({onNavigate}:{onNavigate:(path:string,intention?:string)=>void}){
  const [intent,setIntent]=useState("");
  const [studioId,setStudioId]=useState<StudioId>("metamorphose");
  const [showPreview,setShowPreview]=useState(false);
@@ -38,7 +38,7 @@ export default function AimeUnifiedHome({onNavigate}:{onNavigate:(path:string)=>
   const value=intent.trim();
   if(value.length<8)return;
   // Only prefill the existing Dossier Universel. Nothing is saved or sent from the landing.
-  onNavigate("/espace?intention="+encodeURIComponent(value.slice(0,800)));
+  onNavigate("/espace",value.slice(0,800));
  }
  return <main id="contenu" className="au-home">
    <section className="au-hero" aria-labelledby="au-hero-title">
