@@ -252,16 +252,16 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
   return <div className="pz-design fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#151517] text-white">
     <header className="z-20 flex h-[58px] shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#09090b] px-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <span className="shrink-0 text-[13px] font-bold tracking-tight">× <span className="hidden sm:inline">POINTZERO</span></span>
+        <span className="shrink-0 text-[13px] font-bold tracking-[.035em]">AIME</span>
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
-        <span className="hidden truncate text-[12px] text-white/75 sm:inline">Édition</span>
+        <span className="hidden truncate text-[12px] text-white/75 sm:inline">Atelier</span>
         {onBureau&&<button type="button" aria-label="Retour au Bureau" onClick={onBureau} className={action+" shrink-0"}><FolderOpen size={15}/><span className="hidden sm:inline">Bureau</span></button>}
         <span className="hidden max-w-[220px] truncate text-[12px] text-white/60 lg:inline">{currentProject?.title??"Création indépendante"}</span>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
         <div className="relative">
           <button type="button" aria-label="Ouvrir le menu des studios" aria-expanded={showStudios}
             onClick={()=>{setShowStudios(x=>!x);setShowDecline(false);setShowExport(false);}} className={action}>
-            <LayoutTemplate size={15}/><span className="hidden sm:inline">Studios</span><ChevronDown size={13}/>
+            <LayoutTemplate size={15}/><span className="hidden sm:inline">Outils</span><ChevronDown size={13}/>
           </button>
           {showStudios&&<div aria-label="Choix du studio" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[220px] max-h-[76dvh] overflow-y-auto p-2">
             {([
@@ -276,12 +276,12 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
               {name:"Musique inclusive",icon:<Music2 size={16}/>,onClick:onMusic},
               {name:"Music · Radio & Label",icon:<Music2 size={16}/>,onClick:onMusicProduction},
               {name:"Accessibilité & Design System",icon:<Accessibility size={16}/>,onClick:onAccessibility},
-              {name:"POINTZERO Academy · UI/UX & No Code",icon:<GraduationCap size={16}/>,onClick:onAcademy},
-              {name:"Mon Espace · Tous les mondes",icon:<Layers3 size={16}/>,onClick:onSpace},
+              {name:"AIME Academy · UI/UX & No Code",icon:<GraduationCap size={16}/>,onClick:onAcademy},
+              {name:"Tous les projets et univers",icon:<Layers3 size={16}/>,onClick:onSpace},
               {name:"AIME MÉTAMORPHOSE · Grille",icon:<Sparkles size={16}/>,onClick:onMetamorphose},
               {name:"RIPPLECIRCLE · Cadran vivant",icon:<GitBranch size={16}/>,onClick:onRippleCircle},
-              {name:"Studio Game · Confetti 30",icon:<Gamepad2 size={16}/>,onClick:onGame},
-              {name:"Studio Causal · RIPPLE",icon:<GitBranch size={16}/>,onClick:onCausal},
+              {name:"Jeu · Confetti 30",icon:<Gamepad2 size={16}/>,onClick:onGame},
+              {name:"Liens et impacts · RIPPLE",icon:<GitBranch size={16}/>,onClick:onCausal},
               {name:"Juridique & RGPD",icon:<Scale size={16}/>,onClick:onLegal},
               {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld}
             ]).filter(i=>!!i.onClick).map(item=>
@@ -317,7 +317,7 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
       <button onClick={()=>setSidebar(!sidebar)} className="absolute left-3 top-3 z-20 grid size-10 place-items-center rounded-[5px] border border-white/20 bg-[#09090b] lg:hidden" aria-label={sidebar?"Fermer les ressources":"Ouvrir les ressources"}><LayoutTemplate size={18}/></button>
       <aside aria-label="Ressources et formats" className={"pz-design-sidebar absolute bottom-0 left-0 top-0 z-20 flex w-[252px] flex-col border-r border-white/10 bg-[#0b0b0d] lg:relative lg:translate-x-0 "+(sidebar?"translate-x-0":"-translate-x-full")}>
         <div className="grid grid-cols-4 gap-1 border-b border-white/10 p-2">
-          {([["elements","Ajouter"],["layers","Calques"],["documents","Fichiers"],["fragments","Grille"]] as const).map(([id,label])=>
+          {([["elements","Ajouter"],["layers","Éléments"],["documents","Fichiers"],["fragments","Grille"]] as const).map(([id,label])=>
             <button key={id} onClick={()=>setLeftTab(id)} aria-pressed={leftTab===id} className={"min-h-9 rounded-[5px] text-[11px] font-semibold "+(leftTab===id?"bg-white text-black":"text-white/65 hover:bg-white/10")}>{label}</button>)}
         </div>
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3">
@@ -331,7 +331,7 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
             <p className="mt-5 text-[11px] leading-relaxed text-white/45">Ajoutez uniquement ce dont vous avez besoin. Les motifs de broderie restent dans l'outil Broderie.</p>
           </>}
           {leftTab==="layers"&&<>
-            <h2 className="mb-3 text-xs font-semibold">Calques</h2>
+            <h2 className="mb-3 text-xs font-semibold">Éléments du document</h2>
             {doc.elements.map((layer,index)=><button type="button" key={layer.id} onClick={()=>setSelected(layer.id)}
               aria-pressed={selected===layer.id} className={"mb-1 flex min-h-10 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs "+(selected===layer.id?"bg-white/15":"hover:bg-white/10")}>
               <Layers3 size={13}/><span className="min-w-0 flex-1 truncate">{layer.kind==="text"?layer.text.split("\n")[0]:layer.kind==="motif"?"Motif existant":layer.kind==="image"?"Image":"Forme"}</span><span className="text-white/30">{index+1}</span></button>)}
@@ -349,9 +349,8 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
                 {FORMATS.map(format=><option key={format.id} value={format.id}>{format.label}</option>)}
               </select>
             </label>
-            <button onClick={saveDraft} className={action+" w-full"}><Save size={15}/> Sauvegarder le projet</button>
             <button onClick={()=>projectPicker.current?.click()} className={action+" mt-2 w-full"}><FolderOpen size={15}/> Importer un JSON</button>
-            <h2 className="mb-2 mt-5 text-[12px] font-semibold">Mes créations</h2>
+            <h2 className="mb-2 mt-5 text-[12px] font-semibold">Documents enregistrés</h2>
             {drafts.map(d=><button key={d.id} onClick={()=>loadDraft(d)} className="mb-2 flex w-full flex-col rounded-[5px] border border-white/15 p-3 text-left hover:bg-white/10">
               <span className="text-xs font-semibold">{d.name}</span><span className="mt-1 text-[11px] text-white/55">{specFor(d.format).label} · {d.elements.length} éléments</span>
             </button>)}
@@ -387,7 +386,8 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
         </div>
       </main>
       <aside aria-label="Propriétés de la création" className="pz-design-properties hidden w-[245px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b0b0d] p-4 xl:block">
-        <h2 className="mb-4 text-[13px] font-semibold">{element?"Élément":"Document"}</h2>
+        <h2 className="mb-4 text-[13px] font-semibold">Réglages</h2>
+        <p className="mb-4 text-[11px] text-white/55">{element?"Élément sélectionné":"Document actif"}</p>
         {!element?<>
           <label className="mb-3 block text-[11px] text-white/70">Nom du document
             <input className={mono+" mt-1 w-full"} aria-label="Nom du document" value={doc.name} onChange={e=>patchDocument({name:e.target.value.slice(0,150)})}/>
@@ -395,7 +395,7 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
           <label className="mb-3 block text-[11px] text-white/70">Fond
             <input type="color" value={doc.background} onChange={e=>colorOK(e.target.value)&&patchDocument({background:e.target.value})} className="mt-2 h-9 w-full cursor-pointer rounded-[5px]" aria-label="Couleur du fond"/>
           </label>
-          <p className="text-[11px] leading-relaxed text-white/55">Un document source. Déclinez-le en un clic vers d'autres formats, puis ajustez les détails.</p>
+          <p className="text-[11px] leading-relaxed text-white/55">Les réglages portent sur le document actif, et non sur tous les fichiers du projet.</p>
         </>:<>
           <p className="mb-3 truncate text-xs font-medium text-white/80">{element.kind==="motif"?"Motif":element.kind==="text"?"Texte":element.kind==="shape"?"Forme":"Image"}</p>
           <div className="grid grid-cols-2 gap-2">{(["x","y","w","h"] as const).map(k=>
@@ -428,12 +428,11 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
             <button className={action} onClick={()=>{change({...doc,elements:layers.filter(x=>x.id!==element.id)});setSelected(null);}}><Trash2 size={14}/> Retirer</button>
           </div>
         </>}
-        <div className="mt-5 border-t border-white/10 pt-4">
-          <h3 className="mb-2 text-xs font-semibold">Calques</h3>
-          {[...layers].reverse().map(e=><button key={e.id} onClick={()=>setSelected(e.id)} className={"mb-1 block min-h-9 w-full truncate rounded-[5px] px-2 text-left text-[11px] "+(selected===e.id?"bg-white text-black":"text-white/75 hover:bg-white/10")}>
-            {e.kind==="text"?(e.text.split("\n")[0]||"Texte"):e.kind==="motif"?"Motif existant":e.kind==="shape"?"Forme":"Image"}
-          </button>)}
-        </div>
+        {currentProject&&!element&&<div className="mt-5 border-t border-white/10 pt-4">
+          <p className="mb-2 text-[11px] font-semibold text-white/70">Projet</p>
+          <p className="truncate text-[12px] text-white/85">{currentProject.title}</p>
+          <p className="mt-1 text-[11px] text-white/50">Contexte : {currentProject.kind}</p>
+        </div>}
       </aside>
       </>}
     </div>
@@ -448,7 +447,7 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
       </div>:<div className="pz-design-menu p-2 text-xs text-white/70">{specFor(doc.format).label}</div>}
     </div>}
     <input ref={imagePicker} type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>void chooseImage(e)} className="sr-only" aria-label="Importer une image pour la création"/>
-    <input ref={projectPicker} type="file" accept=".json,application/json" onChange={e=>void openJSON(e)} className="sr-only" aria-label="Importer une création POINTZERO JSON"/>
+    <input ref={projectPicker} type="file" accept=".json,application/json" onChange={e=>void openJSON(e)} className="sr-only" aria-label="Importer une création AIME JSON"/>
     {notice&&<div className="absolute bottom-3 left-1/2 z-40 max-w-[85vw] -translate-x-1/2 rounded-[6px] border border-white/20 bg-[#09090b] px-4 py-3 text-center text-xs text-white shadow-xl" role="status" onClick={()=>setNotice("")}>{notice}</div>}
   </div>;
 }
