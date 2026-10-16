@@ -2,7 +2,7 @@
  * This module never reads or clears a user's saved projects.
  */
 export const STUDIO_ROUTES=[
- "design","embroidery","photo","fashion","budget","programme","admin",
+ "bureau","design","embroidery","photo","fashion","budget","programme","admin",
  "mini-site","pdf","generation","music","art-world","aime-landing",
  "music-production","accessibility","academy","one-space","causal",
  "legal","metamorphose","ripplecircle","game","manifest","manifest-admin",
@@ -21,8 +21,9 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
  const path=decodeURI(pathname).replace(/\/+$/,"")||"/";
  if(path==="/") {
   const legacy=params.get("studio");
-  return isStudioRoute(legacy)&&!["manifest-admin","aime-home"].includes(legacy)?legacy:"design";
+  return isStudioRoute(legacy)&&!["manifest-admin","aime-home","bureau"].includes(legacy)?legacy:"bureau";
  }
+ if(path==="/bureau")return "bureau";
  if(path==="/pointzero")return "manifest";
  if(path==="/le-monde-aime")return "aime-landing";
  if(path==="/vision")return "vision";
@@ -35,17 +36,17 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
   const chosen=params.get("studio");
   return isStudioRoute(chosen)&&!["manifest-admin","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier","manifest","aime-landing"].includes(chosen)?chosen:"design";
  }
- return "design";
+ return "bureau";
 }
 export function publicPathFor(mode:StudioRoute){
- if(mode==="aime-home")return "/";
+ if(mode==="aime-home"||mode==="bureau")return "/";
  if(mode==="manifest")return "/pointzero";
  if(mode==="aime-landing")return "/le-monde-aime";
  if(mode==="vision")return "/vision";
  if(mode==="reference-dossier")return "/dossier";
  if(mode==="universal-dossier")return "/espace";
  if(mode==="universe-index")return "/univers";
- if(mode==="design")return "/";
+ if(mode==="design")return "/atelier";
  if(mode==="manifest-admin")return "/pointzero"; // admin remains a stateful protected overlay, not an unguarded link
  return "/atelier?studio="+encodeURIComponent(mode);
 }
