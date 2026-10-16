@@ -4,7 +4,7 @@ import {readWorld,writeWorld,newSpace,type SpaceKind,type WorldSpace} from "../l
 import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
 import {emptyUniversalMeta} from "../lib/dossierSchema";
 
-/** POINTZERO's actual home: a project browser, not another promotional landing. */
+/** AIME is the public identity of the project workspace; POINTZERO keys remain compatible. */
 type Props={onOpenProject:(id:string)=>void;onLegacyEditor:()=>void};
 const ARCHIVE_KEY="pointzero:bureau-archived:v1";
 const KINDS:{id:SpaceKind;label:string}[]=[
@@ -68,9 +68,9 @@ export default function BureauStudio({onOpenProject,onLegacyEditor}:Props){
    localStorage.setItem(ARCHIVE_KEY,JSON.stringify(next));setArchived(next);setError("");
   }catch{setError("Archivage indisponible. Aucun projet n'a été supprimé.");}
  }
- return <div className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#111113] font-sans text-[#ececee]" aria-label="Bureau POINTZERO">
+ return <div className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#111113] font-sans text-[#ececee]" aria-label="Bureau AIME">
   <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-white/10 bg-[#0c0c0e] px-5">
-   <div className="flex items-center gap-3 text-xs"><span className="text-lg font-bold">×</span><strong>POINTZERO</strong><span className="text-white/35">/</span><span className="text-white/60">Bureau</span></div>
+   <div className="flex items-center gap-3 text-xs"><strong className="text-[13px] font-bold tracking-[.035em]">AIME</strong><span className="text-white/35">/</span><span className="text-white/60">Bureau</span></div>
    <span className="text-[11px] text-white/45">Projets locaux · aucune publication automatique</span>
   </header>
   <div className="flex min-h-0 flex-1">
@@ -83,9 +83,9 @@ export default function BureauStudio({onOpenProject,onLegacyEditor}:Props){
     <div className="mt-auto border-t border-white/10 pt-3">{legacy&&<button className="flex min-h-10 w-full items-center gap-2 rounded-[5px] px-2 text-left text-[11px] text-white/70 hover:bg-white/10" onClick={onLegacyEditor}><FolderOpen size={14}/> Anciennes créations</button>}
     <p className="px-2 pt-3 text-[10px] leading-relaxed text-white/35">Les projets restent sur cet appareil. Exportez-les pour les sauvegarder.</p></div>
    </aside>
-   <main className="min-w-0 flex-1 overflow-y-auto px-5 py-9 sm:px-10 lg:px-14" aria-label="Liste des projets POINTZERO">
+   <main className="min-w-0 flex-1 overflow-y-auto px-5 py-9 sm:px-10 lg:px-14" aria-label="Liste des projets AIME">
     <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
-     <div><p className="mb-2 text-[10px] uppercase tracking-[.16em] text-white/40">POINTZERO / BUREAU</p><h1 className="text-2xl font-semibold tracking-tight">{view==="archive"?"Archive":"Tous les projets"}</h1></div>
+     <div><p className="mb-2 text-[10px] uppercase tracking-[.16em] text-white/40">AIME / BUREAU</p><h1 className="text-2xl font-semibold tracking-tight">{view==="archive"?"Archive":"Tous les projets"}</h1></div>
      <button type="button" onClick={()=>{setShowCreate(true);setError("");}} className="inline-flex min-h-10 items-center gap-2 rounded-[5px] bg-[#159bff] px-4 text-xs font-semibold text-white hover:bg-[#3dadff]"><Plus size={16}/> Nouveau projet</button>
     </div>
     {error&&<p role="alert" className="mb-5 rounded-[5px] border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</p>}
@@ -110,7 +110,7 @@ export default function BureauStudio({onOpenProject,onLegacyEditor}:Props){
     </div>:<div className="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-[7px] border border-dashed border-white/10 text-center">
      {view==="archive"?<Archive size={25} className="text-white/30"/>:<FolderOpen size={25} className="text-white/30"/>}
      <p className="text-sm text-white/65">{query?"Aucun projet correspondant.":view==="archive"?"Aucun projet archivé.":"Votre Bureau est prêt."}</p>
-     {!query&&view==="all"&&<p className="max-w-[320px] text-xs leading-relaxed text-white/40">Créez un projet pour ouvrir l'Atelier. Aucun modèle ni fleur ne sera ajouté.</p>}
+     {!query&&view==="all"&&<p className="max-w-[320px] text-xs leading-relaxed text-white/40">Créez un projet pour ouvrir l'Atelier. Aucun contenu ne sera ajouté sans votre action.</p>}
     </div>}
    </main>
   </div>
