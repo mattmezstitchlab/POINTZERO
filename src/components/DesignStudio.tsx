@@ -112,9 +112,19 @@ export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto,
     return () => observer.disconnect();
   }, [doc.width,doc.height,leftTab]);
   useEffect(() => {
-    try { writeStoredJSON(keys(projectId).current,JSON.stringify(doc),safeDesign);window.dispatchEvent(new Event("aime:design-changed")); }
-    catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
-  }, [doc]);
+    try {
+      const key=keys(projectId).current;
+      const raw=localStorage.getItem(key);
+      if(raw!==null){
+        // Never turn an unreadable/unsupported previous document into a blank overwrite.
+        let parsed:unknown;
+        try{parsed=JSON.parse(raw);}catch{setNotice("Document existant illisible : original conservé, exportez une sauvegarde avant de continuer.");return;}
+        if(!safeDesign(parsed)){setNotice("Format de document incompatible : données existantes conservées.");return;}
+      }
+      writeStoredJSON(key,JSON.stringify(doc),safeDesign);
+      window.dispatchEvent(new Event("aime:design-changed"));
+    }catch{setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création.");}
+  }, [doc,projectId]);
   useEffect(() => {
     if(!incomingPhoto || incomingPhoto.id===receivedPhoto.current)return;
     receivedPhoto.current=incomingPhoto.id;
