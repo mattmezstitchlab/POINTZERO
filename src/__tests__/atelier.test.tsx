@@ -469,7 +469,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   });
   it("garde Créer dans la colonne gauche sans nouveau panneau flottant", async () => {
     await mount();
-    await click(button("POINTZERO : créer un motif"));
+    await click(button("AIME : créer un motif"));
     const left=container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]');
     expect(left?.querySelector('[aria-label="Créer un nouveau motif"]')).toBeTruthy();
     expect(left?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
