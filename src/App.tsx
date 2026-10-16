@@ -88,7 +88,7 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 export default function App() {
   const [boot] = useState(loadStored);
-  // The domain root ALWAYS opens the public manifesto, regardless of stored projects.
+  // The domain root opens the single AIME landing, regardless of stored projects.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
     try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
@@ -110,11 +110,13 @@ export default function App() {
   const [linkedProject,setLinkedProject] = useState<{id:string;name:string}|null>(null);
   // Public pages are addressable and reversible with browser back/forward.
   // Workspace data remains in its original localStorage keys, untouched.
-  const navigatePage=(path:string)=>{
+  const navigatePage=(path:string,transientIntention?:string)=>{
     const next=new URL(path,window.location.origin);
     if(next.origin!==window.location.origin)return;
-    if(next.pathname!==window.location.pathname||next.search!==window.location.search){
-      window.history.pushState(null,"",next.pathname+next.search+next.hash);
+    // Pass a user-entered intention in same-tab navigation state, not in a shareable URL.
+    const navigationState=transientIntention?{aimeIntention:transientIntention.slice(0,800)}:null;
+    if(next.pathname!==window.location.pathname||next.search!==window.location.search||next.hash!==window.location.hash||navigationState){
+      window.history.pushState(navigationState,"",next.pathname+next.search+next.hash);
     }
     setStudioMode(entryStudio(next.search,next.hash,next.pathname));
   };
