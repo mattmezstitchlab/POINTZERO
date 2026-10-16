@@ -184,7 +184,7 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
     {!doc.pages.length&&<p className="px-2 py-3 text-[11px] leading-relaxed text-white/40">Aucune page pour l'instant.</p>}
     {page&&<section className="mt-7 border-t border-white/10 pt-4" aria-label="Éléments de la page">
      <div className="mb-3 flex items-center justify-between px-2"><h2 className="text-xs font-semibold">Éléments</h2><span className="text-[10px] text-white/35">{page.items.length}</span></div>
-     {page.items.map((element,i)=><button type="button" key={element.id} aria-pressed={selectedItem===element.id} onClick={()=>chooseItem(element.id)} className={"mb-1 flex min-h-10 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs "+(selectedItem===element.id?"bg-white/15":"text-white/60 hover:bg-white/10")}><Type size={14}/><span className="min-w-0 flex-1 truncate">{element.text.split("\n")[0]||"Texte vide"}</span><span className="text-white/30">{i+1}</span></button>)}
+     {page.items.map((element,i)=><button type="button" key={element.id} aria-pressed={selectedItem===element.id} onClick={()=>chooseItem(element.id)} className={"mb-1 flex min-h-10 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs "+(selectedItem===element.id?"bg-white/15":"text-white/60 hover:bg-white/10")}><Type size={14}/><span className="min-w-0 flex-1 truncate">{element.kind==="section"?interpolateAime(element.title,doc.variables):interpolateAime(element.text.split("\n")[0]||"Texte vide",doc.variables)}</span><span className="text-white/30">{i+1}</span></button>)}
      {!page.items.length&&<p className="px-2 text-[11px] text-white/40">Aucun élément.</p>}
     </section>}
     <div className="mt-auto border-t border-white/10 px-2 pt-4 text-[10px] leading-relaxed text-white/40">Ce projet est enregistré sur cet appareil. Les anciens fichiers restent indépendants.</div>
@@ -201,13 +201,22 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
       <FolderOpen size={26} className="text-white/25"/>
       <h1 className="text-base font-medium">{project.title}</h1>
       <p className="max-w-[320px] text-xs leading-relaxed text-white/45">Projet vierge. Utilisez le bouton + pour créer votre première page.</p>
+      {!blocked&&<button type="button" onClick={()=>setTemplatePicker(v=>!v)} aria-label="Parcourir les modèles" className={action+" mt-3"}>{templatePicker?"Fermer les modèles":"Partir d’un modèle"}</button>}
+      {templatePicker&&!blocked&&<section aria-label="Bibliothèque de modèles" className="mt-3 w-full max-w-[380px] rounded-[8px] border border-white/15 bg-[#222225] p-4 text-left">
+       <p className="mb-3 text-[11px] font-medium text-white/50">MODÈLES ÉDITABLES</p>
+       {AIME_TEMPLATES.map(t=><div key={t.id} className="grid gap-2"><p className="text-sm font-semibold">{t.title}</p><p className="text-xs leading-relaxed text-white/60">{t.description}</p><p className="text-[11px] text-white/45">{t.pages} pages · {t.sections} sections · Contenu d'exemple personnalisable</p>
+         <button type="button" aria-label="Utiliser le modèle mini-site mariage" onClick={applyWeddingTemplate} className={action+" mt-2 justify-center bg-[#e8e8e8] !text-[#111113] hover:bg-white"}>Créer à partir de ce modèle</button>
+       </div>)}
+      </section>
      </div>:
      <div className="mx-auto flex w-full flex-col gap-3 transition-[max-width] duration-150" style={{maxWidth:frame==="Mobile"?390:frame==="Tablette"?768:frame==="Ordinateur"?1120:920,zoom:zoom/100}}>
        <div className="flex items-center justify-between gap-2 text-[11px] text-white/50"><span className="truncate">{page.title||"Sans titre"}</span><span>Page {doc.pages.findIndex(p=>p.id===page.id)+1}</span></div>
        <div className="min-h-[min(70vh,650px)] rounded-[3px] bg-white px-7 py-9 text-[#171719] shadow-[0_12px_40px_#0003] sm:px-12" aria-label="Page active" onClick={()=>{setSelectedItem(null);setInspect("page");}}>
          <div aria-label="Composition de la page" className={composition==="colonnes"?(frame==="Mobile"?"grid grid-cols-1 gap-3":frame==="Auto"?"grid grid-cols-1 gap-3 sm:grid-cols-2":"grid grid-cols-2 gap-3"):""}>
-         {page.items.map((e)=><button key={e.id} type="button" onClick={ev=>{ev.stopPropagation();chooseItem(e.id);}}
-           className={"mb-3 block max-w-full whitespace-pre-wrap break-words rounded-[3px] px-2 py-1 text-left text-[17px] "+(selectedItem===e.id?"outline outline-2 outline-[#3197ff]":"hover:outline hover:outline-1 hover:outline-black/15")}>{e.text||" "}</button>)}
+         {page.items.map((e)=><button key={e.id} type="button" aria-label={"Sélectionner "+(e.kind==="section"?interpolateAime(e.title,doc.variables):"texte")} onClick={ev=>{ev.stopPropagation();chooseItem(e.id);}}
+           className={(e.kind==="section"?"flex min-h-[125px] w-full flex-col justify-center gap-3 whitespace-pre-wrap break-words rounded-[5px] p-5 text-left sm:p-7 "+(e.layout==="hero"?"bg-[#e8e3e8] text-[#322d37] min-h-[245px]":e.layout==="cta"?"bg-[#25252b] text-white":e.layout==="cards"?"bg-[#e6eae7] text-[#29382c]":e.layout==="split"?"bg-[#eee8e1] text-[#4a382d]":"bg-[#f0f0f0] text-[#292929]")+(composition==="colonnes"&&(e.layout==="hero"||e.layout==="cta")?" col-span-full":""):"mb-3 block max-w-full whitespace-pre-wrap break-words rounded-[3px] px-2 py-1 text-left text-[17px] ")+(selectedItem===e.id?" outline outline-2 outline-[#3197ff]":" hover:outline hover:outline-1 hover:outline-black/20")}>
+           {e.kind==="section"?<><span className={"block font-medium tracking-tight "+(e.layout==="hero"?"text-3xl sm:text-4xl":"text-xl")}>{interpolateAime(e.title,doc.variables)}</span><span className="block whitespace-pre-line text-[13px] leading-relaxed opacity-80">{interpolateAime(e.text,doc.variables)}</span></>:interpolateAime(e.text,doc.variables)||" "}
+         </button>)}
          </div>
        </div>
        {!page.items.length&&<p className="text-center text-[11px] text-white/45">Cette page est vide. Utilisez le bouton + pour ajouter du contenu.</p>}
@@ -228,12 +237,14 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
        <p className="px-3 py-2 text-[11px] font-semibold text-white/50">Créer</p>
        <button type="button" aria-label="Ajouter une page" disabled={blocked||doc.pages.length>=40} onClick={addPage} className={quiet+" w-full disabled:opacity-30"}>Nouvelle page</button>
        <button type="button" aria-label="Ajouter du texte" disabled={blocked||!page||page.items.length>=200} onClick={addText} className={quiet+" w-full disabled:opacity-30"}>Texte</button>
+       <button type="button" aria-label="Ajouter une section" disabled={blocked||!page||page.items.length>=200} onClick={addSection} className={quiet+" w-full disabled:opacity-30"}>Section</button>
+       {!page&&!blocked&&<button type="button" aria-label="Ouvrir les modèles" onClick={()=>{setTemplatePicker(true);setAddOpen(false);}} className={quiet+" w-full"}>Modèles éditables</button>
        {!page&&<p className="px-3 py-2 text-[10px] text-white/40">Créez une page avant d'ajouter du texte.</p>}
       </div>}
       <div className="flex min-h-11 items-center gap-0.5 rounded-full border border-white/20 bg-[#242427] px-2 shadow-lg">
-       <span className="px-3 text-[13px] font-semibold tracking-[.04em] text-white/75">AI</span>
+       <button type="button" aria-label="AI — Conseils de création" aria-pressed={inspect==="ai"} onClick={()=>{setInspect("ai");setRightVisible(true);setAddOpen(false);}} className="rounded-full px-3 py-2 text-[13px] font-semibold tracking-[.04em] text-white/75 hover:bg-white/10 hover:text-white">AI</button>
        <button type="button" aria-label="Ouvrir le menu de création" aria-expanded={addOpen} onClick={()=>setAddOpen(v=>!v)} className={"grid size-9 place-items-center rounded-full text-lg font-medium "+(addOpen?"bg-[#e8e8eb] text-[#111113]":"bg-[#36363a] text-white hover:bg-[#55555a]")}>+</button>
-       <span className="px-3 text-[13px] font-semibold tracking-[.04em] text-white/75">ME</span>
+       <button type="button" aria-label="ME — Mes informations" aria-pressed={inspect==="me"} onClick={()=>{setInspect("me");setRightVisible(true);setAddOpen(false);}} className="rounded-full px-3 py-2 text-[13px] font-semibold tracking-[.04em] text-white/75 hover:bg-white/10 hover:text-white">ME</button>
       </div>
       </div>
       <div aria-label="Zoom du projet" className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/15 bg-[#242427] px-1 py-1">
