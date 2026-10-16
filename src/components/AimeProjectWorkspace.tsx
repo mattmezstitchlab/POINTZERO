@@ -207,7 +207,7 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
        {AIME_TEMPLATES.map(t=><div key={t.id} className="grid gap-2"><p className="text-sm font-semibold">{t.title}</p><p className="text-xs leading-relaxed text-white/60">{t.description}</p><p className="text-[11px] text-white/45">{t.pages} pages · {t.sections} sections · Contenu d'exemple personnalisable</p>
          <button type="button" aria-label="Utiliser le modèle mini-site mariage" onClick={applyWeddingTemplate} className={action+" mt-2 justify-center bg-[#e8e8e8] !text-[#111113] hover:bg-white"}>Créer à partir de ce modèle</button>
        </div>)}
-      </section>
+      </section>}
      </div>:
      <div className="mx-auto flex w-full flex-col gap-3 transition-[max-width] duration-150" style={{maxWidth:frame==="Mobile"?390:frame==="Tablette"?768:frame==="Ordinateur"?1120:920,zoom:zoom/100}}>
        <div className="flex items-center justify-between gap-2 text-[11px] text-white/50"><span className="truncate">{page.title||"Sans titre"}</span><span>Page {doc.pages.findIndex(p=>p.id===page.id)+1}</span></div>
