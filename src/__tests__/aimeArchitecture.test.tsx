@@ -16,13 +16,14 @@ async function open(path:string,page:"aime-home"|"studio-detail"|"universe-index
 }
 describe("AIME — maison mère et dossiers reliés",()=>{
  it("préserve les pages POINTZERO et les anciens liens de l'association",()=>{
-  expect(entryStudio("","","/")).toBe("design");
+  expect(entryStudio("","","/")).toBe("bureau");
   expect(entryStudio("","","/pointzero")).toBe("manifest");
   expect(entryStudio("","","/atelier")).toBe("design");
   expect(entryStudio("?studio=embroidery","","/atelier")).toBe("embroidery");
   expect(entryStudio("?site=le-monde-aime","","/")).toBe("aime-landing");
   expect(entryStudio("","","/le-monde-aime")).toBe("aime-landing");
-  expect(publicPathFor("design")).toBe("/");
+  expect(publicPathFor("design")).toBe("/atelier");
+  expect(publicPathFor("bureau")).toBe("/");
  });
  it("affiche AIME en page mère et invite à entrer dans les Univers",async()=>{
   const onNavigate=vi.fn(),{node}=await open("/","aime-home",onNavigate);
