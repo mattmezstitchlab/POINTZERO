@@ -724,7 +724,7 @@ export default function App() {
     <span className="sr-only">Direction B. {BASE_FLOSS.length} références DMC documentées. {FLOSS[color]?.name}.</span>
   </div>;
   return unified ? <UnifiedWorkshop active={studioMode} onChoose={switchStudio}
-    projects={loadProjectOptions()} projectId={linkedProject?.id??""}
+    pattern={()=>toObject(store.present)} projects={loadProjectOptions()} projectId={linkedProject?.id??""}
     onProject={id=>setLinkedProject(loadProjectOptions().find(p=>p.id===id)??null)}
     onExit={()=>navigatePage("/")}>{editor}</UnifiedWorkshop> : <>{studioMode==='aime-home'&&<a href="/atelier-unifie" style={{position:'fixed',bottom:16,right:16,zIndex:90,padding:'12px 18px',background:'#191715',color:'#fff',borderRadius:8}}>Ouvrir l’atelier commun ↗</a>}{editor}</>;
 }

@@ -17,4 +17,12 @@ Accès : `/atelier-unifie`, également proposé sur l’accueil. Les liens exist
 5. À 390 px et sur tablette : vérifier les deux barres, le défilement horizontal des outils, les panneaux mobiles, les dialogues et les exports. L’enveloppe forme un bloc contenant pour les éditeurs positionnés en fixed.
 6. Vérifier que sans sélection le programme ne prétend pas être lié à un projet.
 
-Prochaine étape : définir des liens explicites entre documents, avec consentement et migration réversible, avant de parler d’un projet de données réellement unifié.
+Étape suivante après les liens explicites : définir les champs partagés et leur propagation contrôlée, avant de parler d’un modèle de données réellement unifié.
+
+## Rattachement explicite et export groupé
+
+Le panneau « Documents et export du projet » ajoute un index versionné `pointzero:workshop-links:v1`, séparé des fichiers métier. Choisir d’abord un projet existant dans le contexte (les projets se créent via « Autres outils et projets »), puis lire l’inventaire et cocher les créations à rattacher.
+
+L’inventaire lit le design courant et les brouillons enregistrés, le patron actuellement ouvert et les programmes locaux. Les liens sont conservés par identifiant ; un document indisponible est signalé et bloque l’export au lieu d’être omis silencieusement. Le regroupement JSON relit les sources au moment de l’export, après confirmation de l’utilisateur. Il contient les valeurs de l’instant, sans déplacer les originaux ni fournir encore d’import groupé. Pour un autre patron, l’ouvrir d’abord depuis la bibliothèque.
+
+Le contexte sélectionné reste temporaire ; les liens sont persistants. Les champs partagés date/personnes et leur propagation entre moteurs ne sont pas encore implémentés. Les exports PDF/SVG restent dans leurs éditeurs respectifs.
