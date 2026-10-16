@@ -1,3 +1,4 @@
+import UnifiedWorkshop from "./components/UnifiedWorkshop";
 import {writeStoredJSON} from "./lib/storageSafety";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
@@ -125,7 +126,12 @@ export default function App() {
     window.addEventListener("popstate",restoreRoute);
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
+  const unified = window.location.pathname.replace(/\/+$/, "") === "/atelier-unifie";
   const switchStudio = (mode: StudioRoute) => {
+    if(unified && !["aime-home","manifest","aime-landing","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
+      navigatePage("/atelier-unifie?studio="+encodeURIComponent(mode));
+      return;
+    }
     if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
@@ -455,7 +461,7 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "universal-dossier"
+  const editor = studioMode === "universal-dossier"
     ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))} onOpenMiniSite={site=>{setMiniSiteHandoff(site);switchStudio("mini-site")}}/>
     : studioMode === "reference-dossier"
     ? <AimeDossier onNavigate={navigatePage}/>
@@ -717,4 +723,8 @@ export default function App() {
     {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: 102 }}>{toast}</div>}
     <span className="sr-only">Direction B. {BASE_FLOSS.length} références DMC documentées. {FLOSS[color]?.name}.</span>
   </div>;
+  return unified ? <UnifiedWorkshop active={studioMode} onChoose={switchStudio}
+    pattern={()=>toObject(store.present)} projects={loadProjectOptions()} projectId={linkedProject?.id??""}
+    onProject={id=>setLinkedProject(loadProjectOptions().find(p=>p.id===id)??null)}
+    onExit={()=>navigatePage("/")}>{editor}</UnifiedWorkshop> : <>{studioMode==='aime-home'&&<a href="/atelier-unifie" style={{position:'fixed',bottom:16,right:16,zIndex:90,padding:'12px 18px',background:'#191715',color:'#fff',borderRadius:8}}>Ouvrir l’atelier commun ↗</a>}{editor}</>;
 }

@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    {"source": "/atelier-unifie", "destination": "/index.html"},
     {"source": "/pointzero", "destination": "/index.html"},
     {"source": "/atelier", "destination": "/index.html"},
     {"source": "/le-monde-aime", "destination": "/index.html"},
