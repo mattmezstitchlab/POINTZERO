@@ -261,21 +261,41 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
        <button type="button" aria-label="Fermer les réglages" onClick={()=>setRightVisible(false)} className="rounded-[5px] p-1.5 text-white/50 hover:bg-white/10 xl:hidden"><X size={15}/></button>
      </div>
      {inspect==="item"&&item?<div className="grid gap-3">
-       <p className="text-[11px] text-white/45">Texte sélectionné</p>
-       <label className="text-[11px] text-white/65">Contenu<textarea aria-label="Modifier le texte" value={item.text} onChange={e=>changeText(e.target.value)} rows={7} maxLength={3000} className={surface+" mt-2 w-full resize-y"} disabled={blocked}/></label>
+       <p className="text-[11px] text-white/45">{item.kind==="section"?"Section sélectionnée":"Texte sélectionné"}</p>
+       {item.kind==="section"&&<>
+        <label className="text-[11px] text-white/65">Titre<input aria-label="Titre de la section" value={item.title} maxLength={150} onChange={e=>changeSection({title:e.target.value.slice(0,150)})} className={surface+" mt-2 w-full"} disabled={blocked}/></label>
+        <label className="text-[11px] text-white/65">Mise en page<select aria-label="Disposition de la section" value={item.layout} onChange={e=>changeSection({layout:e.target.value as typeof item.layout})} className={surface+" mt-2 w-full"} disabled={blocked}>
+         <option value="hero">Présentation</option><option value="simple">Texte simple</option><option value="split">Deux blocs</option><option value="cards">Cartes</option><option value="cta">Conclusion</option>
+        </select></label>
+       </>}
+       <label className="text-[11px] text-white/65">Contenu<textarea aria-label={item.kind==="section"?"Contenu de la section":"Modifier le texte"} value={item.text} onChange={e=>changeText(e.target.value)} rows={7} maxLength={3000} className={surface+" mt-2 w-full resize-y"} disabled={blocked}/></label>
+       {item.kind==="section"&&<p className="text-[11px] leading-relaxed text-white/45">Les valeurs comme {"{{couple}}"} sont partagées dans ME.</p>}
+       <div className="flex gap-2"><button type="button" onClick={()=>moveItem(-1)} disabled={blocked||!page||page.items[0]?.id===item.id} className={action+" flex-1 justify-center disabled:opacity-30"}>Monter</button><button type="button" onClick={()=>moveItem(1)} disabled={blocked||!page||page.items[page.items.length-1]?.id===item.id} className={action+" flex-1 justify-center disabled:opacity-30"}>Descendre</button></div>
        {pendingRemove?<div role="group" aria-label="Confirmer la suppression" className="grid gap-2 rounded-[5px] border border-amber-400/25 bg-amber-950/20 p-3"><p className="text-xs">Retirer cet élément du document ?</p><button type="button" onClick={removeText} disabled={blocked} className={action+" justify-center"}>Confirmer</button><button type="button" onClick={()=>{setPendingRemove(false);changeTool("select");}} className={quiet+" justify-center"}>Annuler</button></div>:<button type="button" onClick={()=>setPendingRemove(true)} disabled={blocked} className={action+" justify-center text-white/65"}>Retirer cet élément</button>}
-       <button type="button" onClick={()=>{setSelectedItem(null);setInspect("page");}} className={quiet+" justify-center"}>Réglages de la page</button>
      </div>:inspect==="page"&&page?<div className="grid gap-3">
        <p className="text-[11px] text-white/45">Page active</p>
        <label className="text-[11px] text-white/65">Nom de la page<input aria-label="Nom de la page" value={page.title} maxLength={150} disabled={blocked} onChange={e=>renamePage(e.target.value)} className={surface+" mt-2 w-full"}/></label>
-       <p className="text-[11px] text-white/40">{page.items.length} élément(s)</p>
-       <button type="button" onClick={()=>setInspect("project")} className={quiet+" justify-center"}>Informations du projet</button>
-     </div>:<div className="grid gap-4">
-       <p className="text-[11px] text-white/45">Projet</p>
+       <p className="text-[11px] text-white/40">{page.items.length} élément(s) · Cliquez sur une section pour modifier sa présentation.</p>
+     </div>:inspect==="me"?<section aria-label="Informations réutilisables" className="grid gap-3">
+       <p className="text-[11px] text-white/45">ME · Mes informations</p>
+       <p className="text-[11px] leading-relaxed text-white/60">Changez une valeur ici : chaque section qui la référence sera mise à jour sans copier l'information.</p>
+       {Object.keys(doc.variables??{}).length>0?Object.entries(doc.variables??{}).map(([key,value])=><label key={key} className="text-[11px] text-white/65">{({couple:"Prénoms",date:"Date",lieu:"Lieu"} as Record<string,string>)[key]??key}
+        <input aria-label={"Information "+key} className={surface+" mt-2 w-full"} value={value} maxLength={300} disabled={blocked} onChange={e=>commit({...doc,variables:{...doc.variables,[key]:e.target.value.slice(0,300)}})}/>
+       </label>):<p className="text-[11px] text-white/40">Aucune donnée partagée dans ce projet pour l'instant. Essayez le modèle de mariage dans un nouveau projet.</p>}
+       <p className="border-t border-white/10 pt-3 text-[10px] leading-relaxed text-white/40">Ces données restent locales à ce projet. Aucun profil global ni partage automatique n'est activé.</p>
+     </section>:inspect==="ai"?<section aria-label="Conseils de création" className="grid gap-3">
+       <p className="text-[11px] text-white/45">AI · Conseils de création</p>
+       <p className="text-[11px] leading-relaxed text-white/60">Guide contextuel local, sans génération par IA pour l'instant.</p>
+       {!page?<><p className="text-xs">Commencez par une page vierge ou un modèle éditable.</p><button type="button" onClick={()=>{setTemplatePicker(true);setInspect("overview");}} className={action}>Explorer les modèles</button></>:<><p className="text-xs">{page.items.length===0?"Ajoutez une première section pour organiser la page.":"Personnalisez une section puis comparez les compositions et les formats."}</p><p className="text-xs">Vos modifications restent enregistrées dans ce projet.</p></>}
+     </section>:inspect==="project"?<div className="grid gap-4">
+       <p className="text-[11px] text-white/45">Informations du projet</p>
        <label className="text-[11px] text-white/65">Nom du projet<input aria-label="Nom du projet" maxLength={180} value={project.title} onChange={e=>updateProject({title:e.target.value})} className={surface+" mt-2 w-full"}/></label>
        <label className="text-[11px] text-white/65">Description<textarea aria-label="Description du projet" maxLength={1200} rows={4} value={project.description} onChange={e=>updateProject({description:e.target.value})} className={surface+" mt-2 w-full resize-y"}/></label>
        <div className="border-t border-white/10 pt-4 text-[11px] text-white/45">Contexte : {project.kind}</div>
-       {page&&<button type="button" className={quiet+" justify-center"} onClick={()=>setInspect("page")}>Réglages de la page</button>}
+     </div>:<div className="grid gap-3">
+       <p className="text-[11px] text-white/50">Aucun élément sélectionné.</p>
+       <p className="text-[11px] leading-relaxed text-white/40">Choisissez une page ou une section : seuls ses réglages apparaîtront ici.</p>
+       <button type="button" onClick={()=>setInspect("project")} className={quiet+" mt-4 justify-start"}>Informations du projet</button>
      </div>}
    </aside>
   </div>
