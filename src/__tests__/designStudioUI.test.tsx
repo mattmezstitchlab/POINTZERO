@@ -75,6 +75,9 @@ describe("POINTZERO — studio universel", () => {
     const host=mount();
     expect(host.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
     expect(host.querySelector('[aria-label="Ressources et formats"]')).toBeTruthy();
+    expect(host.textContent).toContain("AIME");
+    expect(host.textContent).toContain("Réglages");
+    expect(host.querySelector('[aria-label="Propriétés de la création"] h3')).toBeNull(); // Element list is left-only.
     const before=host.querySelectorAll("[data-element-id]").length;
     expect(host.textContent).not.toContain("Bibliothèque florale et graphique");
     click(buttonNamed(host,"Texte"));
