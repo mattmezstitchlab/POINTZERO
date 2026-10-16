@@ -8,7 +8,7 @@ import {AIME_EDITORIAL_VERSION,UNIVERSES,UNIVERSE_BY_SLUG,STUDIO_STORIES,STORY_B
 import {DEFAULT_LAUNCH,STATUS_LABELS,canEnter,canPreview,validLaunch,type LaunchConfig} from "../lib/launchManifest";
 import "./AimeEcosystem.css";
 
-interface Props {page:"aime-home"|"universe-index"|"universe-detail"|"studio-detail"|"vision";onNavigate:(path:string)=>void;onOpenStudio:(route:string)=>void}
+interface Props {page:"aime-home"|"universe-index"|"universe-detail"|"studio-detail"|"vision";onNavigate:(path:string,intention?:string)=>void;onOpenStudio:(route:string)=>void}
 function Jump({href,onNavigate,children,className=""}:{href:string;onNavigate:(path:string)=>void;children:ReactNode;className?:string}){
  function click(e:MouseEvent<HTMLAnchorElement>){
   if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
