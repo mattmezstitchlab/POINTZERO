@@ -68,24 +68,20 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
-  it("ouvre le Studio Édition directement et le Dossier à la demande", async () => {
+  it("ouvre un Bureau vide et ne crée aucun projet avant confirmation", async () => {
     localStorage.setItem("pointzero:workspace","embroidery");
     await mount(true);
-    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
-    expect(container?.querySelector('[aria-label="AIME — Architecture mère"]')).toBeNull();
+    expect(container?.querySelector('[aria-label="Bureau POINTZERO"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeNull();
     expect(window.location.pathname).toBe("/");
     expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
-    await click(button("Ouvrir les dossiers"));
-    expect(container?.querySelector('[aria-label="Dossiers POINTZERO"]')).toBeTruthy();
-    await click(button("Créer un dossier"));
-    expect(container?.querySelector('[aria-label="Dossier Universel AIME"]')).toBeTruthy();
+    const add=[...(container?.querySelectorAll("button")??[])].find(b=>b.textContent?.includes("Nouveau projet"));
+    await click(add);
+    expect(container?.querySelector('[aria-label="Créer un nouveau projet"]')).toBeTruthy();
     expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
-    await click(button("Retour à l’Atelier"));
-    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
-    await click(button("Ouvrir le menu des studios"));
-    expect(container?.querySelector('[aria-label="Choix du studio"]')).toBeTruthy();
-    expect(button("Ouvrir le studio Dossier Universel AIME")).toBeNull();
-    expect(button("Ouvrir le studio LE MONDE AIME · Atelier libre")).toBeTruthy();
+    const cancel=[...(container?.querySelectorAll("button")??[])].find(b=>b.textContent?.trim()==="Annuler");
+    await click(cancel);
+    expect(container?.querySelector('[aria-label="Créer un nouveau projet"]')).toBeNull();
   });
 
 
