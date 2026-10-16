@@ -25,7 +25,7 @@ describe("AIME — espace projet construit depuis le Bureau",()=>{
   expect(view.querySelector('[aria-label="Espace de travail du projet"]')).toBeTruthy();
   expect(view.querySelector('[aria-label="Structure du projet"]')).toBeTruthy();
   expect(view.querySelector('[aria-label="Réglages contextuels"]')).toBeTruthy();
-  expect(view.textContent).toContain("Projet vide");
+  expect(view.textContent).toContain("Projet vierge");
   expect(view.textContent).not.toContain("POINTZERO");
   expect(view.textContent).not.toContain("Studios");
   expect(view.textContent).not.toContain("Broderie");
