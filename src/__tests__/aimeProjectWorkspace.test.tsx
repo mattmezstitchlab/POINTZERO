@@ -33,9 +33,11 @@ describe("AIME — espace projet construit depuis le Bureau",()=>{
   expect(view.querySelector('[aria-label="Grille universelle de fragments"]')).toBeNull();
   expect(localStorage.getItem(projectDocumentKey(p.id))).toBeNull();
   expect(view.querySelector('[aria-label="Outils universels"]')).toBeTruthy();
-  expect(view.querySelector('[aria-label="Capsule AI + ME"]')?.textContent).toContain("AI");
-  expect(view.querySelector('[aria-label="Capsule AI + ME"]')?.textContent).toContain("ME");
-  expect(view.querySelector('[aria-label="Capsule AI + ME"]')?.querySelector("svg")).toBeNull();
+  const createButton=view.querySelector('button[aria-label="Ouvrir le menu de création"]');
+  expect(createButton).toBeTruthy();
+  expect(createButton?.parentElement?.textContent).toContain("AI");
+  expect(createButton?.parentElement?.textContent).toContain("ME");
+  expect(createButton?.parentElement?.querySelector("svg")).toBeNull();
   expect(view.querySelector('button[aria-label="Déplacer la vue"]')).toBeTruthy();
   expect(view.querySelector('button[aria-label="Retirer un élément"]')).toBeTruthy();
   expect(view.querySelector('select[aria-label="Format de prévisualisation"]')).toBeTruthy();
