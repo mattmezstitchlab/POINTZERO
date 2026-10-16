@@ -1,3 +1,4 @@
+import config from '../../vercel.json';
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {act} from 'react';
 import {createRoot,type Root} from 'react-dom/client';
@@ -8,6 +9,7 @@ let root:Root|undefined;let host:HTMLDivElement|undefined;
 afterEach(()=>{act(()=>root?.unmount());host?.remove();});
 describe('Atelier commun non destructif',()=>{
  it('ouvre les outils et refuse les routes privées',()=>{
+  expect(config.rewrites).toContainEqual({source:'/atelier-unifie',destination:'/index.html'});
   expect(entryStudio('','','/atelier-unifie')).toBe('design');
   for(const mode of ['design','embroidery','programme','one-space'])expect(entryStudio('?studio='+mode,'','/atelier-unifie')).toBe(mode);
   expect(entryStudio('?studio=manifest-admin','','/atelier-unifie')).toBe('design');
