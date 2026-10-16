@@ -14,6 +14,8 @@ import Canvas, { type Insets, type ViewMode } from "./components/Canvas";
 import EmbroideryToolbox from "./components/EmbroideryToolbox";
 import TopBar from "./components/TopBar";
 import DesignStudio from "./components/DesignStudio";
+import BureauStudio from "./components/BureauStudio";
+import {readWorld} from "./lib/oneSpaceCore";
 import ManifestLanding from "./components/ManifestLanding";
 import AimeEcosystem from "./components/AimeEcosystem";
 import AimeDossier from "./components/AimeDossier";
@@ -88,17 +90,18 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 export default function App() {
   const [boot] = useState(loadStored);
-  // The domain root opens the real design workspace, regardless of saved preferences.
+  // The domain root opens a real project Bureau, not a promotional landing.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
     try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
-    catch { return "design"; }
+    catch { return "bureau"; }
   });
   useEffect(()=>{
     if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
+    else if(studioMode==="bureau")document.title="Bureau — POINTZERO";
     else if(studioMode==="design")document.title="Atelier — POINTZERO";
     else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
       document.title="Studios — POINTZERO";
@@ -126,7 +129,7 @@ export default function App() {
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
   const switchStudio = (mode: StudioRoute) => {
-    if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+    if(mode==="bureau"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
@@ -135,7 +138,7 @@ export default function App() {
       if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
       navigatePage(publicPathFor(mode));
     }
-    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
+    if(!["bureau","aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
       try { localStorage.setItem("pointzero:workspace", mode); } catch { /* keep existing data */ }
     }
   };
@@ -455,7 +458,9 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "universal-dossier"
+  return studioMode === "bureau"
+    ? <BureauStudio onOpenProject={id=>navigatePage("/atelier?project="+encodeURIComponent(id))} onLegacyEditor={()=>navigatePage("/atelier?legacy=1")}/>
+    : studioMode === "universal-dossier"
     ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))} onOpenMiniSite={site=>{setMiniSiteHandoff(site);switchStudio("mini-site")}}/>
     : studioMode === "reference-dossier"
     ? <AimeDossier onNavigate={navigatePage}/>
@@ -468,7 +473,10 @@ export default function App() {
     : studioMode === "manifest-admin"
     ? <ManifestAdminStudio onBack={() => switchStudio("manifest")}/>
     : studioMode === "design"
-    ? <DesignStudio onEmbroidery={() => switchStudio("embroidery")}
+    ? <DesignStudio key={(new URLSearchParams(window.location.search).get("legacy")==="1"?"legacy":(readWorld().selectedSpaceId||"legacy"))}
+        projectId={new URLSearchParams(window.location.search).get("legacy")==="1"?undefined:readWorld().selectedSpaceId||undefined}
+        onBureau={()=>switchStudio("bureau")}
+        onEmbroidery={() => switchStudio("embroidery")}
         onPhoto={() => switchStudio("photo")} onFashion={() => switchStudio("fashion")}
         onBudget={() => switchStudio("budget")} onProgramme={() => switchStudio("programme")} onAdmin={() => switchStudio("admin")}
         onMiniSite={() => switchStudio("mini-site")} onPDF={() => switchStudio("pdf")}
