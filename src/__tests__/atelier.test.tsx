@@ -34,7 +34,13 @@ afterAll(() => {
 });
 let root: Root | null = null;
 let container: HTMLElement | null = null;
-async function mount() {
+async function mount(publicHome=false) {
+  // Legacy atelier regression tests now use the explicit studio deep link.
+  // The real domain root is reserved for the POINTZERO public manifesto.
+  const requested=localStorage.getItem("pointzero:workspace");
+  if(!publicHome&&requested&&!window.location.search){
+    window.history.replaceState(null,"","/?studio="+encodeURIComponent(requested));
+  }
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -62,6 +68,24 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
+  it("ouvre le manifeste à la racine malgré les projets existants, puis rejoint l'Atelier depuis un CTA", async () => {
+    localStorage.setItem("pointzero:workspace","design");
+    await mount(true);
+    expect(container?.querySelector('[aria-label="POINTZERO .0 — Le temps retrouvé"]')).toBeTruthy();
+    expect(container?.textContent).toContain("Le temps retrouvé.");
+    const opener=[...(container?.querySelectorAll("button")??[])].find(x=>x.textContent?.includes("Ouvrir l’Atelier"));
+    await click(opener);
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
+    await click(button("Ouvrir le menu des studios"));
+    expect(container?.querySelector('[aria-label="Choix du studio"]')).toBeTruthy();
+    expect(button("Ouvrir le studio LE MONDE AIME · Présentation")).toBeNull();
+    expect(button("Ouvrir le studio LE MONDE AIME · Atelier libre")).toBeTruthy();
+    await click(button("Retour à l’accueil POINTZERO"));
+    expect(container?.textContent).toContain("Le temps retrouvé.");
+    expect(container?.querySelector('a[href="?site=le-monde-aime"]')).toBeTruthy();
+  });
+
+
   it("affiche RIPPLECIRCLE comme module externe réutilisable sans chargement automatique", async () => {
     localStorage.setItem("pointzero:workspace","design");
     await mount();
@@ -209,7 +233,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
   });
 
-  it("affiche la landing claire LE MONDE AIME depuis son lien direct, puis ouvre les ateliers", async () => {
+  it("conserve la page publique LE MONDE AIME par lien direct, hors du menu des studios", async () => {
     window.history.replaceState(null,"","/?site=le-monde-aime");
     await mount();
     expect(container?.querySelector('[aria-label="Présentation LE MONDE AIME"]')).toBeTruthy();
@@ -218,7 +242,15 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(container?.querySelector('[aria-label="Espace Musique inclusive"]')).toBeTruthy();
     await click(button("Retour au studio universel"));
     await click(button("Ouvrir le menu des studios"));
-    await click(button("Ouvrir le studio LE MONDE AIME · Présentation"));
+    expect(button("Ouvrir le studio LE MONDE AIME · Présentation")).toBeNull();
+    await click(button("Ouvrir le menu des studios"));
+    await click(button("Retour à l’accueil POINTZERO"));
+    const publicLink=container?.querySelector('a[href="?site=le-monde-aime"]');
+    expect(publicLink).toBeTruthy();
+    await act(async()=>root?.unmount());
+    container?.remove();
+    window.history.replaceState(null,"","/?site=le-monde-aime");
+    await mount();
     await click(button("Créer une œuvre dans LE MONDE AIME"));
     expect(container?.querySelector('[aria-label="Espace LE MONDE AIME"]')).toBeTruthy();
   });
