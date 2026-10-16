@@ -1,4 +1,5 @@
-import {referenceCurrentDesign,resolveCollection} from "../lib/fragmentResources";
+import {readDesignResource,referenceCurrentDesign,resolveCollection} from "../lib/fragmentResources";
+import {beginComposition,commitComposition,confirmFragmentPreview,previewFragmentSpan,redoComposition,selectFragment,undoComposition,type CompositionSession,type FragmentPreview} from "../lib/atelierCompositionContract";
 import {GRID_CONTENT_CSS,cellSpan} from "../lib/gridConstraints";
 import {designCSS,DESIGN_SYSTEM} from "../lib/designSystem";
 import {fragmentsHTML} from "../lib/compositionLayout";
@@ -19,7 +20,16 @@ function restore():FragmentCollection {
   return demoFragments();
 }
 export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentCollection|null}={}){
-  const [collection,setCollection]=useState<FragmentCollection>(restore);
+  const [session,setSession]=useState<CompositionSession>(()=>beginComposition(restore()));
+  const collection=session.present;
+  const [proposal,setProposal]=useState<FragmentPreview|null>(null);
+  const [inspectTab,setInspectTab]=useState<"understand"|"properties"|"code">("properties");
+  const setCollection=(update:FragmentCollection|((prev:FragmentCollection)=>FragmentCollection))=>{
+   setProposal(null);
+   setSession(prev=>commitComposition(prev,typeof update==="function"?update(prev.present):update));
+  };
+  const undo=()=>{setProposal(null);setSession(undoComposition)};
+  const redo=()=>{setProposal(null);setSession(redoComposition)};
   const [selected,setSelected]=useState<string|null>(null);
   const [inspectorOpen,setInspectorOpen]=useState(false);
   const [layout,setLayout]=useState<Layout>("editorial");
@@ -28,15 +38,39 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
   const chooser=useRef<HTMLInputElement>(null);
   const [,refreshResources]=useState(0);
   useEffect(()=>{const refresh=()=>refreshResources(n=>n+1);window.addEventListener('aime:design-changed',refresh);window.addEventListener('storage',refresh);return()=>{window.removeEventListener('aime:design-changed',refresh);window.removeEventListener('storage',refresh)}},[]);
-  let display=collection,resourceError='';
-  try{display=resolveCollection(collection,'private')}catch(e){resourceError=String(e)}
+  const staged=proposal?.after??collection;
+  let display=staged,resourceError='';
+  try{display=resolveCollection(staged,'private')}catch(e){resourceError=String(e)}
   let html='';try{html=fragmentsHTML(collection,layout,'private')}catch{html='<!doctype html><html lang=fr><body>Source liée indisponible. Original conservé.</body></html>'}
-  const active=collection.fragments.find(f=>f.id===selected)??null;
+  const active=staged.fragments.find(f=>f.id===selected)??null;
+  let sourceSnapshot:ReturnType<typeof readDesignResource>=null;
+  let sourceIssue="";
+  if(active?.source)try{sourceSnapshot=readDesignResource(active.source.resourceId);
+   if(!sourceSnapshot)sourceIssue="Ressource Design référencée introuvable."}
+   catch(e){sourceIssue=e instanceof Error?e.message:"Ressource source invalide"}
   useEffect(()=>{
     if(!incoming)return;
     setCollection(incoming);setSelected(null);setNotice("Analyse intégrée : "+incoming.fragments.length+" fragments disponibles.");
   },[incoming]);
-  useEffect(()=>{try{writeStoredJSON(STORAGE,JSON.stringify(collection),validStoredFragments);}catch{setNotice("Stockage local plein : exportez votre JSON.")}},[collection]);
+  useEffect(()=>{try{writeStoredJSON(STORAGE,JSON.stringify(collection),validStoredFragments);
+    window.dispatchEvent(new Event("aime:fragments-changed"));
+   }catch(e){setNotice(e instanceof Error?e.message:"Sauvegarde bloquée ; données originales conservées.")}},[collection]);
+  useEffect(()=>{
+   const focus=(event:Event)=>{const id=(event as CustomEvent<{id:string}>).detail?.id;
+    if(id&&collection.fragments.some(f=>f.id===id)){setSelected(id);setInspectorOpen(true);setInspectTab("understand")}};
+   window.addEventListener("aime:fragment-focus",focus);
+   return()=>window.removeEventListener("aime:fragment-focus",focus);
+  },[collection]);
+  useEffect(()=>{
+   const key=(event:KeyboardEvent)=>{
+    const target=event.target as HTMLElement|null;
+    if(!(event.ctrlKey||event.metaKey)||event.key.toLowerCase()!=="z"||
+       ["INPUT","TEXTAREA","SELECT"].includes(target?.tagName??"")||target?.isContentEditable)return;
+    event.preventDefault();if(event.shiftKey)redo();else undo();
+   };
+   window.addEventListener("keydown",key);
+   return()=>window.removeEventListener("keydown",key);
+  });
   function patch(id:string,change:Partial<Fragment>){setCollection(c=>{const f=c.fragments.find(v=>v.id===id);return updateFragment(c,id,{...change,...(change.title!==undefined&&f?.source?{source:{...f.source,titleMode:'custom' as const}}:{})})})}
   function toggleLock(id:string){setCollection(c=>({...c,fragments:c.fragments.map(f=>f.id===id?{...f,locked:!f.locked}:f)}))}
   function add(){
@@ -70,6 +104,8 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
             <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={exportJSON}><ArrowDownToLine size={13} className="mr-1 inline"/> Exporter</button>
             <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>{try{saveStudioFile("aime-recomposition.html",fragmentsHTML(collection,layout),"text/html;charset=utf-8")}catch(e){setNotice(String(e))}}}>Exporter HTML responsive</button>
             <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>{try{const ref=referenceCurrentDesign();if(collection.fragments.length>=120&&!collection.fragments.some(f=>f.source?.resourceId===ref.source?.resourceId))throw Error('Limite de 120 fragments : aucun remplacement');setCollection(c=>c.fragments.some(f=>f.source?.resourceId===ref.source?.resourceId)?c:{...c,fragments:[...c.fragments,ref]});setNotice('Référence ajoutée, création originale non copiée. Export interdit par défaut.')}catch(e){setNotice(String(e))}}}>Relier ma création Design</button>
+            <button type="button" disabled={!session.past.length} className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2 disabled:opacity-35" onClick={undo}>Annuler</button>
+            <button type="button" disabled={!session.future.length} className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2 disabled:opacity-35" onClick={redo}>Rétablir</button>
             <button className="rounded-[5px] bg-[#242424] px-3 py-2 text-white" onClick={add}><Plus size={13} className="mr-1 inline"/> Fragment</button>
           </div>
         </div>
@@ -117,7 +153,7 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
     <aside aria-label="Propriétés du fragment"
       className={"pz-design-properties shrink-0 overflow-y-auto border-l border-white/10 bg-[#0b0b0d] p-4 text-white "+
         (inspectorOpen?"fixed inset-x-3 bottom-3 z-40 max-h-[65dvh] w-auto rounded-[6px] border xl:static xl:max-h-none xl:w-[245px] xl:rounded-none":"hidden w-[245px] xl:block")}>
-      <div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-[13px] font-semibold">Fragment / Propriétés</h2>
+      <div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-[13px] font-semibold">Zoom Code · Fragment</h2>
         <button type="button" className="min-h-9 rounded-[5px] border border-white/20 px-2 text-xs xl:hidden" onClick={()=>setInspectorOpen(false)}>Fermer</button>
       </div>
       {active ? <>
