@@ -2,7 +2,8 @@ import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from "
 import {ArrowLeft,ChevronDown,Download,Eraser,FileText,FolderOpen,Hand,Minus,MousePointer2,Plus,Type,X,PanelLeft,PanelRight} from "lucide-react";
 import {ids,readWorld,writeWorld,type WorldSpace} from "../lib/oneSpaceCore";
 import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
-import {readProjectDocument,saveProjectDocument,type AimeProjectDocument,type AimePage} from "../lib/aimeProjectDocument";
+import {interpolateAime,readProjectDocument,saveProjectDocument,type AimeProjectDocument,type AimePage} from "../lib/aimeProjectDocument";
+import {AIME_TEMPLATES,createWeddingSiteTemplate} from "../lib/aimeTemplates";
 
 type Props={projectId:string;onBureau:()=>void};
 const surface="rounded-[5px] border border-white/15 bg-[#242427] px-3 py-2 text-[12px] text-white outline-none focus:border-white/70";
@@ -21,7 +22,7 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
  const [doc,setDoc]=useState<AimeProjectDocument>(initial.value);
  const [blocked]=useState(initial.blocked);
  const [selectedItem,setSelectedItem]=useState<string|null>(null);
- const [inspect,setInspect]=useState<"project"|"page"|"item">("project");
+ const [inspect,setInspect]=useState<"overview"|"project"|"page"|"item"|"ai"|"me">("overview");
  const [leftVisible,setLeftVisible]=useState(false);
  const [rightVisible,setRightVisible]=useState(false);
  const [notice,setNotice]=useState("");
@@ -33,6 +34,7 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
  const [headerMenu,setHeaderMenu]=useState<"project"|"format"|"composition"|null>(null);
  const [composition,setComposition]=useState<"flux"|"colonnes">("flux");
  const [learnOpen,setLearnOpen]=useState(false);
+ const [templatePicker,setTemplatePicker]=useState(false);
  const viewport=useRef<HTMLElement|null>(null);
  const panOrigin=useRef<{x:number;y:number;scrollLeft:number;scrollTop:number}|null>(null);
  const page=doc.pages.find(p=>p.id===doc.activePageId)??null;
@@ -42,10 +44,10 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
   window.addEventListener(AIME_WORLD_CHANGED,update);window.addEventListener("storage",update);
   return()=>{window.removeEventListener(AIME_WORLD_CHANGED,update);window.removeEventListener("storage",update);};
  },[projectId]);
- function commit(next:AimeProjectDocument){
-  if(blocked){setNotice("Document incompatible conservé : exportez une sauvegarde avant de continuer.");return;}
-  try{saveProjectDocument(next);setDoc(next);setNotice("");}
-  catch(error){setNotice(error instanceof Error?error.message:"Modification non enregistrée.");}
+ function commit(next:AimeProjectDocument):boolean{
+  if(blocked){setNotice("Document incompatible conservé : exportez une sauvegarde avant de continuer.");return false;}
+  try{saveProjectDocument(next);setDoc(next);setNotice("");return true;}
+  catch(error){setNotice(error instanceof Error?error.message:"Modification non enregistrée.");return false;}
  }
  function updateProject(change:Partial<Pick<WorldSpace,"title"|"description">>){
   try{
@@ -78,6 +80,29 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
   const id=ids();
   commit({...doc,pages:doc.pages.map(p=>p.id===page.id?{...p,items:[...p.items,{id,kind:"text",text:"Votre texte"}]}:p)});
   setSelectedItem(id);setPendingRemove(false);setInspect("item");setLeftVisible(false);setAddOpen(false);
+ }
+ function addSection(){
+  if(!page||blocked)return;
+  if(page.items.length>=200){setNotice("Limite d’éléments atteinte.");return;}
+  const id=ids();
+  if(!commit({...doc,pages:doc.pages.map(p=>p.id===page.id?{...p,items:[...p.items,{id,kind:"section",title:"Nouvelle section",text:"Votre contenu ici.",layout:"simple"}]}:p)}))return;
+  setSelectedItem(id);setInspect("item");setAddOpen(false);
+ }
+ function applyWeddingTemplate(){
+  if(blocked||doc.pages.length!==0||doc.activePageId!==""){setNotice("Un modèle ne peut être installé que dans un projet vide.");return;}
+  if(!commit(createWeddingSiteTemplate(projectId,ids)))return;
+  setTemplatePicker(false);setAddOpen(false);setSelectedItem(null);setInspect("me");
+ }
+ function changeSection(change:Partial<{title:string;layout:"hero"|"split"|"cards"|"simple"|"cta"}>){
+  if(!page||!item||item.kind!=="section")return;
+  commit({...doc,pages:doc.pages.map(p=>p.id===page.id?{...p,items:p.items.map(e=>e.id===item.id&&e.kind==="section"?{...e,...change}:e)}:p)});
+ }
+ function moveItem(direction:-1|1){
+  if(!page||!item)return;
+  const from=page.items.findIndex(e=>e.id===item.id),to=from+direction;
+  if(to<0||to>=page.items.length)return;
+  const reordered=[...page.items];[reordered[from],reordered[to]]=[reordered[to],reordered[from]];
+  commit({...doc,pages:doc.pages.map(p=>p.id===page.id?{...p,items:reordered}:p)});
  }
  function changeText(text:string){
   if(!page||!item)return;
