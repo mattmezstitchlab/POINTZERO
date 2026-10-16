@@ -101,10 +101,10 @@ export default function App() {
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
-    else if(studioMode==="bureau")document.title="Bureau — POINTZERO";
-    else if(studioMode==="design")document.title="Atelier — POINTZERO";
+    else if(studioMode==="bureau")document.title="Bureau — AIME";
+    else if(studioMode==="design")document.title="Atelier — AIME";
     else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
-      document.title="Studios — POINTZERO";
+      document.title="Outils — AIME";
     }
   },[studioMode]);
   const [photoHandoff, setPhotoHandoff] = useState<{id:string;dataUrl:string}|null>(null);
