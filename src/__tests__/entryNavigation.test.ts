@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { entryStudio, isStudioRoute } from "../lib/entryNavigation";
 
 describe("POINTZERO — navigation publique non destructive",()=>{
- it("affiche toujours AIME sur le domaine racine",()=>{
-  expect(entryStudio("","")).toBe("aime-home");
-  expect(entryStudio("?utm_source=share","")).toBe("aime-home");
+ it("ouvre directement le Studio Édition sur le domaine racine",()=>{
+  expect(entryStudio("","")).toBe("design");
+  expect(entryStudio("?utm_source=share","")).toBe("design");
   expect(entryStudio("?page=manifest","")).toBe("manifest");
   expect(entryStudio("","","/pointzero")).toBe("manifest");
   expect(entryStudio("","","/atelier")).toBe("design");
@@ -24,8 +24,8 @@ describe("POINTZERO — navigation publique non destructive",()=>{
   expect(entryStudio("?studio=ripplecircle","")).toBe("ripplecircle");
  });
  it("ne permet pas une navigation par route non reconnue ou par accès direct à l'administration du manifeste",()=>{
-  expect(entryStudio("?studio=not-a-real-studio","")).toBe("aime-home");
-  expect(entryStudio("?studio=manifest-admin","")).toBe("aime-home");
+  expect(entryStudio("?studio=not-a-real-studio","")).toBe("design");
+  expect(entryStudio("?studio=manifest-admin","")).toBe("design");
   expect(isStudioRoute("not-a-real-studio")).toBe(false);
  });
 });
