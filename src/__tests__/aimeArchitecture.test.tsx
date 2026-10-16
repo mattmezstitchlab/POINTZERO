@@ -22,7 +22,7 @@ describe("AIME — maison mère et dossiers reliés",()=>{
   expect(entryStudio("?studio=embroidery","","/atelier")).toBe("embroidery");
   expect(entryStudio("?site=le-monde-aime","","/")).toBe("aime-landing");
   expect(entryStudio("","","/le-monde-aime")).toBe("aime-landing");
-  expect(publicPathFor("design")).toBe("/atelier");
+  expect(publicPathFor("design")).toBe("/");
  });
  it("affiche AIME en page mère et invite à entrer dans les Univers",async()=>{
   const onNavigate=vi.fn(),{node}=await open("/","aime-home",onNavigate);
