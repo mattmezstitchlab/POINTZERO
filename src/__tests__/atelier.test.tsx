@@ -80,7 +80,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await click(button("Créer un dossier"));
     expect(container?.querySelector('[aria-label="Dossier Universel AIME"]')).toBeTruthy();
     expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
-    await click(button("Retour à AIME"));
+    await click(button("Retour à l’Atelier"));
     expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
     await click(button("Ouvrir le menu des studios"));
     expect(container?.querySelector('[aria-label="Choix du studio"]')).toBeTruthy();
