@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from "react";
-import {ArrowLeft,ChevronDown,Download,Eraser,FileText,FolderOpen,Hand,MousePointer2,Plus,Type,X,PanelLeft,PanelRight} from "lucide-react";
+import {ArrowLeft,Download,Eraser,FileText,FolderOpen,Hand,MousePointer2,Type,X,PanelLeft,PanelRight} from "lucide-react";
 import {ids,readWorld,writeWorld,type WorldSpace} from "../lib/oneSpaceCore";
 import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
 import {readProjectDocument,saveProjectDocument,type AimeProjectDocument,type AimePage} from "../lib/aimeProjectDocument";
