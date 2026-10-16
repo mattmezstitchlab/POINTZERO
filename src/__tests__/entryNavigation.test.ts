@@ -3,11 +3,12 @@ import { entryStudio, isStudioRoute } from "../lib/entryNavigation";
 
 describe("POINTZERO — navigation publique non destructive",()=>{
  it("ouvre directement le Studio Édition sur le domaine racine",()=>{
-  expect(entryStudio("","")).toBe("design");
-  expect(entryStudio("?utm_source=share","")).toBe("design");
+  expect(entryStudio("","")).toBe("bureau");
+  expect(entryStudio("?utm_source=share","")).toBe("bureau");
   expect(entryStudio("?page=manifest","")).toBe("manifest");
   expect(entryStudio("","","/pointzero")).toBe("manifest");
   expect(entryStudio("","","/atelier")).toBe("design");
+  expect(entryStudio("","","/bureau")).toBe("bureau");
   expect(entryStudio("","","/le-monde-aime")).toBe("aime-landing");
   expect(entryStudio("","","/univers")).toBe("universe-index");
   expect(entryStudio("","","/univers/mariage")).toBe("universe-detail");
@@ -24,8 +25,8 @@ describe("POINTZERO — navigation publique non destructive",()=>{
   expect(entryStudio("?studio=ripplecircle","")).toBe("ripplecircle");
  });
  it("ne permet pas une navigation par route non reconnue ou par accès direct à l'administration du manifeste",()=>{
-  expect(entryStudio("?studio=not-a-real-studio","")).toBe("design");
-  expect(entryStudio("?studio=manifest-admin","")).toBe("design");
+  expect(entryStudio("?studio=not-a-real-studio","")).toBe("bureau");
+  expect(entryStudio("?studio=manifest-admin","")).toBe("bureau");
   expect(isStudioRoute("not-a-real-studio")).toBe(false);
  });
 });
