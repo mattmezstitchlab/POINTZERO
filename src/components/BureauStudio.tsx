@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState,type FormEvent} from "react";
-import {Archive,ArrowRight,Clock3,FolderOpen,Grid2X2,Layers3,Plus,Search,Undo2} from "lucide-react";
+import {Archive,ArrowRight,FolderOpen,Grid2X2,Layers3,Plus,Search,Undo2} from "lucide-react";
 import {readWorld,writeWorld,newSpace,type SpaceKind,type WorldSpace} from "../lib/oneSpaceCore";
 import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
 import {emptyUniversalMeta} from "../lib/dossierSchema";
@@ -115,3 +115,4 @@ export default function BureauStudio({onOpenProject,onLegacyEditor}:Props){
    </main>
   </div>
  </div>;
+}
