@@ -13,7 +13,10 @@ function download(text:string,name:string){const blob=new Blob([text],{type:"app
 const readable=(s:string)=>{try{const v=JSON.parse(s);return Array.isArray(v)?v.join(", "):String(v??"");}catch{return s}};
 export default function UniversalDossierStudio({onBack,onOpenAcademy,onOpenMiniSite}:Props){
  const [world,setWorld]=useState(readWorld),[activeId,setActiveId]=useState(()=>new URLSearchParams(window.location.search).get("id")||readWorld().selectedSpaceId);
- const [intent,setIntent]=useState(""),[preview,setPreview]=useState<Inference|null>(null);
+ const [intent,setIntent]=useState(()=>{
+   const temporary=(window.history.state as {aimeIntention?:unknown}|null)?.aimeIntention;
+   return typeof temporary==="string"?temporary.slice(0,800):new URLSearchParams(window.location.search).get("intention")?.slice(0,800)??"";
+  }),[preview,setPreview]=useState<Inference|null>(null);
  const [notice,setNotice]=useState(""),[editing,setEditing]=useState<EditKey|null>(null),[draft,setDraft]=useState("");
  const [historyOpen,setHistoryOpen]=useState(false),[showTraining,setShowTraining]=useState(true);
  const [momentTitle,setMomentTitle]=useState(""),[momentTime,setMomentTime]=useState("");

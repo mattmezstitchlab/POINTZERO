@@ -27,7 +27,7 @@ describe("AIME — maison mère et dossiers reliés",()=>{
  it("affiche AIME en page mère et invite à entrer dans les Univers",async()=>{
   const onNavigate=vi.fn(),{node}=await open("/","aime-home",onNavigate);
   expect(node.textContent).toContain("AIME");
-  expect(node.textContent).toContain("Architecture Intelligente");
+  expect(node.textContent).toContain("MÉTAMORPHOSE ULTIME");
   expect(AIME_SIGNATURES).toHaveLength(4);
   const entry=node.querySelector('a[href="/univers"]');
   expect(entry).toBeTruthy();
