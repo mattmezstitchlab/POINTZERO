@@ -8,6 +8,7 @@ export interface MiniSection {
 }
 export interface MiniSite {
   version:1;id:string;name:string;kind:MiniKind;title:string;subtitle:string;
+  dossierBinding?:{version:1;spaceId:string;programmeSectionId:string;programmeMode:"linked"|"custom"};
   eyebrow:string;date:string;place:string;contact:string;
   primaryColor:string;background:string;heroImage:string;
   heroAlt?:string;heroActionLabel?:string;heroActionHref?:string;
@@ -55,6 +56,7 @@ export function safeMiniSite(value:unknown):MiniSite|null {
     !["heroAlt","heroActionLabel","heroActionHref"].every(key=>{
       const v=d[key as keyof MiniSite];return v===undefined||(typeof v==="string"&&v.length<320);
     })|| (d.heroActionHref!==undefined&&d.heroActionHref!==""&&!safeHref(d.heroActionHref)))return null;
+  if(d.dossierBinding!==undefined){const b=d.dossierBinding;if(!b||b.version!==1||typeof b.spaceId!=="string"||!b.spaceId||b.spaceId.length>100||d.projectId!==b.spaceId||typeof b.programmeSectionId!=="string"||!["linked","custom"].includes(b.programmeMode)||!d.sections.some(s=>s&&s.id===b.programmeSectionId&&s.kind==="programme"))return null;}
   const ids=new Set<string>();
   for(const s of d.sections){
     if(!s||typeof s.id!=="string"||s.id.length>120||ids.has(s.id)||

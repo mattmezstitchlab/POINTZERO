@@ -53,6 +53,8 @@ it('affiche le diagnostic et la proposition sans sauvegarde implicite',async()=>
  const node=document.createElement('div');document.body.append(node);const root=createRoot(node);
  try{
  await act(async()=>root.render(<DossierCapabilityPanel dossierId={s.id}/>));
+ const select=node.querySelector('select')!;
+ await act(async()=>{select.value='other';select.dispatchEvent(new Event('change',{bubbles:true}))});
  const input=node.querySelector('input')!;
  await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'publication-distante');input.dispatchEvent(new Event('input',{bubbles:true}));});
  await act(async()=>node.querySelector('button')!.click());

@@ -1,3 +1,4 @@
+import {WORLD_KEY,safeWorld} from "./oneSpaceCore";
 /** POINTZERO Budget: deliberate local-only bookkeeping, not bank synchronization. */
 export type BudgetScope = "personal" | "project";
 export type BudgetKind = "expense" | "income";
@@ -84,5 +85,6 @@ export function loadProjectOptions():{id:string;name:string}[]{
       }
     }
   }catch{/* Existing drafts remain untouched. */}
-  return all.slice(0,30);
+  try{const world=safeWorld(JSON.parse(localStorage.getItem(WORLD_KEY)??"null"));for(const space of world?.spaces??[]){if(!all.some(x=>x.id===space.id))all.push({id:space.id,name:space.title});}}catch{/* Invalid canonical store remains untouched. */}
+  return all.slice(0,60);
 }

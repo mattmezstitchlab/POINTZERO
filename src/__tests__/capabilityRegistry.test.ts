@@ -1,3 +1,5 @@
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {afterEach,describe,expect,it} from 'vitest';
 import {ADAPTERS,CAPABILITIES,diagnose,executeCapability,isDossier,type DiagnosticRequest} from '../lib/capabilityRegistry';
 import {decideNeed,exportNeeds,proposeNeed,similarNeeds} from '../lib/developmentNeeds';
@@ -39,8 +41,8 @@ describe('Registre technique local',()=>{
   expect(isDossier({id:'x'})).toBe(false);
  });
  it('exige des contrats, adaptateurs et preuves pour chaque capacité',()=>{
-  expect(new Set(CAPABILITIES.map(c=>c.id)).size).toBe(5);
-  for(const c of CAPABILITIES){expect(ADAPTERS[c.adapterId]).toBeTruthy();expect(c.evidence[0].sourceCommit).toMatch(/^[a-f0-9]{40}$/);expect(c.limits.length).toBeGreaterThan(0);}
+  expect(new Set(CAPABILITIES.map(c=>c.id)).size).toBe(8);
+  for(const c of CAPABILITIES){expect(ADAPTERS[c.adapterId]).toBeTruthy();expect(c.evidence[0].sourceCommit??c.evidence[0].sourceBlob).toMatch(/^[a-f0-9]{40}$/);expect(c.limits.length).toBeGreaterThan(0);}
  });
  it('distingue les cinq diagnostics et ne confond pas annoncé et disponible',()=>{
   expect(diagnose({...request,target:'dossier'}).status).toBe('immédiat');
@@ -77,4 +79,13 @@ describe('Registre technique local',()=>{
   expect(()=>decideNeed(proposed,'satisfait','responsable','Sans acceptation','2026-10-15T23:02:00Z')).toThrow();
   expect(localStorage.getItem(WORLD_KEY)).toBe(snapshot);
  });
+});
+
+it('projections',()=>{
+ const s=createUniversalDossier(intent);
+ expect(executeCapability('chronology.project',s)).toMatchObject({dossierId:s.id});
+ expect(executeCapability('mini-site.project',s)).toMatchObject({projectId:s.id,dossierBinding:{spaceId:s.id}});
+ expect(executeCapability('document.project',s)).toContain(s.title);
+ const proof=CAPABILITIES.find(c=>c.id==='mini-site.project')!.evidence[0];
+ const bytes=readFileSync(proof.sourceFile!);expect(createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')).toBe(proof.sourceBlob);
 });

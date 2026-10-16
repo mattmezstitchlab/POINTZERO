@@ -1,3 +1,5 @@
+import {WORLD_KEY,safeWorld} from "./oneSpaceCore";
+import {academyDossierKey} from "./universalDossier";
 import {writeStoredJSON} from "./storageSafety";
 /** POINTZERO Legal — educational local dossier, NOT legal advice or a compliance certificate.
  * Project source records stay in their original studio. No automatic publishing. */
@@ -57,6 +59,14 @@ export function sourceProjects():SiteRef[]{
   const project=validProject(raw);
   if(project)refs.push({key:"academy:"+project.id,kind:"academy",id:project.id,title:project.siteTitle||project.name||"Site Academy",contact:"",source:"Academy UI/UX"});
  }catch{/* Invalid project source is ignored. */}
+ try{
+  const world=safeWorld(JSON.parse(localStorage.getItem(WORLD_KEY)??"null"));
+  for(const space of world?.spaces??[]){try{
+   const raw=localStorage.getItem(academyDossierKey(space.id));if(!raw)continue;
+   const p=validProject(JSON.parse(raw));if(!p||p.dossierBinding?.spaceId!==space.id)continue;
+   if(!refs.some(x=>x.key==='academy:'+p.id))refs.push({key:'academy:'+p.id,kind:'academy',id:p.id,title:p.dossierBinding.titleMode==='linked'?space.title:p.siteTitle,contact:'',source:'Academy liée au Dossier Universel'});
+  }catch{/* A damaged support must not hide the other valid supports. */}}
+ }catch{/* No repair or fallback write. */}
  return refs;
 }
 export const newLegalDossier=(projectKey:string):LegalDossier=>({

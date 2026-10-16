@@ -59,7 +59,7 @@ const persist=(space:WorldSpace,selected=true)=>{
 export function makeUniversalDossier(input:string):WorldSpace{
  const inference=understandIntent(input);
  if(inference.intent.length<8)throw Error("Décrivez votre intention en quelques mots.");
- const base=newSpace("professionnel",inference.title);
+ const base=newSpace(inference.universe==="mariage"?"mariage":"professionnel",inference.title);
  const dossier=emptyUniversalMeta(inference.intent,inference.universe);
  dossier.objectives=inference.objectives;
  if(inference.training)dossier.training=inference.training;
@@ -199,4 +199,21 @@ export function importUniversalJSON(raw:unknown,replace=false):WorldSpace{
  if(store.spaces.some(s=>s.id===space.id)&&!replace)throw Error("Conflit d'identifiant : importation refusée. Confirmez explicitement un remplacement.");
  if(!store.spaces.some(s=>s.id===space.id)&&store.spaces.length>=30)throw Error("Capacité locale atteinte.");
  return persist(space);
+}
+
+/** Explicit fictitious demo creation: one canonical write, no secondary stores. */
+export function createWeddingDemo():WorldSpace {
+ const store=writableWorld();if(store.spaces.length>=30)throw Error("Limite de 30 espaces atteinte.");
+ const base=makeUniversalDossier("Je souhaite organiser notre mariage et relier le programme aux documents.");
+ return persist({...base,kind:"mariage",title:"Camille & Gabriel — mariage fictif",moments:[newMoment("Cérémonie","15:00"),newMoment("Cocktail","17:00")]});
+}
+/** Programme projection edits the original moment; no ProgrammeStore copy. */
+export function updateUniversalMoment(spaceId:string,momentId:string,time:string):WorldSpace {
+ const space=readDossier(spaceId);if(!space)throw Error("Dossier introuvable.");
+ const moment=space.moments.find(m=>m.id===momentId);if(!moment)throw Error("Moment introuvable.");
+ if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error("Horaire invalide.");
+ if(time===moment.time)return space;
+ const d=space.dossier??emptyUniversalMeta(space.description);
+ const revision:DossierChange={id:ids(),at:iso(),entityId:moment.id,field:"moments.time",before:moment.time,after:time,origin:"utilisateur",validation:"confirmé"};
+ return persist({...space,moments:space.moments.map(m=>m.id===momentId?{...m,time}:m),dossier:{...d,history:[...d.history,revision].slice(-300)}});
 }

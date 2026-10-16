@@ -1,14 +1,16 @@
+import DossierProjectionPanel from "./DossierProjectionPanel";
+import type {MiniSite} from "../lib/miniSiteCore";
 import {useEffect,useRef,useState,type ChangeEvent} from "react";
 import {ArrowLeft,ArrowRight,BookOpen,Check,ChevronDown,Download,FileText,GraduationCap,History,Layers3,Plus,Save,Upload} from "lucide-react";
 import {readWorld} from "../lib/oneSpaceCore";
-import {AIME_WORLD_CHANGED,academyReferenceHealth,addUniversalMoment,adoptLegacySpace,createUniversalDossier,exportUniversalJSON,importUniversalJSON,projectFormation,readDossier,understandIntent,updateUniversalField} from "../lib/universalDossier";
+import {AIME_WORLD_CHANGED,createWeddingDemo,academyReferenceHealth,addUniversalMoment,adoptLegacySpace,createUniversalDossier,exportUniversalJSON,importUniversalJSON,projectFormation,readDossier,understandIntent,updateUniversalField} from "../lib/universalDossier";
 import type{EditKey,Inference} from "../lib/universalDossier";
 import "./UniversalDossierStudio.css";
 import DossierCapabilityPanel from "./DossierCapabilityPanel";
-type Props={onBack:()=>void;onOpenAcademy:(id:string)=>void};
+type Props={onBack:()=>void;onOpenAcademy:(id:string)=>void;onOpenMiniSite?:(site:MiniSite)=>void};
 function download(text:string,name:string){const blob=new Blob([text],{type:"application/json;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);}
 const readable=(s:string)=>{try{const v=JSON.parse(s);return Array.isArray(v)?v.join(", "):String(v??"");}catch{return s}};
-export default function UniversalDossierStudio({onBack,onOpenAcademy}:Props){
+export default function UniversalDossierStudio({onBack,onOpenAcademy,onOpenMiniSite}:Props){
  const [world,setWorld]=useState(readWorld),[activeId,setActiveId]=useState(()=>new URLSearchParams(window.location.search).get("id")||readWorld().selectedSpaceId);
  const [intent,setIntent]=useState(""),[preview,setPreview]=useState<Inference|null>(null);
  const [notice,setNotice]=useState(""),[editing,setEditing]=useState<EditKey|null>(null),[draft,setDraft]=useState("");
@@ -62,6 +64,7 @@ export default function UniversalDossierStudio({onBack,onOpenAcademy}:Props){
     <h1>Un même projet.<br/><em>Plusieurs usages.</em></h1>
     <p>Commencez par votre intention. Les données restent sur cet appareil ; aucune action réglementaire ou notification n'est envoyée.</p>
    </div>
+   <button type="button" className="ud-primary" onClick={()=>{try{const s=createWeddingDemo();setActiveId(s.id);setNotice("Exemple fictif créé sur cet appareil. Aucun envoi ni partage.")}catch(e){setNotice(String(e))}}}>Essayer le mariage fictif — créer un dossier local</button>
    <label className="ud-intent-label" htmlFor="ud-intent">Votre intention</label>
    <div className="ud-compose"><textarea id="ud-intent" rows={3} value={intent} onChange={e=>{setIntent(e.target.value);setPreview(null)}} placeholder="Je suis saxophoniste et je souhaite transmettre l’improvisation à dix débutants."/>
     <div className="ud-compose-bottom"><span>Interprétation locale guidée, sans appel à une IA.</span><button type="button" disabled={intent.trim().length<8} onClick={prepare}>Comprendre mon projet <ArrowRight size={16}/></button></div>
@@ -78,6 +81,7 @@ export default function UniversalDossierStudio({onBack,onOpenAcademy}:Props){
    </div>
    {current&&<div className="ud-live" key={current.id}>
     <div className="ud-section-head"><div><span className="ud-kicker">DOSSIER CANONIQUE · {current.id.slice(0,8)}</span><h2>{current.title}</h2></div><span className="ud-local-tag"><Check size={13}/> Local · version 1</span></div>
+    {current.dossier&&current.moments.length>0&&<DossierProjectionPanel space={current} onOpenMiniSite={onOpenMiniSite}/>}
     <div className="ud-grid">
      <section className="ud-sheet" aria-label="Dossier vivant"><div className="ud-pane-title"><FileText size={18}/><h3>Le dossier vivant</h3></div>
       {field("title","Titre canonique",current.title)}

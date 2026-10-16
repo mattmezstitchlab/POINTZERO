@@ -454,7 +454,7 @@ export default function App() {
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
   return studioMode === "universal-dossier"
-    ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))}/>
+    ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))} onOpenMiniSite={site=>{setMiniSiteHandoff(site);switchStudio("mini-site")}}/>
     : studioMode === "reference-dossier"
     ? <AimeDossier onNavigate={navigatePage}/>
     : studioMode === "aime-home" || studioMode === "universe-index" ||
