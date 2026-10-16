@@ -68,25 +68,20 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
-  it("ouvre AIME à la racine, puis POINTZERO et l'Atelier sans perdre le projet", async () => {
-    localStorage.setItem("pointzero:workspace","design");
+  it("ouvre le Bureau neuf à la racine sans aucun atelier ni création automatique",async()=>{
     await mount(true);
-    expect(container?.querySelector('[aria-label="AIME — Architecture mère"]')).toBeTruthy();
-    expect(container?.textContent).toContain("LETTRE OUVERTE");
-    await click(container?.querySelector('a[href="/pointzero"]'));
-    expect(container?.querySelector('[aria-label="POINTZERO .0 — Le temps retrouvé"]')).toBeTruthy();
-    const opener=[...(container?.querySelectorAll("button")??[])].find(x=>x.textContent?.includes("Ouvrir l’Atelier"));
-    await click(opener);
-    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
-    await click(button("Ouvrir le menu des studios"));
-    expect(container?.querySelector('[aria-label="Choix du studio"]')).toBeTruthy();
-    expect(button("Ouvrir le studio LE MONDE AIME · Présentation")).toBeNull();
-    expect(button("Ouvrir le studio LE MONDE AIME · Atelier libre")).toBeTruthy();
-    await click(button("Retour à l’accueil POINTZERO"));
-    expect(container?.textContent).toContain("Le temps retrouvé.");
-    expect(container?.querySelector('a[href="/le-monde-aime"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Bureau AIME"]')).toBeTruthy();
+    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeNull();
+    expect(container?.querySelector('[aria-label="Grille universelle de fragments"]')).toBeNull();
+    expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
+    const add=[...(container?.querySelectorAll("button")??[])].find(b=>b.textContent?.includes("Nouveau projet"));
+    await click(add);
+    expect(container?.querySelector('[aria-label="Créer un nouveau projet"]')).toBeTruthy();
+    expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
+    const cancel=[...(container?.querySelectorAll("button")??[])].find(b=>b.textContent?.trim()==="Annuler");
+    await click(cancel);
+    expect(localStorage.getItem("pointzero:one-space:v1")).toBeNull();
   });
-
 
   it("affiche RIPPLECIRCLE comme module externe réutilisable sans chargement automatique", async () => {
     localStorage.setItem("pointzero:workspace","design");
