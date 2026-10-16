@@ -1,5 +1,5 @@
 import {useEffect,useState} from "react";
-import {ArrowLeft,Download,FilePlus2,FileText,FolderOpen,Plus,Type,X,PanelLeft,PanelRight} from "lucide-react";
+import {ArrowLeft,Download,FileText,FolderOpen,Plus,Type,X,PanelLeft,PanelRight} from "lucide-react";
 import {ids,readWorld,writeWorld,type WorldSpace} from "../lib/oneSpaceCore";
 import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
 import {readProjectDocument,saveProjectDocument,type AimeProjectDocument,type AimePage} from "../lib/aimeProjectDocument";
