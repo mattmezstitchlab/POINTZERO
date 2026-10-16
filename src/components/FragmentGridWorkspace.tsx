@@ -157,6 +157,43 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
         <button type="button" className="min-h-9 rounded-[5px] border border-white/20 px-2 text-xs xl:hidden" onClick={()=>setInspectorOpen(false)}>Fermer</button>
       </div>
       {active ? <>
+        <div role="tablist" aria-label="Zoom Code du fragment" className="mb-4 grid grid-cols-3 gap-1">
+          {(["understand","properties","code"] as const).map(tab=><button type="button" key={tab} role="tab" aria-selected={inspectTab===tab}
+            onClick={()=>setInspectTab(tab)} className={"rounded-[4px] px-1 py-2 text-[10px] "+(inspectTab===tab?"bg-white text-black":"border border-white/20")}>
+            {({understand:"Comprendre",properties:"Propriétés",code:"Code"})[tab]}</button>)}
+        </div>
+        {inspectTab==="understand"?<div className="space-y-3 text-xs leading-relaxed text-white/70">
+          <p>Un fragment est une représentation éditable, pas une modification de sa source.</p>
+          <p><b>Identifiant :</b> {active.id}</p><p><b>Catégorie :</b> {active.kind}</p>
+          <p><b>Provenance :</b> {active.source?"Design · "+active.source.resourceId:"Fragment local"}</p>
+          {sourceSnapshot&&<p><b>Document Design :</b> {sourceSnapshot.name} · {sourceSnapshot.format} · {sourceSnapshot.width} × {sourceSnapshot.height} · {sourceSnapshot.elements.length} éléments.</p>}
+          {sourceIssue&&<p role="alert">{sourceIssue}</p>}
+          <p><b>Synchronisation :</b> {active.source?.titleMode==="linked"?"Titre lu depuis la source":"Propriétés personnalisées"}</p>
+          <p><b>Export :</b> {active.source?(active.source.allowExport?"Autorisé sur confirmation antérieure":"Privé : refusé par défaut"):"Non lié"}</p>
+          <p><b>Contrainte :</b> {active.locked?"Verrouillé":active.span+" colonnes"} ; zoom {active.crop.zoom}%.</p>
+        </div>:inspectTab==="code"?<div className="space-y-3 text-xs leading-relaxed">
+          <p>Structure locale en lecture seule : aucun code privé de la source n'est exposé.</p>
+          <pre className="max-h-[48vh] overflow-auto whitespace-pre-wrap break-all rounded bg-white/5 p-2 text-[10px]">{JSON.stringify({
+            selection:selectFragment(active),fragment:active,layout,device,
+            sourceMetadata:sourceSnapshot?{id:sourceSnapshot.id,version:sourceSnapshot.version,name:sourceSnapshot.name,format:sourceSnapshot.format,dimensions:[sourceSnapshot.width,sourceSnapshot.height],elementCount:sourceSnapshot.elements.length}:sourceIssue||null
+          },null,2)}</pre>
+        </div>:<>
+        <div className="mb-4 space-y-2 rounded-[5px] border border-white/20 p-2 text-[11px]">
+          <p>Transformation réversible · taille du fragment</p>
+          <button type="button" className={btn} disabled={active.locked||active.span>=4} onClick={()=>{
+            try{setProposal(previewFragmentSpan(collection,active.id,Math.min(4,active.span+1) as Fragment["span"]));setNotice("Prévisualisation non enregistrée : vérifiez les impacts.")}
+            catch(e){setNotice(e instanceof Error?e.message:"Action impossible")}
+          }}>Prévisualiser +1 colonne</button>
+          {proposal&&proposal.targetId===active.id&&<div aria-label="Impact de la modification" className="space-y-2 rounded bg-white/10 p-2">
+            <p>{proposal.previousSpan} → {proposal.nextSpan} colonnes</p>
+            {proposal.effects.map(effect=><p key={effect}>{effect}</p>)}
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={btn} onClick={()=>{try{setSession(confirmFragmentPreview(session,proposal));setProposal(null);setNotice("Modification confirmée ; annulation disponible.")}
+                catch(e){setProposal(null);setNotice(String(e))}}}>Confirmer la modification</button>
+              <button type="button" className={btn} onClick={()=>setProposal(null)}>Abandonner la proposition</button>
+            </div>
+          </div>}
+        </div>
         {active.source&&<><p>Référence Design · titre {active.source.titleMode==='linked'?'lié':'personnalisé'} · export {active.source.allowExport?'autorisé':'privé'}</p><button className={btn} onClick={()=>{if(window.confirm('Autoriser explicitement cette ressource liée dans les exports HTML ?'))patch(active.id,{source:{...active.source!,allowExport:true}})}}>Autoriser cette ressource dans l’export</button><button className={btn} onClick={()=>patch(active.id,{source:{...active.source!,allowExport:false}})}>Retirer l’autorisation d’export futur</button></>}
         <p className="mb-3 text-[11px] text-white/60">Source conservée. La composition ne modifie pas l'original.</p>
         {([["title","Titre"],["description","Description"],["kind","Catégorie"],["sourceUrl","URL source"],["image","URL image"],["notes","Notes"]] as const).map(([key,label])=>
@@ -178,6 +215,7 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
           {active.locked?<LockOpen size={14}/>:<Lock size={14}/>} {active.locked?"Déverrouiller":"Verrouiller"}
         </button>
         {allowedFragmentUrl(active.sourceUrl)&&<a target="_blank" rel="noopener noreferrer" href={allowedFragmentUrl(active.sourceUrl)} className={btn+" flex w-full items-center justify-center gap-2"}><ExternalLink size={14}/> Ouvrir la source</a>}
+        </>}
       </> : <p className="text-[12px] leading-relaxed text-white/55">Sélectionnez un fragment pour l'agrandir, le recadrer et le verrouiller. La source et les notes sont sauvegardées dans la collection.</p>}
       <div className="mt-5 border-t border-white/10 pt-4"><p className="text-[10px] leading-relaxed text-white/55">Données stockées sur cet appareil. JSON AIME MÉTAMORPHOSE compatible ; pas de modification distante du site source.</p></div>
     </aside>
