@@ -126,7 +126,6 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
     {headerMenu==="project"&&<div role="menu" aria-label="Actions du projet" className="absolute left-0 top-[calc(100%+5px)] z-50 w-[210px] rounded-[7px] border border-white/15 bg-[#242427] p-1.5 shadow-xl">
       <button type="button" role="menuitem" onClick={()=>{setHeaderMenu(null);onBureau();}} className={quiet+" w-full"}><ArrowLeft size={13}/> Retour au Bureau</button>
       <button type="button" role="menuitem" onClick={()=>{setHeaderMenu(null);setInspect("project");setRightVisible(true);}} className={quiet+" w-full"}>Renommer / Informations</button>
-      {doc.pages.length>0&&<button type="button" role="menuitem" onClick={()=>{setHeaderMenu(null);exportPages();}} className={quiet+" w-full"}><Download size={13}/> Exporter les pages · JSON</button>}
     </div>}
    </div>
    <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
@@ -210,6 +209,7 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
        <span className="px-3 text-[13px] font-semibold tracking-[.04em] text-white/75">AI</span>
        <button type="button" aria-label="Ouvrir le menu de création" aria-expanded={addOpen} onClick={()=>setAddOpen(v=>!v)} className={"grid size-9 place-items-center rounded-full text-lg font-medium "+(addOpen?"bg-[#e8e8eb] text-[#111113]":"bg-[#36363a] text-white hover:bg-[#55555a]")}>+</button>
        <span className="px-3 text-[13px] font-semibold tracking-[.04em] text-white/75">ME</span>
+      </div>
       </div>
       <div aria-label="Zoom du projet" className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/15 bg-[#242427] px-1 py-1">
        <button type="button" aria-label="Réduire le zoom" disabled={zoom<=75} onClick={()=>setZoom(z=>Math.max(75,z-25))} className={quiet+" !min-h-7 !px-1.5 disabled:opacity-30"}><Minus size={14}/></button>
