@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from "react";
-import {ArrowLeft,Download,Eraser,FileText,FolderOpen,Hand,MousePointer2,Type,X,PanelLeft,PanelRight} from "lucide-react";
+import {ArrowLeft,ChevronDown,Download,Eraser,FileText,FolderOpen,Hand,Minus,MousePointer2,Plus,Type,X,PanelLeft,PanelRight} from "lucide-react";
 import {ids,readWorld,writeWorld,type WorldSpace} from "../lib/oneSpaceCore";
 import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
 import {readProjectDocument,saveProjectDocument,type AimeProjectDocument,type AimePage} from "../lib/aimeProjectDocument";
@@ -30,6 +30,9 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
  const [pendingRemove,setPendingRemove]=useState(false);
  const [frame,setFrame]=useState<"Auto"|"Ordinateur"|"Tablette"|"Mobile">("Auto");
  const [zoom,setZoom]=useState(100);
+ const [headerMenu,setHeaderMenu]=useState<"project"|"format"|"composition"|null>(null);
+ const [composition,setComposition]=useState<"flux"|"colonnes">("flux");
+ const [learnOpen,setLearnOpen]=useState(false);
  const viewport=useRef<HTMLElement|null>(null);
  const panOrigin=useRef<{x:number;y:number;scrollLeft:number;scrollTop:number}|null>(null);
  const page=doc.pages.find(p=>p.id===doc.activePageId)??null;
@@ -115,17 +118,34 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
   <button type="button" onClick={onBureau} className={action}>Retour au Bureau</button>
  </div>;
  return <div className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#111113] text-[#efeff1]" aria-label="Atelier AIME — projet">
-  <header className="z-30 flex h-[54px] shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#0d0d0f] px-3 sm:px-5">
-   <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-    <strong className="shrink-0 text-[13px] tracking-[.04em]">AIME</strong><span className="text-white/30">/</span>
-    <button type="button" aria-label="Retour au Bureau" onClick={onBureau} className={quiet+" !px-1.5"}><ArrowLeft size={14}/><span className="hidden sm:inline">Bureau</span></button>
-    <span className="hidden text-white/30 sm:inline">/</span>
-    <button type="button" onClick={()=>{setInspect("project");setRightVisible(true);}} className="min-w-0 truncate rounded-[4px] px-1.5 py-2 text-left text-xs font-medium hover:bg-white/10" title="Informations du projet">{project.title}</button>
+  <header className="relative z-40 flex h-[54px] shrink-0 items-center gap-2 border-b border-white/10 bg-[#0d0d0f] px-3 sm:gap-3 sm:px-5">
+   <strong className="shrink-0 text-[13px] tracking-[.04em]">AIME</strong>
+   <span className="text-white/30">/</span>
+   <div className="relative min-w-0 max-w-[220px] shrink sm:max-w-[300px]">
+    <button type="button" aria-label="Menu du projet" aria-expanded={headerMenu==="project"} onClick={()=>setHeaderMenu(m=>m==="project"?null:"project")} className={quiet+" max-w-full !gap-1"}><span className="truncate">{project.title}</span><ChevronDown size={12}/></button>
+    {headerMenu==="project"&&<div role="menu" aria-label="Actions du projet" className="absolute left-0 top-[calc(100%+5px)] z-50 w-[210px] rounded-[7px] border border-white/15 bg-[#242427] p-1.5 shadow-xl">
+      <button type="button" role="menuitem" onClick={()=>{setHeaderMenu(null);onBureau();}} className={quiet+" w-full"}><ArrowLeft size={13}/> Retour au Bureau</button>
+      <button type="button" role="menuitem" onClick={()=>{setHeaderMenu(null);setInspect("project");setRightVisible(true);}} className={quiet+" w-full"}>Renommer / Informations</button>
+      {doc.pages.length>0&&<button type="button" role="menuitem" onClick={()=>{setHeaderMenu(null);exportPages();}} className={quiet+" w-full"}><Download size={13}/> Exporter les pages · JSON</button>}
+    </div>}
    </div>
-   <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+   <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+    <div className="relative">
+     <button type="button" aria-label="Choisir le format" aria-expanded={headerMenu==="format"} onClick={()=>setHeaderMenu(m=>m==="format"?null:"format")} className={quiet+" !gap-1"}><span>Format</span><span className="hidden max-w-[65px] truncate text-white/45 md:inline">{frame}</span><ChevronDown size={12}/></button>
+     {headerMenu==="format"&&<div role="menu" aria-label="Formats d'aperçu" className="absolute right-0 top-[calc(100%+5px)] z-50 w-[160px] rounded-[7px] border border-white/15 bg-[#242427] p-1.5 shadow-xl">
+      {(["Auto","Ordinateur","Tablette","Mobile"] as const).map(v=><button key={v} type="button" role="menuitemradio" aria-checked={frame===v} onClick={()=>{setFrame(v);setHeaderMenu(null);}} className={quiet+" w-full justify-between"}>{v}{frame===v&&<span className="text-white/50">✓</span>}</button>)}
+     </div>}
+    </div>
+    <div className="relative">
+     <button type="button" aria-label="Choisir la composition" aria-expanded={headerMenu==="composition"} onClick={()=>setHeaderMenu(m=>m==="composition"?null:"composition")} className={quiet+" !gap-1"}><span>Composition</span><ChevronDown size={12}/></button>
+     {headerMenu==="composition"&&<div role="menu" aria-label="Compositions de la page" className="absolute right-0 top-[calc(100%+5px)] z-50 w-[185px] rounded-[7px] border border-white/15 bg-[#242427] p-1.5 shadow-xl">
+      {([{id:"flux",label:"Flux vertical"},{id:"colonnes",label:"Deux colonnes"}] as const).map(v=><button key={v.id} type="button" role="menuitemradio" aria-checked={composition===v.id} onClick={()=>{setComposition(v.id);setHeaderMenu(null);}} className={quiet+" w-full justify-between"}>{v.label}{composition===v.id&&<span className="text-white/50">✓</span>}</button>)}
+      <p className="px-3 py-2 text-[10px] leading-relaxed text-white/40">La disposition ne modifie pas les données.</p>
+     </div>}
+    </div>
     <button type="button" aria-label="Afficher la structure" onClick={()=>setLeftVisible(v=>!v)} className={quiet+" lg:hidden"}><PanelLeft size={17}/></button>
     <button type="button" aria-label="Afficher les réglages" onClick={()=>setRightVisible(v=>!v)} className={quiet+" xl:hidden"}><PanelRight size={17}/></button>
-    {doc.pages.length>0&&<button type="button" onClick={exportPages} className={action}><Download size={15}/><span className="hidden sm:inline">Exporter les pages</span></button>}
+    {doc.pages.length>0&&<button type="button" onClick={exportPages} aria-label="Exporter les pages en JSON" className={action+" !px-2 sm:!px-3"}><Download size={14}/><span className="hidden xl:inline">Exporter</span></button>}
    </div>
   </header>
   <div className="relative flex min-h-0 flex-1">
@@ -150,14 +170,6 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
      {([{id:"select",label:"Sélectionner",icon:<MousePointer2 size={17}/>},{id:"hand",label:"Déplacer la vue",icon:<Hand size={17}/>},{id:"erase",label:"Retirer un élément",icon:<Eraser size={17}/>} ] as const).map(t=><button key={t.id} type="button" title={t.label} aria-label={t.label} aria-pressed={tool===t.id} onClick={()=>changeTool(t.id)} className={"flex size-9 items-center justify-center rounded-[5px] "+(tool===t.id?"bg-[#f2f2f3] text-[#111113]":"text-white/60 hover:bg-white/10 hover:text-white")}>{t.icon}</button>)}
     </nav>
     <div className="flex min-w-0 flex-1 flex-col">
-     <div className="flex min-h-[43px] shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#18181a] px-3">
-      <label className="flex items-center gap-2 text-[11px] text-white/65">Aperçu
-       <select aria-label="Format de prévisualisation" value={frame} onChange={e=>setFrame(e.target.value as typeof frame)} className="rounded-[4px] bg-[#252528] px-2 py-1.5 text-[11px] text-white outline-none focus:ring-1 focus:ring-white/60"><option>Auto</option><option>Ordinateur</option><option>Tablette</option><option>Mobile</option></select>
-      </label>
-      <label className="flex items-center gap-2 text-[11px] text-white/50">Zoom
-       <select aria-label="Zoom de l’espace de travail" value={zoom} onChange={e=>setZoom(Number(e.target.value))} className="rounded-[4px] bg-[#252528] px-2 py-1.5 text-[11px] text-white outline-none focus:ring-1 focus:ring-white/60"><option value={75}>75 %</option><option value={100}>100 %</option><option value={125}>125 %</option></select>
-      </label>
-     </div>
      <main ref={viewport} aria-label="Espace de travail du projet" onPointerDown={onPanStart} onPointerMove={onPanMove} onPointerUp={onPanEnd} onPointerCancel={onPanEnd} className={"min-h-0 min-w-0 flex-1 overflow-auto bg-[#171719] px-4 py-8 sm:px-8 "+(tool==="hand"?"cursor-grab active:cursor-grabbing":"")}>
     {notice&&<p role="alert" className="mx-auto mb-5 max-w-[860px] rounded-[5px] border border-amber-400/40 bg-amber-900/20 p-3 text-xs text-amber-100">{notice}</p>}
     {blocked&&<p role="alert" className="mx-auto mb-5 max-w-[860px] text-xs text-amber-200">Document existant incompatible : modification désactivée. Données conservées.</p>}
@@ -169,13 +181,25 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
      <div className="mx-auto flex w-full flex-col gap-3 transition-[max-width] duration-150" style={{maxWidth:frame==="Mobile"?390:frame==="Tablette"?768:frame==="Ordinateur"?1120:920,zoom:zoom/100}}>
        <div className="flex items-center justify-between gap-2 text-[11px] text-white/50"><span className="truncate">{page.title||"Sans titre"}</span><span>Page {doc.pages.findIndex(p=>p.id===page.id)+1}</span></div>
        <div className="min-h-[min(70vh,650px)] rounded-[3px] bg-white px-7 py-9 text-[#171719] shadow-[0_12px_40px_#0003] sm:px-12" aria-label="Page active" onClick={()=>{setSelectedItem(null);setInspect("page");}}>
+         <div aria-label="Composition de la page" className={composition==="colonnes"?(frame==="Mobile"?"grid grid-cols-1 gap-3":frame==="Auto"?"grid grid-cols-1 gap-3 sm:grid-cols-2":"grid grid-cols-2 gap-3"):""}>
          {page.items.map((e)=><button key={e.id} type="button" onClick={ev=>{ev.stopPropagation();chooseItem(e.id);}}
            className={"mb-3 block max-w-full whitespace-pre-wrap break-words rounded-[3px] px-2 py-1 text-left text-[17px] "+(selectedItem===e.id?"outline outline-2 outline-[#3197ff]":"hover:outline hover:outline-1 hover:outline-black/15")}>{e.text||" "}</button>)}
+         </div>
        </div>
        {!page.items.length&&<p className="text-center text-[11px] text-white/45">Cette page est vide. Utilisez le bouton + pour ajouter du contenu.</p>}
      </div>}
      </main>
-     <div className="relative z-10 flex min-h-[66px] shrink-0 items-center justify-center border-t border-white/10 bg-[#151517] px-3" aria-label="Capsule AI + ME">
+     {learnOpen&&<section aria-label="Découvrir AIME" className="shrink-0 border-t border-white/10 bg-[#202023] px-4 py-3 text-xs text-white/70">
+      <div className="mx-auto flex max-w-[720px] flex-wrap items-start justify-between gap-3">
+       <div className="max-w-[570px]"><h2 className="mb-1 font-semibold text-white">Apprendre en créant</h2>
+        <p>{!page?"Commencez par le + pour créer une page.":!page.items.length?"Votre page est prête. Utilisez le + pour y ajouter du texte.":"Sélectionnez un texte avec la flèche, modifiez-le à droite, puis essayez Format et Composition."}</p>
+       </div>
+       <button type="button" onClick={()=>setLearnOpen(false)} className={quiet+" !min-h-7"}>Fermer</button>
+      </div>
+     </section>}
+     <div className="relative z-10 flex min-h-[62px] shrink-0 items-center justify-between gap-2 border-t border-white/10 bg-[#151517] px-2 sm:px-3" aria-label="Barre inférieure">
+      <button type="button" aria-label="Découvrir AIME" aria-expanded={learnOpen} onClick={()=>setLearnOpen(v=>!v)} className={quiet+" shrink-0 !px-2"}>Aide</button>
+      <div className="relative flex justify-center" aria-label="Capsule AI + ME">
       {addOpen&&<div aria-label="Ajouter au projet" className="absolute bottom-[calc(100%+8px)] left-1/2 w-[220px] -translate-x-1/2 rounded-[7px] border border-white/15 bg-[#242427] p-2 shadow-[0_15px_38px_#0008]">
        <p className="px-3 py-2 text-[11px] font-semibold text-white/50">Créer</p>
        <button type="button" aria-label="Ajouter une page" disabled={blocked||doc.pages.length>=40} onClick={addPage} className={quiet+" w-full disabled:opacity-30"}>Nouvelle page</button>
@@ -186,6 +210,11 @@ export default function AimeProjectWorkspace({projectId,onBureau}:Props){
        <span className="px-3 text-[13px] font-semibold tracking-[.04em] text-white/75">AI</span>
        <button type="button" aria-label="Ouvrir le menu de création" aria-expanded={addOpen} onClick={()=>setAddOpen(v=>!v)} className={"grid size-9 place-items-center rounded-full text-lg font-medium "+(addOpen?"bg-[#e8e8eb] text-[#111113]":"bg-[#36363a] text-white hover:bg-[#55555a]")}>+</button>
        <span className="px-3 text-[13px] font-semibold tracking-[.04em] text-white/75">ME</span>
+      </div>
+      <div aria-label="Zoom du projet" className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/15 bg-[#242427] px-1 py-1">
+       <button type="button" aria-label="Réduire le zoom" disabled={zoom<=75} onClick={()=>setZoom(z=>Math.max(75,z-25))} className={quiet+" !min-h-7 !px-1.5 disabled:opacity-30"}><Minus size={14}/></button>
+       <button type="button" aria-label="Réinitialiser le zoom" onClick={()=>setZoom(100)} className="min-w-10 px-1 text-[11px] tabular-nums text-white/70">{zoom}%</button>
+       <button type="button" aria-label="Augmenter le zoom" disabled={zoom>=125} onClick={()=>setZoom(z=>Math.min(125,z+25))} className={quiet+" !min-h-7 !px-1.5 disabled:opacity-30"}><Plus size={14}/></button>
       </div>
      </div>
     </div>
