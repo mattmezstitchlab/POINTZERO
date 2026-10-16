@@ -32,13 +32,29 @@ describe("AIME — espace projet construit depuis le Bureau",()=>{
   expect(view.textContent).not.toContain("Grille universelle");
   expect(view.querySelector('[aria-label="Grille universelle de fragments"]')).toBeNull();
   expect(localStorage.getItem(projectDocumentKey(p.id))).toBeNull();
+  expect(view.querySelector('[aria-label="Outils universels"]')).toBeTruthy();
+  expect(view.querySelector('[aria-label="Capsule AI + ME"]')?.textContent).toContain("AI");
+  expect(view.querySelector('[aria-label="Capsule AI + ME"]')?.textContent).toContain("ME");
+  expect(view.querySelector('[aria-label="Capsule AI + ME"]')?.querySelector("svg")).toBeNull();
+  expect(view.querySelector('button[aria-label="Déplacer la vue"]')).toBeTruthy();
+  expect(view.querySelector('button[aria-label="Retirer un élément"]')).toBeTruthy();
+  expect(view.querySelector('select[aria-label="Format de prévisualisation"]')).toBeTruthy();
+  await click(view.querySelector('button[aria-label="Ouvrir le menu de création"]'));
   await click(view.querySelector('button[aria-label="Ajouter une page"]'));
   expect(view.querySelector('[aria-label="Page active"]')).toBeTruthy();
   expect(view.querySelector('[aria-label="Éléments de la page"]')).toBeTruthy();
   expect(readProjectDocument(p.id).value.pages).toHaveLength(1);
+  await click(view.querySelector('button[aria-label="Ouvrir le menu de création"]'));
   await click(view.querySelector('button[aria-label="Ajouter du texte"]'));
   expect(readProjectDocument(p.id).value.pages[0].items).toHaveLength(1);
   expect(view.querySelector('[aria-label="Modifier le texte"]')).toBeTruthy();
+  await click(view.querySelector('button[aria-label="Retirer un élément"]'));
+  await click(view.querySelector('[aria-label="Page active"] button'));
+  expect(readProjectDocument(p.id).value.pages[0].items).toHaveLength(1);
+  expect(view.querySelector('[aria-label="Confirmer la suppression"]')).toBeTruthy();
+  await click([...view.querySelectorAll('button')].find(x=>x.textContent==="Annuler"));
+  expect(readProjectDocument(p.id).value.pages[0].items).toHaveLength(1);
+
  });
  it("ne modifie pas les anciennes données et protège le projet illisible",async()=>{
   const p=newSpace("professionnel","Client");
@@ -48,6 +64,7 @@ describe("AIME — espace projet construit depuis le Bureau",()=>{
   localStorage.setItem(projectDocumentKey(p.id),"{cassé");
   const view=await mount(p.id);
   expect(view.textContent).toContain("Document existant incompatible");
+  await click(view.querySelector('button[aria-label="Ouvrir le menu de création"]'));
   await click(view.querySelector('button[aria-label="Ajouter une page"]'));
   expect(localStorage.getItem(projectDocumentKey(p.id))).toBe("{cassé");
   expect(localStorage.getItem("pointzero:design-current:v1")).toBe("{format ancien conservé}");
