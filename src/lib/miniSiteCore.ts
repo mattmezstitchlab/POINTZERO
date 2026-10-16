@@ -1,3 +1,4 @@
+import {compositionCSS,type CompositionMode} from "./compositionLayout";
 import {DESIGN_SYSTEM,standaloneDesignCSS} from "./designSystem";
 /** POINTZERO mini-sites: responsive static pages generated locally, without hosting or server forms. */
 import {safeHref} from "./academyCore";
@@ -10,6 +11,7 @@ export interface MiniSection {
 export interface MiniSite {
   version:1;id:string;name:string;kind:MiniKind;title:string;subtitle:string;
   designVersion?:"1.0.0";
+  compositionMode?:CompositionMode;
   dossierBinding?:{version:1;spaceId:string;programmeSectionId:string;programmeMode:"linked"|"custom"};
   eyebrow:string;date:string;place:string;contact:string;
   primaryColor:string;background:string;heroImage:string;
@@ -50,6 +52,7 @@ export const safeHero=(src:unknown)=>typeof src==="string"&&(!src||(/^data:image
 export function safeMiniSite(value:unknown):MiniSite|null {
   if(!value||typeof value!=="object")return null;
   const d=value as Partial<MiniSite>;
+  if(d.compositionMode!==undefined&&!["editorial","regular","immersive"].includes(d.compositionMode))return null;
   if(d.designVersion!==undefined&&d.designVersion!=="1.0.0")return null;
   if(d.version!==1||typeof d.id!=="string"||d.id.length>120||!MINI_KINDS.some(k=>k.id===d.kind)||
     !["name","title","subtitle","eyebrow","date","place","contact","projectId"].every(k=>{
@@ -103,7 +106,7 @@ export function miniSiteToHTML(doc:MiniSite):string {
   const safeMail=emailOK(doc.contact)?'<a href="mailto:'+encodeURIComponent(doc.contact)+'">'+esc(doc.contact)+'</a>':esc(doc.contact);
   return '<!doctype html><html lang="fr" data-aime-design-version="'+(doc.designVersion==='1.0.0'?DESIGN_SYSTEM.version:'legacy')+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
     '<meta name="description" content="'+esc(doc.subtitle)+'"><title>'+esc(doc.title)+'</title>'+
-    '<style>'+(doc.designVersion==='1.0.0'?standaloneDesignCSS():'')+':root{--accent:'+doc.primaryColor+';--paper:'+doc.background+'}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:#171719;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif}'+
+    '<style>'+(doc.designVersion==='1.0.0'||doc.compositionMode?standaloneDesignCSS():'')+':root{--accent:'+doc.primaryColor+';--paper:'+doc.background+'}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:#171719;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif}'+
     '.site-header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:30px;padding:0 max(24px,calc((100vw - 1120px)/2));background:var(--paper);position:sticky;top:0;z-index:3;border-bottom:1px solid #0001}'+
     '.brand{font-size:15px;font-weight:700;text-decoration:none;color:inherit}.nav{display:flex;gap:20px;overflow:auto;white-space:nowrap}.nav a{font-size:12px;color:#333;text-decoration:none}.nav a:hover{text-decoration:underline}'+
     '.hero{min-height:550px;display:grid;place-items:center;text-align:center;padding:95px 24px;position:relative;isolation:isolate;overflow:hidden}'+
@@ -117,10 +120,11 @@ export function miniSiteToHTML(doc:MiniSite):string {
     '@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}'+
     '@media(max-width:720px){.site-header{height:auto;min-height:64px;padding:12px 18px;display:block}.nav{margin-top:10px}.hero{min-height:440px;padding:72px 18px}.section{padding:58px 20px}.gallery{grid-template-columns:1fr 1fr}.gallery-card{min-height:120px}}'+
     (doc.designVersion==='1.0.0'?'body{font-family:var(--aime-body)}h1,h2{font-family:var(--aime-heading)}.cta{border-radius:var(--aime-pill);background:var(--aime-button);color:var(--aime-buttonText);min-height:48px}.hero{min-height:clamp(500px,82vh,850px);padding:clamp(72px,10vw,150px) var(--aime-gutter)}.hero-image{opacity:.32}.section-inner{max-width:1000px}.section{padding:clamp(60px,8vw,120px) var(--aime-gutter)}.hero:has(.hero-image){background:#161616;color:white}.hero:has(.hero-image) .subtitle,.hero:has(.hero-image) .eyebrow{color:white}.hero:has(.hero-image) .cta{background:white;color:#161616}':'')+
+    (doc.compositionMode?compositionCSS(doc.compositionMode).split('.aime-composition article').join('.aime-composition > section'):'')+
     '</style></head><body><header class="site-header"><a class="brand" href="#top">'+esc(doc.title)+'</a><nav class="nav" aria-label="Sections">'+links+'</nav></header>'+
     '<main id="top"><div class="hero">'+hero+'<div><p class="eyebrow">'+esc(doc.eyebrow)+'</p><h1>'+esc(doc.title)+'</h1><p class="subtitle">'+esc(doc.subtitle)+'</p>'+
     '<p class="meta">'+esc([doc.date,doc.place].filter(Boolean).join(" · "))+'</p>'+heroCTA+'</div></div>'+
-    sections.map(s=>sectionHTML(s,doc.contact)).join("")+'</main><footer class="footer">'+safeMail+'</footer>'+
+    '<div'+(doc.compositionMode?' class="aime-composition"':'')+'>'+sections.map(s=>sectionHTML(s,doc.contact)).join("")+'</div></main><footer class="footer">'+safeMail+'</footer>'+
     (hasExternal?'<script>(function(){document.querySelectorAll(".external-project[data-external-url]").forEach(function(card){var button=card.querySelector(".external-load");if(!button)return;button.addEventListener("click",function(){if(card.querySelector("iframe"))return;var frame=document.createElement("iframe");frame.title="Projet externe : "+(card.closest("section").querySelector("h2")?.textContent||"Application");frame.referrerPolicy="no-referrer";frame.loading="lazy";frame.setAttribute("sandbox","allow-scripts allow-same-origin allow-forms");frame.setAttribute("allow","fullscreen");frame.src=card.dataset.externalUrl;card.querySelector(".external-embed-target").appendChild(frame);button.disabled=true;button.textContent="Aperçu demandé";});});})();</script>':"")+
     '</body></html>';
 }

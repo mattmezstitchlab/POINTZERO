@@ -25,6 +25,8 @@ const matchText=(html,pattern)=>text((pattern.exec(html)||[])[1]||"");
 const plain=s=>text(String(s||"").replace(/<[^>]*>/g," ").replace(/&(?:amp|nbsp);/g," ").replace(/&quot;/g,'"'),350);
 async function getHtml(input){
  const u=safeUrl(input);
+ const allowed=(process.env.POINTZERO_SCAN_ALLOWED_HOSTS||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+ if(!allowed.length||!allowed.includes(u.hostname.toLowerCase()))throw Error("Domaine non autorisé : configurez la liste des sites de test possédés.");
  const addresses=await dns.lookup(u.hostname,{all:true,verbatim:true});
  if(!addresses.length||addresses.some(({address})=>!publicIPv4(address)))throw Error("Destination réseau bloquée.");
  const chosen=addresses[0];
@@ -63,16 +65,25 @@ function inspect(input){
  if(/cookie|consent|onetrust|didomi/i.test(html))add("Cookies : contrôle manuel","Marqueurs détectés ; aucun scénario de consentement n'a été exécuté.");
  return {url,title,fragments,findings,limitations:["Une seule page HTML statique, sans exécution JavaScript.","Une image OpenGraph éventuelle, pas une capture pixel à pixel.","Aucune observation ne vaut avis juridique ou certificat de conformité."]};
 }
+let lastScan=0,scanActive=false;
 export default async function handler(req,res){
  res.setHeader("Cache-Control","no-store");
  if(req.method!=="POST")return deny(res,405,"Méthode non autorisée.");
  const gate=process.env.POINTZERO_SCAN_ACCESS_CODE;
  if(!gate)return deny(res,503,"Scan désactivé : POINTZERO_SCAN_ACCESS_CODE non configuré côté serveur.");
+ const origin=req.headers.origin;
+ if(origin){try{if(new URL(origin).host!==String(req.headers.host||''))return deny(res,403,"Origine refusée.");}catch{return deny(res,403,"Origine refusée.");}}
  const provided=String(req.headers["x-pointzero-scan-code"]||"");
  const hash=s=>crypto.createHash("sha256").update(s).digest();
- if(!provided||!crypto.timingSafeEqual(hash(provided),hash(gate)))return deny(res,401,"Code d'accès incorrect.");
+ if(!provided||provided.length>400||!crypto.timingSafeEqual(hash(provided),hash(gate)))return deny(res,401,"Code d'accès incorrect.");
  if(Number(req.headers["content-length"]||0)>3000)return deny(res,413,"Requête trop grande.");
  if(req.body?.authorized!==true)return deny(res,400,"L'autorisation d'inspection de ce site est requise.");
+ if(Buffer.byteLength(JSON.stringify(req.body||{}),'utf8')>3000)return deny(res,413,"Requête trop grande.");
+ // Per-instance bound only; not a distributed rate limiter.
+ const now=Date.now();
+ if(now-lastScan<10_000||scanActive)return deny(res,429,"Scanner occupé : réessayez dans quelques secondes.");
+ lastScan=now;scanActive=true;
  try{return res.status(200).json(inspect(await getHtml(req.body?.url)));}
  catch(e){return deny(res,400,text(e?.message||"Analyse impossible.",220));}
+ finally{scanActive=false;}
 }

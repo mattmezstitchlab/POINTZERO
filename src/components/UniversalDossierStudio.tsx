@@ -1,3 +1,4 @@
+import AimeSymbol from "./AimeSymbol";
 import DossierProjectionPanel from "./DossierProjectionPanel";
 import type {MiniSite} from "../lib/miniSiteCore";
 import {useEffect,useRef,useState,type ChangeEvent} from "react";
@@ -55,7 +56,7 @@ export default function UniversalDossierStudio({onBack,onOpenAcademy,onOpenMiniS
    :<p className="ud-field-value">{value||placeholder||"À renseigner"}</p>}
  </div>;
  return <div className="ud-shell" aria-label="Dossier Universel AIME">
-  <header className="ud-top"><button onClick={onBack} aria-label="Retour à AIME" className="ud-back"><ArrowLeft size={17}/> AIME</button><span className="ud-logo">✳ <strong>Dossier Universel</strong></span>
+  <header className="ud-top"><button onClick={onBack} aria-label="Retour à AIME" className="ud-back"><ArrowLeft size={17}/> AIME</button><span className="ud-logo"><AimeSymbol name="intention"/> <strong>Dossier Universel</strong></span>
    <div className="ud-header-actions"><button type="button" onClick={()=>upload.current?.click()}><Upload size={15}/> Importer</button>
     {current&&<button type="button" onClick={()=>{try{download(exportUniversalJSON(current),"aime-dossier-"+current.id.slice(0,8)+".json")}catch(e){setNotice(String(e))}}}><Download size={15}/> Exporter</button>}</div>
   </header>

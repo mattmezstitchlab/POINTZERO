@@ -99,6 +99,8 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   return <StudioFrame title="Mini-site" subtitle="Une seule page · responsive · export HTML statique" onBack={onBack}
     leftLabel="Bibliothèque de mini-sites" rightLabel="Contenu du mini-site" actions={actions}
     left={<>
+      <label className="block text-xs">Composition responsive<select className={studioInput} aria-label="Composition du mini-site" value={doc.compositionMode??''} onChange={e=>update({compositionMode:e.target.value?e.target.value as 'editorial'|'regular'|'immersive':undefined})}><option value="">Présentation originale</option><option value="editorial">Éditoriale</option><option value="regular">Régulière</option><option value="immersive">Immersive</option></select></label>
+
       {doc.dossierBinding&&<div role="status"><p>Programme {doc.dossierBinding.programmeMode==="linked"?"lié au Dossier Universel":"personnalisé, non synchronisé"}. Local uniquement.</p><p>{projectionError}</p>
       <button type="button" onClick={()=>{if(!projectionError&&window.confirm("Dissocier le programme et conserver son contenu actuel ?"))setDoc({...effectiveDoc,dossierBinding:{...doc.dossierBinding!,programmeMode:"custom"}})}}>Conserver une version personnalisée</button>
       {doc.dossierBinding.programmeMode==="custom"&&<button type="button" onClick={()=>{if(window.confirm("Remplacer l’affichage du programme par la source canonique ? Le texte personnalisé reste dans le JSON local."))update({dossierBinding:{...doc.dossierBinding!,programmeMode:"linked"}})}}>Suivre le programme du dossier</button>}</div>}

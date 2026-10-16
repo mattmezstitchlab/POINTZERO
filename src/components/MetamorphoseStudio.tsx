@@ -54,7 +54,8 @@ export default function MetamorphoseStudio({onBack,onCircle,onGame}:{onBack:()=>
       <button aria-pressed={section==="report"} onClick={()=>setSection("report")} className={"flex-1 rounded-[4px] px-2 py-2 text-xs "+(section==="report"?"bg-white text-black":"border border-white/20")}>Diagnostic</button>
     </div>
     {section==="source"?<form className="space-y-3" onSubmit={e=>void scan(e)}>
-      <p className="text-[11px] leading-relaxed text-white/60">Entrez l'adresse de votre site. Les composants HTML reconnus rejoignent directement la grille centrale.</p>
+      <p className="text-[11px] leading-relaxed text-white/60">Entrez l'adresse de votre site. Le titre et les en-têtes HTML reconnus deviennent des fragments ; ce n’est pas une copie des composants interactifs.</p>
+      <p className="text-xs leading-relaxed text-white/80">Activation requise en Preview : POINTZERO_SCAN_ACCESS_CODE (secret) et POINTZERO_SCAN_ALLOWED_HOSTS (domaines possédés). À configurer par le propriétaire dans Vercel Settings → Environment Variables, puis reconstruire uniquement cette preview. Ne partagez pas votre code.</p>
       <label className="block text-[11px] text-white/70">URL du site
         <input aria-label="URL à décomposer" className={field+" mt-1"} type="url" placeholder="https://mon-site.fr" value={url} onChange={e=>setUrl(e.target.value)} required/>
       </label>

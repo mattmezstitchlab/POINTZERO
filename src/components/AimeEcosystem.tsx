@@ -1,3 +1,4 @@
+import AimeSymbol from "./AimeSymbol";
 import {DESIGN_SYSTEM,designCSS} from "../lib/designSystem";
 import "../design/components.css";
 import AimeProductVisual from "./AimeProductVisual";
@@ -17,7 +18,7 @@ function Jump({href,onNavigate,children,className=""}:{href:string;onNavigate:(p
 }
 function SiteHeader({onNavigate}:{onNavigate:(path:string)=>void}){
  return <header className="ae-header">
-  <Jump href="/" onNavigate={onNavigate} className="ae-brand" ><span className="ae-symbol" aria-hidden="true">✳</span>AIME<span className="ae-brand-dot">®</span></Jump>
+  <Jump href="/" onNavigate={onNavigate} className="ae-brand" ><AimeSymbol name="continuite"/>AIME<span className="ae-brand-dot">®</span></Jump>
   <nav aria-label="Navigation générale AIME">
    <Jump href="/univers" onNavigate={onNavigate}>Univers</Jump>
    <Jump href="/vision" onNavigate={onNavigate}>La vision</Jump>

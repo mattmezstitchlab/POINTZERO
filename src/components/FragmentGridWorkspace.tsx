@@ -1,3 +1,5 @@
+import {fragmentsHTML} from "../lib/compositionLayout";
+import {saveStudioFile} from "./StudioFrame";
 import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDownToLine, ExternalLink, Lock, LockOpen, Plus, Upload } from "lucide-react";
@@ -57,6 +59,7 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>chooser.current?.click()}><Upload size={13} className="mr-1 inline"/> Importer JSON</button>
             <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={exportJSON}><ArrowDownToLine size={13} className="mr-1 inline"/> Exporter</button>
+            <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>saveStudioFile("aime-recomposition.html",fragmentsHTML(collection,layout),"text/html;charset=utf-8")}>Exporter HTML responsive</button>
             <button className="rounded-[5px] bg-[#242424] px-3 py-2 text-white" onClick={add}><Plus size={13} className="mr-1 inline"/> Fragment</button>
           </div>
         </div>
@@ -94,6 +97,7 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
             })}
           </div>
         </div>
+        <details className="mt-5"><summary>Aperçu responsive exportable — même moteur que le HTML</summary><div style={{overflowX:'auto'}}><iframe title="Recomposition responsive des fragments" sandbox="" srcDoc={fragmentsHTML(collection,layout)} style={{width:device==='phone'?390:device==='tablet'?768:1200,height:600,maxWidth:'none',border:'1px solid #aaa'}}/></div><p>Largeur réelle du document : 390 / 768 / 1200 px. Défilement horizontal possible dans les écrans étroits.</p></details>
         <p className="mt-5 text-[11px] text-[#8c8580]">Sélectionnez une case pour la modifier ; agrandissez-la et la grille se réorganise. Déplacez une case non verrouillée pour changer sa place.</p>
         <input ref={chooser} type="file" accept=".json,application/json" className="sr-only" onChange={e=>void importJSON(e)} aria-label="Importer des fragments JSON"/>
         {notice&&<p role="status" className="mt-3 rounded-[5px] border border-[#e5dfdb] bg-white p-3 text-[12px]">{notice}</p>}
