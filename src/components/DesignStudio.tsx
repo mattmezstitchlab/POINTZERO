@@ -1,11 +1,8 @@
 import {writeStoredJSON,everyStored} from "../lib/storageSafety";
-import {readWorld,writeWorld} from "../lib/oneSpaceCore";
-import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
+import {readWorld} from "../lib/oneSpaceCore";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
 import { Accessibility, GraduationCap, GitBranch, Gamepad2, Sparkles, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
-import { MOTIF_PRESETS } from "../lib/motifPresets";
-import { StitchThumbnail } from "./MotifLibrary";
 import FragmentGridWorkspace from "./FragmentGridWorkspace";
 import {
   FORMATS, addDesignElement, colorOK, createDesign, designToHTML, designToSVG, duplicateDesign, safeDesign, specFor,
@@ -14,6 +11,11 @@ import {
 
 const CURRENT = "pointzero:design-current:v1";
 const DRAFTS = "pointzero:design-drafts:v1";
+const keys=(projectId?:string)=>projectId?{
+ current:"pointzero:design:project:"+projectId+":current:v1",
+ drafts:"pointzero:design:project:"+projectId+":drafts:v1"
+}:{current:CURRENT,drafts:DRAFTS};
+const blankDesign=(format:DesignFormat):DesignDocument=>({...createDesign(format),name:"Sans titre",background:"#ffffff",elements:[]});
 const mono = "rounded-[5px] border border-white/20 bg-[#1e1e21] px-3 py-2 text-[12px] text-white outline-none focus:border-white/70";
 const action = "inline-flex min-h-9 items-center justify-center gap-2 rounded-[5px] border border-white/20 bg-white/[.065] px-3 text-xs font-medium text-white hover:bg-white/15";
 const saveFile = (name: string, body: Blob) => {
@@ -23,12 +25,12 @@ const saveFile = (name: string, body: Blob) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 300);
 };
 const slug = (doc: DesignDocument) => (doc.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "pointzero");
-function restore(): DesignDocument {
-  try { return safeDesign(JSON.parse(localStorage.getItem(CURRENT) ?? "")) ?? createDesign("affiche"); }
-  catch { return createDesign("affiche"); }
+function restore(projectId?:string): DesignDocument {
+  try { return safeDesign(JSON.parse(localStorage.getItem(keys(projectId).current) ?? "")) ?? blankDesign("maquette"); }
+  catch { return blankDesign("maquette"); }
 }
-function readDrafts(): DesignDocument[] {
-  try { const value = JSON.parse(localStorage.getItem(DRAFTS) ?? "[]") as unknown;
+function readDrafts(projectId?:string): DesignDocument[] {
+  try { const value = JSON.parse(localStorage.getItem(keys(projectId).drafts) ?? "[]") as unknown;
     return Array.isArray(value) ? value.map(safeDesign).filter((d): d is DesignDocument => !!d).slice(0,12) : [];
   } catch { return []; }
 }
@@ -53,6 +55,8 @@ function motifSVG(doc: DesignDocument, layer: Extract<DesignElement,{kind:"motif
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(designToSVG(fragment,true));
 }
 interface Props {
+  onBureau?: () => void;
+  projectId?:string;
   onEmbroidery: () => void;
   onPhoto?: () => void;
   onFashion?: () => void;
@@ -77,24 +81,21 @@ interface Props {
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onUniversal, incomingPhoto, onPhotoConsumed }: Props) {
-  const [doc, setDoc] = useState<DesignDocument>(restore);
+export default function DesignStudio({ onBureau,projectId,onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onUniversal, incomingPhoto, onPhotoConsumed }: Props) {
+  const [doc, setDoc] = useState<DesignDocument>(()=>restore(projectId));
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [leftTab, setLeftTab] = useState<"elements"|"formats"|"documents"|"fragments">("elements");
-  const [search, setSearch] = useState("");
+  const [leftTab, setLeftTab] = useState<"elements"|"layers"|"documents"|"fragments">("elements");
   const [sidebar, setSidebar] = useState(false);
-  const [drafts, setDrafts] = useState<DesignDocument[]>(readDrafts);
+  const [drafts, setDrafts] = useState<DesignDocument[]>(()=>readDrafts(projectId));
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [scale,setScale] = useState(.5);
   const [showExport,setShowExport] = useState(false);
   const [showDecline,setShowDecline] = useState(false);
   const [showStudios,setShowStudios] = useState(false);
-  const [showDossiers,setShowDossiers] = useState(false);
-  const [world,setWorld] = useState(readWorld);
-  const selectedDossier = world.spaces.find(space=>space.id===world.selectedSpaceId)??null;
+  const currentProject=projectId?readWorld().spaces.find(space=>space.id===projectId):null;
   const stage = useRef<HTMLDivElement>(null);
   const artboard = useRef<HTMLDivElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
@@ -102,30 +103,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   const dragRef = useRef<{id:string;x:number;y:number;startX:number;startY:number}|null>(null);
   const receivedPhoto = useRef<string|null>(null);
   const element = doc.elements.find(e => e.id===selected) ?? null;
-  const [patternPreviews] = useState(() => MOTIF_PRESETS.map(p => ({...p, pattern:p.make()})));
 
-  useEffect(() => {
-    const update=()=>setWorld(readWorld());
-    window.addEventListener(AIME_WORLD_CHANGED,update);
-    window.addEventListener("storage",update);
-    return()=>{window.removeEventListener(AIME_WORLD_CHANGED,update);window.removeEventListener("storage",update);};
-  },[]);
-  useEffect(()=>{
-    if(!showDossiers)return;
-    const onEscape=(event:KeyboardEvent)=>{if(event.key==="Escape")setShowDossiers(false);};
-    window.addEventListener("keydown",onEscape);
-    return()=>window.removeEventListener("keydown",onEscape);
-  },[showDossiers]);
-  const selectDossier=(id:string)=>{
-    try{
-      const current=writableWorld();
-      if(!current.spaces.some(space=>space.id===id))throw Error("Dossier introuvable sur cet appareil.");
-      writeWorld({...current,selectedSpaceId:id});
-      window.dispatchEvent(new Event(AIME_WORLD_CHANGED));
-      setShowDossiers(false);
-      setNotice("Dossier sélectionné. Les documents existants restent indépendants tant qu'ils ne sont pas reliés explicitement.");
-    }catch(error){setNotice(error instanceof Error?error.message:"Impossible d'ouvrir ce dossier.");}
-  };
   useEffect(() => {
     const el = stage.current;
     if (!el) return;
@@ -134,7 +112,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     return () => observer.disconnect();
   }, [doc.width,doc.height,leftTab]);
   useEffect(() => {
-    try { writeStoredJSON(CURRENT,JSON.stringify(doc),safeDesign);window.dispatchEvent(new Event("aime:design-changed")); }
+    try { writeStoredJSON(keys(projectId).current,JSON.stringify(doc),safeDesign);window.dispatchEvent(new Event("aime:design-changed")); }
     catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
   }, [doc]);
   useEffect(() => {
@@ -168,7 +146,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   const redo = () => { if(!future.length)return;setPast(h=>[...h,doc]);setDoc(future[0]);setFuture(f=>f.slice(1));setSelected(null); };
   const newDocument=(format:DesignFormat) => {
     if(doc.elements.length && !window.confirm("Créer un nouveau document ? Le brouillon actuel est sauvegardé sur cet appareil."))return;
-    change(createDesign(format));setSelected(null);setSidebar(false);
+    change(blankDesign(format));setSelected(null);setSidebar(false);
   };
   const decline = (format:DesignFormat) => {
     if(format===doc.format){setShowDecline(false);return;}
@@ -177,7 +155,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     const versions=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
     let preserved=false;
     try {
-      writeStoredJSON(DRAFTS,JSON.stringify(versions),everyStored(safeDesign));
+      writeStoredJSON(keys(projectId).drafts,JSON.stringify(versions),everyStored(safeDesign));
       setDrafts(versions);
       preserved=true;
     } catch { /* The user can still undo and export the original JSON. */ }
@@ -188,7 +166,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   };
   const saveDraft = () => {
     const next=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
-    try{writeStoredJSON(DRAFTS,JSON.stringify(next),everyStored(safeDesign));setDrafts(next);setNotice("Document ajouté à Mes créations.");}
+    try{writeStoredJSON(keys(projectId).drafts,JSON.stringify(next),everyStored(safeDesign));setDrafts(next);setNotice("Document ajouté à Mes créations.");}
     catch{setNotice("Espace local insuffisant. Utilisez Exporter → Projet JSON.");}
   };
   const loadDraft=(value:DesignDocument) => {change(value);setSelected(null);setSidebar(false);};
@@ -260,7 +238,6 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     add("motif",presetId,{x,y});
   };
   const layers=doc.elements;
-  const filtered=patternPreviews.filter(x=>x.name.toLowerCase().includes(search.trim().toLowerCase()));
 
   return <div className="pz-design fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#151517] text-white">
     <header className="z-20 flex h-[58px] shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#09090b] px-3 sm:px-4">
@@ -268,34 +245,12 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
         <span className="shrink-0 text-[13px] font-bold tracking-tight">× <span className="hidden sm:inline">POINTZERO</span></span>
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Édition</span>
-        <div className="relative">
-          <button type="button" aria-label="Ouvrir les dossiers" aria-expanded={showDossiers}
-            onClick={()=>{setShowDossiers(value=>!value);setShowStudios(false);setShowDecline(false);setShowExport(false);}}
-            className={action+" max-w-[210px] gap-1.5"}>
-            <FolderOpen size={15}/><span>Dossier</span>
-            {selectedDossier&&<span className="hidden max-w-[90px] truncate text-white/55 xl:inline">{selectedDossier.title}</span>}
-            <ChevronDown size={13}/>
-          </button>
-          {showDossiers&&<div aria-label="Dossiers POINTZERO" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[min(320px,85vw)] max-h-[75dvh] overflow-y-auto p-3">
-            <p className="mb-2 text-[11px] font-semibold text-white/70">Dossiers existants sur cet appareil</p>
-            {world.spaces.map(space=><button key={space.id} type="button" aria-label={"Sélectionner le dossier "+space.title}
-              aria-pressed={space.id===world.selectedSpaceId} onClick={()=>selectDossier(space.id)}
-              className={"mb-1 flex min-h-11 w-full items-center justify-between gap-2 rounded-[5px] px-3 text-left text-xs hover:bg-white/10 "+(space.id===world.selectedSpaceId?"bg-white/15 text-white":"text-white/80")}>
-              <span className="min-w-0 truncate">{space.title||"Sans titre"}</span>
-              {space.id===world.selectedSpaceId&&<span className="shrink-0 text-[10px] text-white/55">Actif</span>}
-            </button>)}
-            {!world.spaces.length&&<p className="px-2 py-3 text-xs text-white/55">Aucun Dossier pour l'instant. Vos créations existantes sont conservées.</p>}
-            {onUniversal&&<div className="mt-2 grid gap-1 border-t border-white/15 pt-2">
-              <button type="button" aria-label="Créer un dossier" onClick={()=>{setShowDossiers(false);onUniversal();}} className={action+" w-full justify-start"}>Nouveau dossier</button>
-              <button type="button" aria-label="Ouvrir le Dossier Universel" onClick={()=>{setShowDossiers(false);onUniversal();}} className={action+" w-full justify-start"}>Gérer le Dossier Universel</button>
-            </div>}
-            <p className="mt-2 text-[10px] leading-relaxed text-white/45">Choisir un Dossier n'associe pas automatiquement le document graphique en cours.</p>
-          </div>}
-        </div>
+        {onBureau&&<button type="button" aria-label="Retour au Bureau" onClick={onBureau} className={action+" shrink-0"}><FolderOpen size={15}/><span className="hidden sm:inline">Bureau</span></button>}
+        <span className="hidden max-w-[220px] truncate text-[12px] text-white/60 lg:inline">{currentProject?.title??"Création indépendante"}</span>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
         <div className="relative">
           <button type="button" aria-label="Ouvrir le menu des studios" aria-expanded={showStudios}
-            onClick={()=>{setShowStudios(x=>!x);setShowDossiers(false);setShowDecline(false);setShowExport(false);}} className={action}>
+            onClick={()=>{setShowStudios(x=>!x);setShowDecline(false);setShowExport(false);}} className={action}>
             <LayoutTemplate size={15}/><span className="hidden sm:inline">Studios</span><ChevronDown size={13}/>
           </button>
           {showStudios&&<div aria-label="Choix du studio" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[220px] max-h-[76dvh] overflow-y-auto p-2">
@@ -352,7 +307,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
       <button onClick={()=>setSidebar(!sidebar)} className="absolute left-3 top-3 z-20 grid size-10 place-items-center rounded-[5px] border border-white/20 bg-[#09090b] lg:hidden" aria-label={sidebar?"Fermer les ressources":"Ouvrir les ressources"}><LayoutTemplate size={18}/></button>
       <aside aria-label="Ressources et formats" className={"pz-design-sidebar absolute bottom-0 left-0 top-0 z-20 flex w-[252px] flex-col border-r border-white/10 bg-[#0b0b0d] lg:relative lg:translate-x-0 "+(sidebar?"translate-x-0":"-translate-x-full")}>
         <div className="grid grid-cols-4 gap-1 border-b border-white/10 p-2">
-          {([["elements","Éléments"],["formats","Formats"],["documents","Projets"],["fragments","Grille"]] as const).map(([id,label])=>
+          {([["elements","Ajouter"],["layers","Calques"],["documents","Fichiers"],["fragments","Grille"]] as const).map(([id,label])=>
             <button key={id} onClick={()=>setLeftTab(id)} aria-pressed={leftTab===id} className={"min-h-9 rounded-[5px] text-[11px] font-semibold "+(leftTab===id?"bg-white text-black":"text-white/65 hover:bg-white/10")}>{label}</button>)}
         </div>
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3">
@@ -363,22 +318,14 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               <button onClick={()=>add("shape")} className={action+" flex-col px-1 py-3"}><Shapes size={18}/> Forme</button>
               <button onClick={()=>imagePicker.current?.click()} className={action+" flex-col px-1 py-3"}><ImagePlus size={18}/> Image</button>
             </div>
-            <h2 className="mb-2 mt-5 text-[12px] font-semibold">Bibliothèque florale et graphique</h2>
-            <div className="relative"><Search size={14} className="absolute left-2.5 top-2.5 text-white/60"/>
-              <input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Chercher un motif" className={mono+" w-full pl-8"} aria-label="Rechercher dans la bibliothèque graphique"/>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">{filtered.map(p=>
-              <button type="button" key={p.id} draggable onDragStart={e=>{e.dataTransfer.setData("application/x-pointzero-design-motif",p.id);e.dataTransfer.effectAllowed="copy";}}
-                onClick={()=>add("motif",p.id)} title="Cliquer pour ajouter, glisser pour placer" className="overflow-hidden rounded-[5px] border border-white/15 bg-white/[.06] text-left hover:border-white/50">
-                <div className="bg-[#f8f4ee]"><StitchThumbnail pattern={p.pattern}/></div><span className="block truncate p-2 text-[11px]">{p.name}</span>
-              </button>)}</div>
+            <p className="mt-5 text-[11px] leading-relaxed text-white/45">Ajoutez uniquement ce dont vous avez besoin. Les motifs de broderie restent dans l'outil Broderie.</p>
           </>}
-          {leftTab==="formats"&&<>
-            <h2 className="mb-2 text-xs font-semibold">Nouveau support</h2>
-            <p className="mb-3 text-[11px] leading-relaxed text-white/65">Créez un nouveau document, ou utilisez « Décliner » pour conserver la composition.</p>
-            {FORMATS.map(f=><button key={f.id} onClick={()=>newDocument(f.id)} className={"mb-1.5 flex w-full items-center justify-between gap-2 rounded-[5px] border px-3 py-3 text-left text-xs "+(f.id===doc.format?"border-white/60 bg-white/10":"border-white/15 hover:bg-white/10")}>
-              <span className="font-semibold">{f.label}</span><span className="text-[10px] text-white/55">{f.description}</span>
-            </button>)}
+          {leftTab==="layers"&&<>
+            <h2 className="mb-3 text-xs font-semibold">Calques</h2>
+            {doc.elements.map((layer,index)=><button type="button" key={layer.id} onClick={()=>setSelected(layer.id)}
+              aria-pressed={selected===layer.id} className={"mb-1 flex min-h-10 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs "+(selected===layer.id?"bg-white/15":"hover:bg-white/10")}>
+              <Layers3 size={13}/><span className="min-w-0 flex-1 truncate">{layer.kind==="text"?layer.text.split("\n")[0]:layer.kind==="motif"?"Motif existant":layer.kind==="image"?"Image":"Forme"}</span><span className="text-white/30">{index+1}</span></button>)}
+            {!doc.elements.length&&<p className="text-[11px] text-white/50">Aucun calque. Ajoutez du texte, une forme ou une image.</p>}
           </>}
           {leftTab==="fragments"&&<>
             <h2 className="mb-3 text-[12px] font-semibold">Grille universelle</h2>
