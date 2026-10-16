@@ -1,3 +1,4 @@
+import ZoomCodePrototype from "./ZoomCodePrototype";
 import { useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, FileSearch, GitBranch, Grid2X2, ShieldAlert } from "lucide-react";
 import FragmentGridWorkspace from "./FragmentGridWorkspace";
@@ -93,7 +94,7 @@ export default function MetamorphoseStudio({onBack,onCircle,onGame}:{onBack:()=>
       </form></details>
     </div>
     <div className="flex min-h-0 flex-1">
-     <FragmentGridWorkspace incoming={collection}/>
+     <div style={{minWidth:0,flex:1,overflow:"auto"}}><ZoomCodePrototype/><div style={{display:"flex",minHeight:600}}><FragmentGridWorkspace incoming={collection}/></div></div>
     </div>
    </div>
   </div>
