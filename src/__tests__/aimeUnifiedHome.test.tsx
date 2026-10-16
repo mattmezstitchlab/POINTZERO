@@ -35,7 +35,7 @@ describe("AIME — une landing MÉTAMORPHOSE, sans migration",()=>{
   const design=[...view.querySelectorAll("button")].find(v=>v.textContent==="Design")!;
   await act(async()=>design.click());
   expect(view.querySelector("iframe")).toBeNull();
-  expect(view.textContent).toContain("Un moteur spécialisé");
+  expect(view.textContent).toContain("Créations vectorielles et composition");
  });
  it("transmet l'intention sans sauvegarder ni créer de dossier automatiquement",async()=>{
   const navigate=vi.fn();
