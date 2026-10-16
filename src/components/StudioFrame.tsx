@@ -16,7 +16,7 @@ export function StudioFrame({title,subtitle,onBack,left,children,right,actions,l
       <div className="flex min-w-0 items-center gap-2">
         <button type="button" aria-label="Retour au studio universel" onClick={onBack} className={studioButton+" !px-2"}><ArrowLeft size={17}/></button>
         <div className="min-w-0">
-          <h1 className="truncate text-[14px] font-semibold">× POINTZERO <span className="font-normal text-white/80">/ {title}</span></h1>
+          <h1 className="truncate text-[14px] font-semibold">AIME <span className="font-normal text-white/80">/ {title}</span></h1>
           <p className="hidden truncate text-[11px] text-white/60 sm:block">{subtitle}</p>
         </div>
       </div>
