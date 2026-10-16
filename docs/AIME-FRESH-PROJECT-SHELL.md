@@ -15,6 +15,7 @@ Le Bureau AIME validé visuellement est la base du logiciel. L'ouverture d'un pr
 
 ## Données et limites
 - Une page n'existe qu'après l'action « Ajouter une page ».
+- Les nouveaux projets ne préremplissent aucun module métier : le tableau interne `tiles` démarre vide, contrairement au constructeur historique. Les anciens projets gardent leurs modules actuels.
 - Les données de ce nouveau socle sont isolées dans `aime:project-document:v1:<id>`, avec validation de schéma et protection contre l'écrasement d'un enregistrement invalide.
 - Les vrais projets continuent d'utiliser `WorldSpace.id` dans le stockage existant `pointzero:one-space:v1`.
 - Les moteurs, les anciens fragments de démonstration, les travaux graphiques, les exports Broderie et les URL historiques **ne sont pas effacés ni migrés**.
