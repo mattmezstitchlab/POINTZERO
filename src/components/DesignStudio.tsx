@@ -1,3 +1,4 @@
+import {writeStoredJSON,everyStored} from "../lib/storageSafety";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
 import { Accessibility, GraduationCap, GitBranch, Gamepad2, Sparkles, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
@@ -107,7 +108,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     return () => observer.disconnect();
   }, [doc.width,doc.height,leftTab]);
   useEffect(() => {
-    try { localStorage.setItem(CURRENT,JSON.stringify(doc)); }
+    try { writeStoredJSON(CURRENT,JSON.stringify(doc),safeDesign); }
     catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
   }, [doc]);
   useEffect(() => {
@@ -150,7 +151,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     const versions=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
     let preserved=false;
     try {
-      localStorage.setItem(DRAFTS,JSON.stringify(versions));
+      writeStoredJSON(DRAFTS,JSON.stringify(versions),everyStored(safeDesign));
       setDrafts(versions);
       preserved=true;
     } catch { /* The user can still undo and export the original JSON. */ }
@@ -161,7 +162,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   };
   const saveDraft = () => {
     const next=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
-    try{localStorage.setItem(DRAFTS,JSON.stringify(next));setDrafts(next);setNotice("Document ajouté à Mes créations.");}
+    try{writeStoredJSON(DRAFTS,JSON.stringify(next),everyStored(safeDesign));setDrafts(next);setNotice("Document ajouté à Mes créations.");}
     catch{setNotice("Espace local insuffisant. Utilisez Exporter → Projet JSON.");}
   };
   const loadDraft=(value:DesignDocument) => {change(value);setSelected(null);setSidebar(false);};

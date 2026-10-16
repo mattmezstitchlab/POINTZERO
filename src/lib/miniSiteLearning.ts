@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 /** POINTZERO Mini-site Academy — deterministic, explainable preflight rules.
  * This is not a full RGAA, WCAG, SEO or cognitive usability audit.
  * Lessons attach to the original document, never a copied site.
@@ -42,8 +43,9 @@ export function writeMiniCoach(profile:MiniCoachProfile):void{
  if(!safeMiniCoach(profile,profile.siteId))throw Error("Profil de formation invalide.");
  const all=JSON.parse(localStorage.getItem(MINI_COACH_KEY)??"{}") as Record<string,unknown>;
  const records=all&&typeof all==="object"&&!Array.isArray(all)?all:{};
- const selected=Object.fromEntries(Object.entries(records).filter(([k])=>k===profile.siteId||Object.keys(records).length<25));
- localStorage.setItem(MINI_COACH_KEY,JSON.stringify({...selected,[profile.siteId]:profile}));
+ if(!(profile.siteId in records)&&Object.keys(records).length>=25)throw Error("Limite de 25 profils atteinte : données existantes conservées.");
+ const selected=records;
+ writeStoredJSON(MINI_COACH_KEY,JSON.stringify({...selected,[profile.siteId]:profile}),v=>!!v&&typeof v==="object"&&!Array.isArray(v)&&Object.entries(v).every(([id,p])=>!!safeMiniCoach(p,id)));
 }
 const defaultTitles=["Camille & Gabriel","Une signature singulière","Une rencontre à vivre","Votre univers prend forme"];
 const defaultSubtitles=["Nous avons le bonheur de vous inviter","Découvrez mes créations et mon univers","Toutes les informations au même endroit","Une page simple pour présenter l'essentiel"];

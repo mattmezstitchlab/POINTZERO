@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 /**
  * POINTZERO Academy — a genuinely editable, local-first website and learning project.
  * No fake multi-tenant accounts, published hosting, course certification or LMS backend.
@@ -134,7 +135,7 @@ export const readLearning=():LearningState=>{
 };
 export function writeAcademy(p:SiteProject){
  if(!validProject(p))throw Error("Projet non valide.");
- localStorage.setItem(ACADEMY_KEY,JSON.stringify(p));
+ writeStoredJSON(ACADEMY_KEY,JSON.stringify(p),validProject);
 }
 export const ACADEMY_LESSONS:AcademyLesson[]=[
  {id:"hero",title:"Personnaliser l'accueil",description:"Écrire pour être compris en une seconde.",

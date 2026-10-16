@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 import { fromObject, toObject, type Pattern } from "./pattern";
 
 const KEY="pointzero:components:v1";
@@ -10,17 +11,21 @@ export interface LibrarySubject {
   author:string;
   sprite:string;
 }
-export function loadSubjectLibrary():LibrarySubject[] {
-  try{
-    const arr=JSON.parse(localStorage.getItem(KEY)??"[]") as unknown;
-    if(!Array.isArray(arr))return [];
-    return arr.filter((v):v is LibrarySubject=>{
+function validLibrarySubject(v:unknown):v is LibrarySubject {
       if(!v||typeof v!=="object")return false;
       const x=v as Record<string,unknown>;
       return typeof x.id==="string"&&x.id.length<120&&typeof x.name==="string"&&x.name.length<120&&
         typeof x.updated==="number"&&Number.isFinite(x.updated)&&typeof x.personalOnly==="boolean"&&
         typeof x.author==="string"&&x.author.length<150&&typeof x.sprite==="string"&&x.sprite.length<2_000_000;
-    }).slice(0,MAX_RECORDS);
+
+}
+const validLibrary=(v:unknown)=>Array.isArray(v)&&v.length<=MAX_RECORDS&&v.every(validLibrarySubject);
+export function loadSubjectLibrary():LibrarySubject[] {
+  try{
+    const arr=JSON.parse(localStorage.getItem(KEY)??"[]") as unknown;
+    if(!Array.isArray(arr))return [];
+    return arr.filter(validLibrarySubject).slice(0,MAX_RECORDS);
+
   }catch{return [];}
 }
 export function storeSubject(pattern:Pattern):LibrarySubject[] {
@@ -33,7 +38,7 @@ export function storeSubject(pattern:Pattern):LibrarySubject[] {
     author:pattern.provenance?.author??"",sprite:snapshot,
   };
   const next=[rec,...loadSubjectLibrary().filter(x=>x.id!==rec.id)].slice(0,MAX_RECORDS);
-  try{localStorage.setItem(KEY,JSON.stringify(next));return next;}
+  try{writeStoredJSON(KEY,JSON.stringify(next),validLibrary);return next;}
   catch{throw new Error("Stockage local indisponible ou plein. Exportez le JSON pour conserver ce sujet.");}
 }
 export function openLibrarySubject(item:LibrarySubject):Pattern {
@@ -43,7 +48,7 @@ export function openLibrarySubject(item:LibrarySubject):Pattern {
 }
 export function deleteLibrarySubject(id:string):LibrarySubject[] {
   const next=loadSubjectLibrary().filter(x=>x.id!==id);
-  try{localStorage.setItem(KEY,JSON.stringify(next));}
+  try{writeStoredJSON(KEY,JSON.stringify(next),validLibrary);}
   catch{throw new Error("Bibliothèque locale indisponible.");}
   return next;
 }

@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Code2, Download, Eye, GraduationCap, Layers3, Monitor, Palette, Plus, RotateCcw, Save, Scale, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
@@ -75,10 +76,10 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDoss
     throw Error("Support Academy stocké invalide ou étranger : contenu original conservé. Exportez votre support avant toute réparation.");
   }
  }
- localStorage.setItem(key,JSON.stringify(project));
+ writeStoredJSON(key,JSON.stringify(project),validProject);
  if(linkedDossierId)attachAcademyResource(linkedDossierId,project.id);
  }catch(error){setNotice(error instanceof Error?error.message:"Stockage local indisponible : exportez votre site.");}},[project,linkedDossierId]);
- useEffect(()=>{try{localStorage.setItem(linkedDossierId?ACADEMY_PROGRESS_KEY+":"+linkedDossierId:ACADEMY_PROGRESS_KEY,JSON.stringify(learning));}catch{setNotice("Stockage des exercices impossible : exportez votre projet.");}},[learning,linkedDossierId]);
+ useEffect(()=>{try{writeStoredJSON(linkedDossierId?ACADEMY_PROGRESS_KEY+":"+linkedDossierId:ACADEMY_PROGRESS_KEY,JSON.stringify(learning),validLearning);}catch{setNotice("Stockage des exercices impossible : exportez votre projet.");}},[learning,linkedDossierId]);
  const update=(fn:(p:SiteProject)=>SiteProject)=>setProject(p=>({...fn(p),updated:localToday()}));
  const patchSite=(patch:Partial<SiteProject>)=>update(p=>({...p,...patch}));
  const patchSection=(patch:Partial<SiteSection>)=>{

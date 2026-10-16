@@ -1,7 +1,9 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDownToLine, ExternalLink, Lock, LockOpen, Plus, Upload } from "lucide-react";
 import { allowedFragmentUrl, demoFragments, readFragments, reorderFragments, updateFragment, type Fragment, type FragmentCollection } from "../lib/fragmentGrid";
 
+const validStoredFragments=(v:unknown)=>{const parsed=readFragments(v);return !!parsed&&!!v&&typeof v==="object"&&(v as {version?:unknown}).version===1&&Array.isArray((v as {fragments?:unknown}).fragments)&&parsed.fragments.length===(v as {fragments:unknown[]}).fragments.length;};
 const STORAGE="pointzero:universal-fragments:v1";
 const tones=[["#e7d6dc","#654a56"],["#dce6e9","#45606a"],["#dfe5d9","#4c654d"],["#ece1d7","#775a48"],["#e1dfeb","#565375"]];
 const inputClass="w-full rounded-[5px] border border-white/20 bg-[#202024] px-2.5 py-2 text-[12px] text-white outline-none focus:border-white/70";
@@ -24,7 +26,7 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
     if(!incoming)return;
     setCollection(incoming);setSelected(null);setNotice("Analyse intégrée : "+incoming.fragments.length+" fragments disponibles.");
   },[incoming]);
-  useEffect(()=>{try{localStorage.setItem(STORAGE,JSON.stringify(collection));}catch{setNotice("Stockage local plein : exportez votre JSON.")}},[collection]);
+  useEffect(()=>{try{writeStoredJSON(STORAGE,JSON.stringify(collection),validStoredFragments);}catch{setNotice("Stockage local plein : exportez votre JSON.")}},[collection]);
   function patch(id:string,change:Partial<Fragment>){setCollection(c=>updateFragment(c,id,change))}
   function toggleLock(id:string){setCollection(c=>({...c,fragments:c.fragments.map(f=>f.id===id?{...f,locked:!f.locked}:f)}))}
   function add(){

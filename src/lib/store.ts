@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 import { createPattern, fromObject, toObject, type Pattern } from "./pattern";
 
 /**
@@ -81,7 +82,7 @@ export function loadStored(): Pattern | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const restored = fromObject(JSON.parse(raw));
-    if (!restored && !localStorage.getItem("point-zero:legacy-backup")) localStorage.setItem("point-zero:legacy-backup", raw);
+    // Read-only: original bytes remain available for explicit recovery.
     return restored;
   } catch {
     return null;
@@ -90,7 +91,7 @@ export function loadStored(): Pattern | null {
 
 export function saveStored(p: Pattern): boolean {
   try {
-    localStorage.setItem(KEY, JSON.stringify(toObject(p)));
+    writeStoredJSON(KEY, JSON.stringify(toObject(p)),fromObject);
     return true;
   } catch {
     return false;

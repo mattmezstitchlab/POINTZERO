@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { CalendarDays, Copy, Download, FileText, Plus, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, SummaryTile, saveStudioFile } from "./StudioFrame";
@@ -37,7 +38,7 @@ export default function ProgrammeStudio({onBack,linkedProject}:Props){
   },[linkedProject]);
   const programme=store.programmes.find(p=>p.id===selectedId)??null;
   const chosenSession=programme?.sessions.find(s=>s.id===sessionId)??null;
-  useEffect(()=>{try{localStorage.setItem(PROGRAMME_STORAGE,JSON.stringify(store));}
+  useEffect(()=>{try{writeStoredJSON(PROGRAMME_STORAGE,JSON.stringify(store),safeProgrammeStore);}
     catch{setMessage("Stockage saturé : exportez vos programmes en JSON.");}},[store]);
   const updateProgramme=(patch:Partial<Programme>)=>{
     if(!programme)return;

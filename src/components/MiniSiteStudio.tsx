@@ -1,3 +1,4 @@
+import {writeStoredJSON,everyStored} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Download, Eye, EyeOff, GitBranch, ImagePlus, Laptop, Save, Scale, Smartphone, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
@@ -28,7 +29,7 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   const projects=useMemo(loadProjectOptions,[]);
   const update=(patch:Partial<MiniSite>)=>setDoc(d=>({...d,...patch}));
   const updateSection=(id:string,patch:Partial<MiniSection>)=>setDoc(d=>({...d,sections:d.sections.map(s=>s.id===id?{...s,...patch}:s)}));
-  useEffect(()=>{try{localStorage.setItem(MINI_KEY,JSON.stringify(doc));}catch{setStatus("Stockage saturé : exportez ce mini-site en HTML ou JSON.");}},[doc]);
+  useEffect(()=>{try{writeStoredJSON(MINI_KEY,JSON.stringify(doc),safeMiniSite);}catch{setStatus("Stockage saturé : exportez ce mini-site en HTML ou JSON.");}},[doc]);
   useEffect(()=>{setCoach(readMiniCoach(doc.id));},[doc.id]);
   useEffect(()=>{try{writeMiniCoach(coach);}catch{setStatus("Le parcours pédagogique ne peut pas être conservé dans ce navigateur.");}},[coach]);
   useEffect(()=>{
@@ -48,7 +49,7 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   };
   const store=()=>{
     const next=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
-    try{localStorage.setItem(MINI_DRAFTS,JSON.stringify(next));setDrafts(next);setStatus("Mini-site conservé dans Mes mini-sites.");}
+    try{writeStoredJSON(MINI_DRAFTS,JSON.stringify(next),everyStored(safeMiniSite));setDrafts(next);setStatus("Mini-site conservé dans Mes mini-sites.");}
     catch{setStatus("Stockage saturé : exportez ce mini-site en JSON.");}
   };
   const changeOrder=(id:string,delta:number)=>{

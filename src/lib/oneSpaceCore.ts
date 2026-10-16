@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 /** POINTZERO common spaces. All permissions here are local planning data, not authentication. */
 import {ACADEMY_KEY,validProject} from "./academyCore";
 import {validUniversalMeta,type UniversalMeta} from "./dossierSchema";
@@ -113,7 +114,7 @@ export function readWorld():WorldStore{
 }
 export function writeWorld(w:WorldStore):void{
  if(!safeWorld(w))throw Error("Espace invalide : informations non enregistrées.");
- localStorage.setItem(WORLD_KEY,JSON.stringify(w));
+ writeStoredJSON(WORLD_KEY,JSON.stringify(w),safeWorld);
 }
 export function selectedWorld(w:WorldStore){
  return w.spaces.find(s=>s.id===w.selectedSpaceId)??w.spaces[0]??null;

@@ -1,3 +1,5 @@
+import {safeMusicLabel} from "../lib/musicLabelCore";
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Album, Check, ChevronRight, Download, FileText, Plus, Radio, Upload, Users, WandSparkles } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
@@ -47,7 +49,7 @@ export default function MusicProductionStudio({onBack,linkedProject}:Props){
  const approved=active?eventPlaylist(data,active.id):[];
  const playlist=active?approved.map(r=>r.track).filter((t):t is NonNullable<typeof t>=>!!t):data.tracks;
  const update=(fn:(s:MusicLabelStore)=>MusicLabelStore)=>setData(s=>fn(s));
- useEffect(()=>{try{localStorage.setItem("pointzero:music-label:v1",JSON.stringify(data));}catch{setNotice("Stockage saturé. Sauvegardez le catalogue en JSON.");}},[data]);
+ useEffect(()=>{try{writeStoredJSON("pointzero:music-label:v1",JSON.stringify(data),safeMusicLabel);}catch{setNotice("Stockage saturé. Sauvegardez le catalogue en JSON.");}},[data]);
  useEffect(()=>()=>{for(const url of files.current.values())URL.revokeObjectURL(url);},[]);
  const createEvent=()=>{
    if(!eventTitle.trim())return setNotice("Le nom de l'événement est nécessaire.");

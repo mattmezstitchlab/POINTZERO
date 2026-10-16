@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 /** POINTZERO Legal — educational local dossier, NOT legal advice or a compliance certificate.
  * Project source records stay in their original studio. No automatic publishing. */
 import {ACADEMY_KEY,validProject} from "./academyCore";
@@ -105,7 +106,7 @@ export function readLegal():LegalStore{
 }
 export function writeLegal(store:LegalStore):void{
  if(!validLegalStore(store))throw Error("Le dossier contient des données incorrectes.");
- localStorage.setItem(LEGAL_KEY,JSON.stringify(store));
+ writeStoredJSON(LEGAL_KEY,JSON.stringify(store),validLegalStore);
 }
 export type LegalIssue={
  id:string;area:"identification"|"rgpd"|"cookies"|"verification";level:"prioritaire"|"a-confirmer";

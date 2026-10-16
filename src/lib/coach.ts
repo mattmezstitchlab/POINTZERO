@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 import type { Tool } from "./stitch";
 
 /**
@@ -847,7 +848,8 @@ export function loadCoach(storage: Pick<Storage, "getItem"> | null = safeLocal()
 export function saveCoach(progress: CoachProgress, storage: Pick<Storage, "setItem"> | null = safeLocal()): void {
   if (!storage) return;
   try {
-    storage.setItem(KEY, JSON.stringify(progress));
+    if(storage===safeLocal())writeStoredJSON(KEY,JSON.stringify(progress),asProgress);
+    else storage.setItem(KEY, JSON.stringify(progress));
   } catch {
     /* Navigation privée ou quota saturé : le guide continue sans se souvenir. */
   }

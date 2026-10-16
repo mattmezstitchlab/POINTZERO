@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Copy, Download, FileText, Plus, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
@@ -28,7 +29,7 @@ export default function AdminStudio({onBack,linkedProject}:Props) {
   const doc=store.documents.find(d=>d.id===selectedId)??null;
   const money=doc&&(doc.kind==="devis"||doc.kind==="facture");
   const totals=doc?documentTotals(doc):null;
-  useEffect(()=>{try{localStorage.setItem(ADMIN_STORAGE,JSON.stringify(store));}
+  useEffect(()=>{try{writeStoredJSON(ADMIN_STORAGE,JSON.stringify(store),safeAdminStore);}
     catch{setNotice("Stockage local saturé : exportez votre bibliothèque en JSON.");}},[store]);
   const update=(patch:Partial<AdminDocument>)=>{
     if(!doc)return;

@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, Download, FileText, LockKeyhole, Search, ShoppingBag, X } from "lucide-react";
 import { CATALOGUE, fabriquerPatron, type ProduitPatron, type ThemeMotif } from "../lib/catalogue";
@@ -100,7 +101,7 @@ export default function BoutiquePatrons({ onClose, onOpenPattern }: {
     if (!produit || allowed) return;
     // IMPORTANT : ce bouton n'est PAS un achat. Il n'encode aucune preuve de paiement.
     const next = [...unlocked, produit.id];
-    try { localStorage.setItem(DEMO_KEY, JSON.stringify(next)); }
+    try { writeStoredJSON(DEMO_KEY, JSON.stringify(next),v=>Array.isArray(v)&&v.every(x=>typeof x==="string")); }
     catch { setNotice("Stockage local indisponible : le déblocage de démonstration ne sera pas conservé."); }
     setUnlocked(next);
     setNotice("Patron débloqué pour l’essai, sans paiement. Ouvrez-le dans l’atelier ou exportez son PDF.");

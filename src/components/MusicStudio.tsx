@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Accessibility, Download, Mic, Music2, Pause, Play, Plus, RotateCcw, Save, SkipBack, Sparkles, Trash2, Upload, Users, Volume2, VolumeX } from "lucide-react";
 import { StudioFrame, saveStudioFile, studioButton, studioInput } from "./StudioFrame";
@@ -73,7 +74,7 @@ export default function MusicStudio({onBack}:Props){
   const scoreRef=useRef(score);
   const soundRef=useRef(true);
   if(!audioRef.current)audioRef.current=new MusicAudio();
-  useEffect(()=>{try{localStorage.setItem(MUSIC_KEY,JSON.stringify(score));}catch{setStatus("Stockage saturé. Exportez votre partition JSON.");}},[score]);
+  useEffect(()=>{try{writeStoredJSON(MUSIC_KEY,JSON.stringify(score),safeMusicScore);}catch{setStatus("Stockage saturé. Exportez votre partition JSON.");}},[score]);
   useEffect(()=>{voiceRef.current=voiceUrl;},[voiceUrl]);
   useEffect(()=>{scoreRef.current=score;},[score]);
   useEffect(()=>{soundRef.current=soundActive;if(!soundActive)audioRef.current?.stopVoices();},[soundActive]);

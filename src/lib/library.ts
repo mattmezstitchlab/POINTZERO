@@ -27,8 +27,9 @@ export const getProject = (record: ProjectRecord) => fromObject(JSON.parse(recor
 export async function saveLibrary(p: Pattern, checkpoint = false): Promise<void> {
   const id = p.id ?? makeId();
   const old = await request<ProjectRecord | undefined>("readonly", (s) => s.get(id));
+  if(old){try{if(!fromObject(JSON.parse(old.data)))throw Error();}catch{throw Error("Projet enregistré illisible : remplacement bloqué, original conservé.");}}
   const { totals } = computeStats(p), now = Date.now(), data = JSON.stringify(toObject({ ...p, id }));
-  const versions = old?.versions ?? [];
+  const versions = [...(old?.versions ?? [])];
   if (old && (checkpoint || now - (versions[0]?.date ?? 0) > 180000) && old.data !== data) versions.unshift({ date: old.updated, data: old.data });
   await request("readwrite", (s) => s.put({ id, name: p.name, folder: p.folder ?? "", updated: now, w: p.w, h: p.h, progress: totals.units ? totals.doneUnits / totals.units : 0, data, versions: versions.slice(0, 8) } satisfies ProjectRecord));
 }

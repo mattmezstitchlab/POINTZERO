@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 /** Persistent accessibility preferences and a bounded first-pass markup audit.
  * A partial automated audit is never a certificate of WCAG/RGAA compliance. */
 export const ACCESS_KEY="pointzero:accessibility:v1";
@@ -28,7 +29,7 @@ export function readPrefs():Preferences{
 export function savePrefs(p:Preferences):void{
  const safe=parsePrefs(p);
  if(!safe)throw Error("Préférences d’accessibilité invalides.");
- localStorage.setItem(ACCESS_KEY,JSON.stringify(safe));
+ writeStoredJSON(ACCESS_KEY,JSON.stringify(safe),parsePrefs);
  window.dispatchEvent(new CustomEvent("pz:accessibility",{detail:safe}));
 }
 export function resolvedTheme(p:Preferences,systemDark:boolean):"dark"|"light"{

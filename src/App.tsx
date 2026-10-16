@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./lib/storageSafety";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
 import { blankPattern, initState, loadStored, reducer, saveStored } from "./lib/store";
@@ -221,7 +222,7 @@ export default function App() {
     document.title = `${P.name} | POINTZERO · Atelier`;
   }, [P.name]);
   useEffect(() => {
-    try { localStorage.setItem("point-zero:preferences", JSON.stringify(prefs)); } catch { /* Optional preferences do not block the editor. */ }
+    try { writeStoredJSON("point-zero:preferences", JSON.stringify(prefs),v=>!!v&&typeof v==="object"&&!Array.isArray(v)); } catch { /* Optional preferences do not block the editor. */ }
   }, [prefs]);
   // Aucun motif de démonstration n'est chargé sur la grille initiale.
   // La véritable toile Canvas est visible sous la saisie de création.
