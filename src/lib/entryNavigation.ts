@@ -23,6 +23,10 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
   const legacy=params.get("studio");
   return isStudioRoute(legacy)&&legacy!=="manifest-admin"?legacy:"aime-home";
  }
+ if(path==="/atelier-unifie"){
+  const chosen=params.get("studio");
+  return isStudioRoute(chosen)&&!["manifest-admin","aime-home","manifest","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier","aime-landing"].includes(chosen)?chosen:"design";
+ }
  if(path==="/pointzero")return "manifest";
  if(path==="/le-monde-aime")return "aime-landing";
  if(path==="/vision")return "vision";

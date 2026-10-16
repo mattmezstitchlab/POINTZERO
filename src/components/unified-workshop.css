@@ -1,0 +1,13 @@
+.unified-workshop{height:100dvh;display:flex;flex-direction:column;background:#111114;color:#fff;overflow:hidden}
+.unified-workshop-header{flex:none;padding:10px 16px;border-bottom:1px solid #ffffff30;display:grid;grid-template-columns:1fr auto;gap:8px;font-size:12px;background:#151517}
+.unified-workshop-brand{display:flex;align-items:center;gap:16px}.unified-workshop-brand span{font-weight:400;color:#ddd}
+.unified-workshop-header button,.unified-workshop-header select{min-height:34px;border:1px solid #ffffff40;border-radius:6px;background:#242428;color:#fff;padding:5px 10px;font:inherit}
+.unified-workshop-header button:hover{background:#36363c}.unified-workshop-header button:focus-visible,.unified-workshop-header select:focus-visible{outline:2px solid #f0d7a7;outline-offset:2px}
+.unified-workshop-header button[aria-pressed=true]{background:#f0d7a7;color:#191715;border-color:#f0d7a7}
+.unified-workshop-project{display:flex;align-items:center;gap:8px}.unified-workshop-project select{max-width:240px}
+.unified-workshop-header nav{grid-column:1/-1;display:flex;gap:6px;overflow-x:auto;align-items:center}.unified-workshop-header nav button{white-space:nowrap}
+.unified-workshop-header p{grid-column:1/-1;margin:0;color:#ccc;font-size:11px}.unified-workshop-current{white-space:nowrap;padding:5px}
+/* A containing block for legacy fixed editors and overlays, without iframe isolation. */
+.unified-workshop-editor{position:relative;transform:translateZ(0);isolation:isolate;flex:1;min-height:0;overflow:hidden}
+.unified-workshop-editor>.pz-design,.unified-workshop-editor>.pz-studio,.unified-workshop-editor>.pz-atelier{height:100%!important}
+@media(max-width:640px){.unified-workshop-header{grid-template-columns:1fr;padding:8px;gap:6px}.unified-workshop-project{justify-content:space-between}.unified-workshop-project select{max-width:55vw}.unified-workshop-brand{justify-content:space-between}.unified-workshop-header p{font-size:10px}}
