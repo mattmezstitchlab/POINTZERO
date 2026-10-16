@@ -1,4 +1,17 @@
-# POINTZERO — Architecture Bureau → Projet → Édition
+# AIME — Architecture Bureau → Projet → Atelier
+
+> **Identité unique : AIME.** Le « point zéro » représente le principe fondateur d'AIME ; POINTZERO n'est pas une seconde marque ou une application à afficher dans les interfaces usuelles. Le dépôt GitHub `POINTZERO`, les clés de stockage `pointzero:*`, les identifiants de routes et les formats historiques restent inchangés pour la compatibilité.
+
+## Interface mère (premier socle concret)
+
+- **Header permanent** : AIME, retour Bureau, projet actif et mode Atelier ; une zone d'actions uniques pour annuler, rétablir, enregistrer et exporter.
+- **Gauche (structure et ressources)** : Ajouter, Éléments, Fichiers, Grille. Les éléments sont sélectionnés ici ; pas de deuxième liste de calques dans l'inspecteur.
+- **Centre (travail)** : document vierge choisi par le créateur ; aucune fleur, modèle de mariage ou contenu décoratif injecté. Les moteurs métiers peuvent encore être ouverts via le menu Outils.
+- **Droite (réglages)** : propriétés du document courant ou de l'élément sélectionné ; infos du projet affichées sans confondre projet et document.
+- **Bureau** : même identité AIME, projets canoniques, recherche, archivage réversible et accès aux anciennes créations.
+
+**Ce qui n'est pas encore fusionné** : les anciennes surfaces d'édition spécialisées conservent leurs propres moteurs et interfaces. Le menu Outils est un pont temporaire ; la convergence des moteurs exige d'abord un document commun versionné, une sélection commune, des pages et des commandes partagées. Aucun état multi-Studio unifié n'est revendiqué à ce stade.
+
 
 ## Décision de conception
 
