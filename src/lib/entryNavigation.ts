@@ -1,4 +1,4 @@
-/** Public AIME hierarchy with compatibility for pre-existing POINTZERO query links.
+/** POINTZERO workspace-first navigation; legacy public links stay addressable.
  * This module never reads or clears a user's saved projects.
  */
 export const STUDIO_ROUTES=[
@@ -21,7 +21,7 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
  const path=decodeURI(pathname).replace(/\/+$/,"")||"/";
  if(path==="/") {
   const legacy=params.get("studio");
-  return isStudioRoute(legacy)&&legacy!=="manifest-admin"?legacy:"aime-home";
+  return isStudioRoute(legacy)&&!["manifest-admin","aime-home"].includes(legacy)?legacy:"design";
  }
  if(path==="/pointzero")return "manifest";
  if(path==="/le-monde-aime")return "aime-landing";
@@ -35,7 +35,7 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
   const chosen=params.get("studio");
   return isStudioRoute(chosen)&&!["manifest-admin","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier","manifest","aime-landing"].includes(chosen)?chosen:"design";
  }
- return "aime-home";
+ return "design";
 }
 export function publicPathFor(mode:StudioRoute){
  if(mode==="aime-home")return "/";
@@ -45,7 +45,7 @@ export function publicPathFor(mode:StudioRoute){
  if(mode==="reference-dossier")return "/dossier";
  if(mode==="universal-dossier")return "/espace";
  if(mode==="universe-index")return "/univers";
- if(mode==="design")return "/atelier";
+ if(mode==="design")return "/";
  if(mode==="manifest-admin")return "/pointzero"; // admin remains a stateful protected overlay, not an unguarded link
  return "/atelier?studio="+encodeURIComponent(mode);
 }
