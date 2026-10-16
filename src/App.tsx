@@ -88,11 +88,11 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 export default function App() {
   const [boot] = useState(loadStored);
-  // The domain root opens the single AIME landing, regardless of stored projects.
+  // The domain root opens the real design workspace, regardless of saved preferences.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
     try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
-    catch { return "aime-home"; }
+    catch { return "design"; }
   });
   useEffect(()=>{
     if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
@@ -474,7 +474,7 @@ export default function App() {
         onMiniSite={() => switchStudio("mini-site")} onPDF={() => switchStudio("pdf")}
         onGeneration={() => switchStudio("generation")} onMusic={() => switchStudio("music")} onMusicProduction={() => switchStudio("music-production")} onAccessibility={() => switchStudio("accessibility")} onAcademy={() => switchStudio("academy")} onSpace={() => switchStudio("one-space")} onCausal={() => switchStudio("causal")} onLegal={() => switchStudio("legal")}
         onArtWorld={() => {setOpenPrivateGallery(false);switchStudio("art-world");}}
-        onManifest={() => switchStudio("manifest")} onUniversal={() => switchStudio("universal-dossier")}
+        onUniversal={() => switchStudio("universal-dossier")}
         onMetamorphose={() => switchStudio("metamorphose")} onRippleCircle={() => switchStudio("ripplecircle")} onGame={() => switchStudio("game")}
         incomingPhoto={photoHandoff} onPhotoConsumed={() => setPhotoHandoff(null)} />
     : studioMode === "metamorphose"
