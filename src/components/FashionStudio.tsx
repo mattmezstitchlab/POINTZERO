@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Download, RotateCcw, Shirt, X } from "lucide-react";
 import { GARMENTS, GARMENT_COLORS, createGarment, fashionTechSheet, fashionToSVG, validGarment, type GarmentProject, type GarmentSide } from "../lib/fashionStudio";
@@ -39,7 +40,7 @@ export default function FashionStudio({onBack,onUse}:{onBack:()=>void;onUse?:(da
   const previews=useMemo(()=>MOTIF_PRESETS.map(p=>({...p,pattern:p.make()})),[]);
   const update=(patch:Partial<GarmentProject>)=>setProject(p=>({...p,...patch}));
   useEffect(()=>{
-    try{localStorage.setItem(KEY,JSON.stringify(project));}
+    try{writeStoredJSON(KEY,JSON.stringify(project),validGarment);}
     catch{setNotice("Enregistrement local indisponible : exportez le projet JSON.");}
   },[project]);
   const source=fashionToSVG(project,project.view);

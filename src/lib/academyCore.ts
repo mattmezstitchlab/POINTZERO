@@ -1,3 +1,5 @@
+import {designVariables} from "./designSystem";
+import {writeStoredJSON} from "./storageSafety";
 /**
  * POINTZERO Academy — a genuinely editable, local-first website and learning project.
  * No fake multi-tenant accounts, published hosting, course certification or LMS backend.
@@ -13,7 +15,8 @@ export type SiteSection={
 };
 export type SiteProject={
  version:1;id:string;name:string;siteTitle:string;accent:string;background:string;foreground:string;
- font:"sans"|"serif";template:AcademyTemplate;sections:SiteSection[];updated:string
+ font:"sans"|"serif";template:AcademyTemplate;sections:SiteSection[];updated:string;
+ dossierBinding?:{spaceId:string;titleMode:"linked"|"custom";objectivesMode?:"linked"|"custom"}
 };
 export type CustomExercise={id:string;title:string;instructions:string};
 export type LearningState={version:1;completedCustom:string[];exercises:CustomExercise[];notes:string};
@@ -81,7 +84,9 @@ export function validProject(data:unknown):SiteProject|null{
  if(p.version!==1||!short(p.id,100)||!p.id||!short(p.name,100)||!short(p.siteTitle,100)||
   !color(p.accent)||!color(p.background)||!color(p.foreground)||!["sans","serif"].includes(p.font as string)||
   !templatesIDs.includes(p.template as AcademyTemplate)||!short(p.updated,30)||
-  !Array.isArray(p.sections)||p.sections.length<1||p.sections.length>45)return null;
+  !Array.isArray(p.sections)||p.sections.length<1||p.sections.length>45||
+  (p.dossierBinding!==undefined&&(!p.dossierBinding||!short(p.dossierBinding.spaceId,100)||!p.dossierBinding.spaceId||!["linked","custom"].includes(p.dossierBinding.titleMode)||
+   (p.dossierBinding.objectivesMode!==undefined&&!["linked","custom"].includes(p.dossierBinding.objectivesMode)))))return null;
  const ids=new Set<string>();
  for(const section of p.sections){
   if(!section||!short(section.id,100)||!section.id||ids.has(section.id)||
@@ -90,6 +95,22 @@ export function validProject(data:unknown):SiteProject|null{
   ids.add(section.id);
  }
  return p as SiteProject;
+}
+/** Read-through projection: the canonical title is NEVER copied back into a linked site.
+ * Explicit personalization switches titleMode to "custom" and is not overwritten.
+ */
+export function academyDisplayProject(project:SiteProject,source:{id:string;title:string;objectives?:string[];dossier?:{objectives:string[]}}|null):SiteProject{
+ if(!source||project.dossierBinding?.spaceId!==source.id)return project;
+ const titleLinked=project.dossierBinding.titleMode==="linked";
+ const objectivesLinked=project.dossierBinding.objectivesMode==="linked";
+ const objectives=source.objectives??source.dossier?.objectives??[];
+ return {...project,
+  name:titleLinked?source.title:project.name,
+  siteTitle:titleLinked?source.title:project.siteTitle,
+  sections:objectivesLinked?
+   project.sections.map(section=>section.kind==="intro"?{...section,body:objectives.length?
+    objectives.map((v,i)=>(i+1)+". "+v).join("\n"):"Aucun objectif pédagogique renseigné dans le Dossier Universel."}:section):project.sections
+ };
 }
 export const defaultLearning=():LearningState=>({version:1,completedCustom:[],exercises:[],notes:""});
 export function validLearning(data:unknown):LearningState|null{
@@ -115,7 +136,7 @@ export const readLearning=():LearningState=>{
 };
 export function writeAcademy(p:SiteProject){
  if(!validProject(p))throw Error("Projet non valide.");
- localStorage.setItem(ACADEMY_KEY,JSON.stringify(p));
+ writeStoredJSON(ACADEMY_KEY,JSON.stringify(p),validProject);
 }
 export const ACADEMY_LESSONS:AcademyLesson[]=[
  {id:"hero",title:"Personnaliser l'accueil",description:"Écrire pour être compris en une seconde.",
@@ -165,7 +186,7 @@ export function exportAcademyHTML(p:SiteProject):string{
  }).join("");
  return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
   '<meta name="description" content="'+html(p.siteTitle)+'"><title>'+html(p.siteTitle)+'</title>'+
-  '<style>:root{--ink:'+p.foreground+';--bg:'+p.background+';--accent:'+p.accent+'}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:'+(p.font==="serif"?'Georgia,serif':'system-ui,-apple-system,sans-serif')+';line-height:1.65}a{color:inherit}a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.top{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px max(22px,6vw);background:var(--bg);border-bottom:1px solid #9995}.top nav{display:flex;gap:18px;flex-wrap:wrap}.top nav a{text-decoration:none;font-size:13px}.block{padding:clamp(45px,8vw,110px) max(22px,8vw);max-width:1440px;margin:auto}.block-hero{min-height:480px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(120deg,var(--bg),color-mix(in srgb,var(--accent) 10%,var(--bg)))}h1{max-width:850px;font-size:clamp(38px,5vw,82px);letter-spacing:-.045em;line-height:1.1}h2{font-size:clamp(27px,3.4vw,48px);letter-spacing:-.025em}p{max-width:780px;font-size:clamp(16px,1.5vw,19px)}.button{display:inline-flex;margin-top:20px;padding:14px 23px;border-radius:7px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}.card{padding:25px;border-radius:9px;background:color-mix(in srgb,var(--accent) 10%,var(--bg));border:1px solid #7773}.block-footer{border-top:1px solid #7773;padding-block:45px}@media(max-width:560px){.top{display:block}.top nav{padding-top:12px}h1{font-size:36px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}</style>'+
+  '<style>'+(':root{'+designVariables()+'}')+':root{--ink:'+p.foreground+';--bg:'+p.background+';--accent:'+p.accent+'}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:'+(p.font==="serif"?'Georgia,serif':'system-ui,-apple-system,sans-serif')+';line-height:1.65}a{color:inherit}a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.top{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px max(22px,6vw);background:var(--bg);border-bottom:1px solid #9995}.top nav{display:flex;gap:18px;flex-wrap:wrap}.top nav a{text-decoration:none;font-size:13px}.block{padding:clamp(45px,8vw,110px) max(22px,8vw);max-width:var(--aime-content);margin:auto}.block-hero{min-height:480px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(120deg,var(--bg),color-mix(in srgb,var(--accent) 10%,var(--bg)))}h1{max-width:850px;font-size:clamp(38px,5vw,82px);letter-spacing:-.045em;line-height:1.1}h2{font-size:clamp(27px,3.4vw,48px);letter-spacing:-.025em}p{max-width:780px;font-size:clamp(16px,1.5vw,19px)}.button{display:inline-flex;margin-top:20px;padding:14px 23px;border-radius:var(--aime-pill);background:var(--accent);color:#fff;text-decoration:none;font-weight:700}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}.card{padding:25px;border-radius:9px;background:color-mix(in srgb,var(--accent) 10%,var(--bg));border:1px solid #7773}.block-footer{border-top:1px solid #7773;padding-block:45px}@media(max-width:560px){.top{display:block}.top nav{padding-top:12px}h1{font-size:36px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}</style>'+
   '</head><body><header class="top"><strong>'+html(p.siteTitle)+'</strong><nav aria-label="Sections">'+nav+'</nav></header><main>'+
   sections+'</main></body></html>';
 }

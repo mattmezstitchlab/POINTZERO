@@ -36,7 +36,10 @@ afterAll(() => {
 });
 
 let root: Root | null = null, container: HTMLElement | null = null;
-let openSpy: ReturnType<typeof vi.fn>, motifSpy: ReturnType<typeof vi.fn>, pdfSpy: ReturnType<typeof vi.fn>, imageSpy: ReturnType<typeof vi.fn>, projectSpy: ReturnType<typeof vi.fn>;
+let openSpy: ReturnType<typeof vi.fn<() => void>>;
+let motifSpy: ReturnType<typeof vi.fn<(p:Pattern) => void>>;
+let pdfSpy: ReturnType<typeof vi.fn<(file:File) => void>>, imageSpy: ReturnType<typeof vi.fn<(file:File) => void>>;
+let projectSpy: ReturnType<typeof vi.fn<(file:File) => Promise<string|null>>>;
 const click = async (el: Element) => {
   await act(async () => { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
 };

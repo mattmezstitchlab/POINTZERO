@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ChangeEvent } from "react";
 import { ArrowLeftRight, Download, FolderOpen, Frame, Image, PenLine, Plus, Redo2, Save, Search, Sparkles, Undo2, Volume2, VolumeX, WandSparkles } from "lucide-react";
 import { StudioFrame, saveStudioFile, studioButton, studioInput } from "./StudioFrame";
@@ -11,6 +12,7 @@ import {
   type ArtMark, type ArtTool, type GalleryItem
 } from "../lib/artWorldCore";
 
+const validStoredGallery=(v:unknown)=>Array.isArray(v)&&safeGallery(v).length===v.length;
 const today=()=>new Date().toISOString().slice(0,10);
 const readArt=()=>{try{return safeArt(JSON.parse(localStorage.getItem(ART_KEY)??"null"))??makeArt();}catch{return makeArt();}};
 const readGallery=()=>{try{return safeGallery(JSON.parse(localStorage.getItem(GALLERY_KEY)??"null"));}catch{return [];}};
@@ -71,7 +73,7 @@ export default function ArtWorldStudio({onBack,onPattern,onDesign,startInGallery
   const svg=useRef<SVGSVGElement>(null);
   const audio=useRef<AudioContext|null>(null);
   useEffect(()=>()=>{if(audio.current){void audio.current.close();audio.current=null;}},[]);
-  useEffect(()=>{try{localStorage.setItem(ART_KEY,JSON.stringify(project));}catch{setStatus("Stockage local saturé. Exportez votre œuvre JSON.");}},[project]);
+  useEffect(()=>{try{writeStoredJSON(ART_KEY,JSON.stringify(project),safeArt);}catch{setStatus("Stockage local saturé. Exportez votre œuvre JSON.");}},[project]);
   const analysis=useMemo(()=>artPaletteAnalysis(project),[project]);
   const currentColor=ink??artColor(active);
   const stepWidth=size;
@@ -165,7 +167,7 @@ export default function ArtWorldStudio({onBack,onPattern,onDesign,startInGallery
     const next=[item,...gallery].slice(0,12);
     try{
       if(JSON.stringify(next).length>3_000_000)throw Error("Galerie volumineuse");
-      localStorage.setItem(GALLERY_KEY,JSON.stringify(next));setGallery(next);setGalleryMode(true);
+      writeStoredJSON(GALLERY_KEY,JSON.stringify(next),validStoredGallery);setGallery(next);setGalleryMode(true);
       setStatus("Œuvre ajoutée à votre galerie privée. Aucune publication ni vente en ligne.");
     }catch{setStatus("Espace local insuffisant. Exportez votre œuvre SVG ou JSON.");}
   };

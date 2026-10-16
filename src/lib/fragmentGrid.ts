@@ -1,8 +1,10 @@
+import {validDesignSource,type DesignFragmentSource} from "./fragmentResources";
 /**
  * AIME METAMORPHOSE / POINTZERO — grille de fragments universelle.
  * Séparée du Pattern DMC : ni points de croix ni historique de broderie ne changent.
  */
 export interface Fragment {
+  source?:DesignFragmentSource;
   id: string;
   title: string;
   description: string;
@@ -40,11 +42,13 @@ export function readFragments(value: unknown): FragmentCollection | null {
   for(const [i,entry] of entries.entries()) {
     if(!entry||typeof entry!=="object")continue;
     const raw=entry as Record<string,unknown>;
+    if(raw.source!==undefined&&!validDesignSource(raw.source))return null;
     const id=trunc(raw.id,100)||"frag_"+i;
     if(used.has(id))continue; used.add(id);
     const title=trunc(raw.title,160)||"Fragment "+(i+1);
     const crop=raw.crop&&typeof raw.crop==="object"?raw.crop as Record<string,unknown>:{};
     fragments.push({
+      ...(raw.source?{source:raw.source as DesignFragmentSource}:{}),
       id,title,description:trunc(raw.description,600),
       sourceUrl:allowedFragmentUrl(raw.sourceUrl),
       image:allowedFragmentUrl(raw.image),

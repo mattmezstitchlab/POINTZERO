@@ -1,5 +1,6 @@
+import {writeStoredJSON,everyStored} from "../lib/storageSafety";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
-import { Accessibility, GraduationCap, GitBranch, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
+import { Accessibility, GraduationCap, GitBranch, Gamepad2, Sparkles, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { MOTIF_PRESETS } from "../lib/motifPresets";
 import { StitchThumbnail } from "./MotifLibrary";
@@ -65,13 +66,17 @@ interface Props {
   onAcademy?: () => void;
   onSpace?: () => void;
   onCausal?: () => void;
+  onMetamorphose?: () => void;
+  onRippleCircle?: () => void;
+  onGame?: () => void;
   onLegal?: () => void;
   onArtWorld?: () => void;
-  onAimeLanding?: () => void;
+  onManifest?: () => void;
+  onUniversal?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onLegal, onArtWorld, onAimeLanding, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onManifest, onUniversal, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -103,7 +108,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     return () => observer.disconnect();
   }, [doc.width,doc.height,leftTab]);
   useEffect(() => {
-    try { localStorage.setItem(CURRENT,JSON.stringify(doc)); }
+    try { writeStoredJSON(CURRENT,JSON.stringify(doc),safeDesign);window.dispatchEvent(new Event("aime:design-changed")); }
     catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
   }, [doc]);
   useEffect(() => {
@@ -146,7 +151,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     const versions=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
     let preserved=false;
     try {
-      localStorage.setItem(DRAFTS,JSON.stringify(versions));
+      writeStoredJSON(DRAFTS,JSON.stringify(versions),everyStored(safeDesign));
       setDrafts(versions);
       preserved=true;
     } catch { /* The user can still undo and export the original JSON. */ }
@@ -157,7 +162,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   };
   const saveDraft = () => {
     const next=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
-    try{localStorage.setItem(DRAFTS,JSON.stringify(next));setDrafts(next);setNotice("Document ajouté à Mes créations.");}
+    try{writeStoredJSON(DRAFTS,JSON.stringify(next),everyStored(safeDesign));setDrafts(next);setNotice("Document ajouté à Mes créations.");}
     catch{setNotice("Espace local insuffisant. Utilisez Exporter → Projet JSON.");}
   };
   const loadDraft=(value:DesignDocument) => {change(value);setSelected(null);setSidebar(false);};
@@ -237,6 +242,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
         <span className="shrink-0 text-[13px] font-bold tracking-tight">× <span className="hidden sm:inline">POINTZERO</span></span>
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
         <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
+        {onManifest&&<button type="button" aria-label="Retour à l’accueil POINTZERO" onClick={onManifest} className={action+" whitespace-nowrap"}>Accueil</button>}
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
         <div className="relative">
           <button type="button" aria-label="Ouvrir le menu des studios" aria-expanded={showStudios}
@@ -245,6 +251,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
           </button>
           {showStudios&&<div aria-label="Choix du studio" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[220px] max-h-[76dvh] overflow-y-auto p-2">
             {([
+              {name:"Dossier Universel AIME",icon:<Layers3 size={16}/>,onClick:onUniversal},
               {name:"Photo",icon:<Camera size={16}/>,onClick:onPhoto},
               {name:"Stylisme",icon:<Shirt size={16}/>,onClick:onFashion},
               {name:"Budget",icon:<Wallet size={16}/>,onClick:onBudget},
@@ -258,10 +265,12 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
               {name:"Accessibilité & Design System",icon:<Accessibility size={16}/>,onClick:onAccessibility},
               {name:"POINTZERO Academy · UI/UX & No Code",icon:<GraduationCap size={16}/>,onClick:onAcademy},
               {name:"Mon Espace · Tous les mondes",icon:<Layers3 size={16}/>,onClick:onSpace},
+              {name:"AIME MÉTAMORPHOSE · Grille",icon:<Sparkles size={16}/>,onClick:onMetamorphose},
+              {name:"RIPPLECIRCLE · Cadran vivant",icon:<GitBranch size={16}/>,onClick:onRippleCircle},
+              {name:"Studio Game · Confetti 30",icon:<Gamepad2 size={16}/>,onClick:onGame},
               {name:"Studio Causal · RIPPLE",icon:<GitBranch size={16}/>,onClick:onCausal},
               {name:"Juridique & RGPD",icon:<Scale size={16}/>,onClick:onLegal},
-              {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld},
-              {name:"LE MONDE AIME · Présentation",icon:<HeartHandshake size={16}/>,onClick:onAimeLanding}
+              {name:"LE MONDE AIME · Atelier libre",icon:<HeartHandshake size={16}/>,onClick:onArtWorld}
             ]).filter(i=>!!i.onClick).map(item=>
               <button type="button" key={item.name} aria-label={"Ouvrir le studio "+item.name}
                 className="flex min-h-11 w-full items-center gap-2 rounded-[5px] px-3 text-left text-xs text-white/85 hover:bg-white/10 hover:text-white"

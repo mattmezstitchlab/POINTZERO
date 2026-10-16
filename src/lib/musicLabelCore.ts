@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 /** One local registry for artists, recordings, invited music choices and events.
  * No fake streaming, SACEM declaration, royalty distribution or publishing backend. */
 export const MUSIC_LABEL_KEY="pointzero:music-label:v1";
@@ -73,7 +74,7 @@ export function safeMusicLabel(data:unknown):MusicLabelStore|null{
  }
  return s as MusicLabelStore;
 }
-export const saveLabel=(s:MusicLabelStore)=>localStorage.setItem(MUSIC_LABEL_KEY,JSON.stringify(s));
+export const saveLabel=(s:MusicLabelStore)=>writeStoredJSON(MUSIC_LABEL_KEY,JSON.stringify(s),safeMusicLabel);
 export function loadLabel():MusicLabelStore{
  try{return safeMusicLabel(JSON.parse(localStorage.getItem(MUSIC_LABEL_KEY)??"null"))??makeMusicLabel();}
  catch{return makeMusicLabel();}

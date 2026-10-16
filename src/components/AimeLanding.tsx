@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Brush, Frame, Heart, Music2, Palette, Sparkles, Users } from "lucide-react";
 import { artToSVG, GALLERY_KEY, safeGallery } from "../lib/artWorldCore";
 
-interface Props {onBack:()=>void;onCreate:()=>void;onMusic:()=>void;onGallery:()=>void}
+interface Props {onBack:()=>void;onPointzero:()=>void;onCreate:()=>void;onMusic:()=>void;onGallery:()=>void}
 /** Light, inclusive, public-facing introduction — no fake sessions or fundraising. */
 const accents=[
  {id:"bleu",name:"La sérénité",color:"#62a6f8",cx:130,cy:140,r:50},
@@ -17,16 +17,16 @@ const modules=[
  {icon:Palette,name:"Transformer",body:"Un dessin devient une image, une broderie ou un support à transmettre.",tag:"Création"},
  {icon:Frame,name:"Exposer",body:"Une première galerie privée pour préserver les œuvres avant toute publication autorisée.",tag:"Galerie"}
 ];
-export default function AimeLanding({onBack,onCreate,onMusic,onGallery}:Props){
+export default function AimeLanding({onBack,onPointzero,onCreate,onMusic,onGallery}:Props){
  const [active,setActive]=useState<string|null>(null);
  const gallery=useMemo(()=>{try{return safeGallery(JSON.parse(localStorage.getItem(GALLERY_KEY)??"null"));}catch{return [];}},[]);
- return <div className="fixed inset-0 h-[100dvh] overflow-y-auto bg-[#f9f8fc] font-sans text-[#272631]" aria-label="Présentation LE MONDE AIME">
-    <header className="sticky top-0 z-30 flex min-h-[72px] items-center justify-between gap-3 border-b border-[#e6e4ed] bg-[#fbfafd]/95 px-4 backdrop-blur-xl sm:px-8 lg:px-12">
+ return <div className="fixed inset-0 h-[100dvh] overflow-y-auto bg-[#faf9f7] font-sans text-[#272631]" aria-label="Présentation LE MONDE AIME">
+    <header className="sticky top-0 z-30 flex min-h-[72px] items-center justify-between gap-3 border-b border-[#e6e4ed] bg-[#faf9f7]/95 px-4 backdrop-blur-xl sm:px-8 lg:px-12">
       <div className="flex min-w-0 items-center gap-3">
-        <button aria-label="Retour à POINTZERO" onClick={onBack} className="grid size-10 shrink-0 place-items-center rounded-[7px] border border-[#dedce6] bg-white text-[#4f4774] hover:bg-[#f2eef9]"><ArrowLeft size={17}/></button>
+        <button aria-label="Retour à AIME" onClick={onBack} className="grid size-10 shrink-0 place-items-center rounded-[7px] border border-[#dedce6] bg-white text-[#4f4774] hover:bg-[#f2eef9]"><ArrowLeft size={17}/></button>
         <a href="#accueil" className="flex items-center gap-3">
           <div className="grid size-10 place-items-center rounded-[10px] bg-gradient-to-br from-[#745bc7] to-[#9c84e4] text-white shadow-[0_4px_16px_#6f60c055]"><Heart size={21} strokeWidth={2.2}/></div>
-          <div className="leading-tight"><span className="block truncate text-[13px] font-bold tracking-[.02em]">LE MONDE AIME</span><span className="hidden text-[10px] text-[#817d8b] sm:block">Un amour, une toile, un monde.</span></div>
+          <div className="leading-tight"><span className="block truncate text-[13px] font-bold tracking-[.02em]">LE MONDE AIME</span><span className="hidden text-[10px] text-[#817d8b] sm:block">Association · Art, générations et transmission</span></div>
         </a>
       </div>
       <nav className="hidden items-center gap-1 rounded-[9px] border border-[#e9e6ef] bg-white p-1 text-xs text-[#655f73] md:flex" aria-label="Navigation LE MONDE AIME">
@@ -137,7 +137,7 @@ export default function AimeLanding({onBack,onCreate,onMusic,onGallery}:Props){
     </main>
     <footer className="flex flex-wrap items-center justify-between gap-3 bg-[#201c30] px-5 py-7 text-xs text-[#dad6e6] sm:px-10">
       <div className="flex items-center gap-2"><Heart size={16} className="text-[#b59df0]"/> LE MONDE AIME · Un amour, une toile, un monde</div>
-      <button onClick={onBack} className="flex items-center gap-1 text-[#dcd7e9] hover:text-white">POINTZERO · Tous les studios <ArrowRight size={14}/></button>
+      <div className="flex flex-wrap gap-6"><button onClick={onBack} className="flex items-center gap-1 text-[#dcd7e9] hover:text-white">AIME · Maison mère <ArrowRight size={14}/></button><button onClick={onPointzero} className="flex items-center gap-1 text-[#dcd7e9] hover:text-white">POINTZERO · Studios <ArrowRight size={14}/></button></div>
     </footer>
   </div>;
 }

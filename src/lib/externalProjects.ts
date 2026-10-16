@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "./storageSafety";
 /**
  * POINTZERO external project registry (local-first). This is a URL reference,
  * NOT API access, single-sign-on, synchronization or proof of iframe support.
@@ -61,7 +62,7 @@ export function readExternal():ExternalRegistry{
 }
 export function writeExternal(reg:ExternalRegistry){
  if(!validRegistry(reg))throw Error("Le registre contient une URL ou une ressource invalide.");
- localStorage.setItem(EXTERNAL_KEY,JSON.stringify(reg));
+ writeStoredJSON(EXTERNAL_KEY,JSON.stringify(reg),validRegistry);
  window.dispatchEvent(new Event("pointzero:external-changed"));
 }
 export function addExternal(reg:ExternalRegistry,title:string,url:string):ExternalRegistry{

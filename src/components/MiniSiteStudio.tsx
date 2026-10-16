@@ -1,3 +1,6 @@
+import {projectMiniSite,storedProjectionSource} from "../lib/dossierProjections";
+import {AIME_WORLD_CHANGED} from "../lib/universalDossier";
+import {writeStoredJSON,everyStored} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Download, Eye, EyeOff, GitBranch, ImagePlus, Laptop, Save, Scale, Smartphone, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
@@ -23,12 +26,16 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   const [externalRegistry,setExternalRegistry]=useState(readExternal);
   const filePicker=useRef<HTMLInputElement>(null);
   const imagePicker=useRef<HTMLInputElement>(null);
-  const section=doc.sections.find(s=>s.id===selected)??null;
+  const [,refreshSource]=useState(0);
+  useEffect(()=>{const refresh=()=>refreshSource(n=>n+1);window.addEventListener(AIME_WORLD_CHANGED,refresh);window.addEventListener("storage",refresh);return()=>{window.removeEventListener(AIME_WORLD_CHANGED,refresh);window.removeEventListener("storage",refresh)}},[]);
+  let effectiveDoc=doc,projectionError="";
+  try{effectiveDoc=projectMiniSite(doc,doc.dossierBinding?.programmeMode==="linked"?storedProjectionSource(doc.dossierBinding.spaceId):null)}catch(e){projectionError=String(e)}
+  const section=effectiveDoc.sections.find(s=>s.id===selected)??null;
   const evaluation=useMemo(()=>miniCoachProgress(doc,coach.siteId===doc.id?coach:readMiniCoach(doc.id)),[doc,coach]);
   const projects=useMemo(loadProjectOptions,[]);
   const update=(patch:Partial<MiniSite>)=>setDoc(d=>({...d,...patch}));
-  const updateSection=(id:string,patch:Partial<MiniSection>)=>setDoc(d=>({...d,sections:d.sections.map(s=>s.id===id?{...s,...patch}:s)}));
-  useEffect(()=>{try{localStorage.setItem(MINI_KEY,JSON.stringify(doc));}catch{setStatus("Stockage saturé : exportez ce mini-site en HTML ou JSON.");}},[doc]);
+  const updateSection=(id:string,patch:Partial<MiniSection>)=>setDoc(d=>({...d,sections:d.sections.map(s=>s.id===id?{...s,...patch}:s),dossierBinding:d.dossierBinding&&id===d.dossierBinding.programmeSectionId&&patch.body!==undefined?{...d.dossierBinding,programmeMode:"custom"}:d.dossierBinding}));
+  useEffect(()=>{try{writeStoredJSON(MINI_KEY,JSON.stringify(doc),safeMiniSite);}catch{setStatus("Stockage saturé : exportez ce mini-site en HTML ou JSON.");}},[doc]);
   useEffect(()=>{setCoach(readMiniCoach(doc.id));},[doc.id]);
   useEffect(()=>{try{writeMiniCoach(coach);}catch{setStatus("Le parcours pédagogique ne peut pas être conservé dans ce navigateur.");}},[coach]);
   useEffect(()=>{
@@ -48,7 +55,7 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   };
   const store=()=>{
     const next=[doc,...drafts.filter(d=>d.id!==doc.id)].slice(0,12);
-    try{localStorage.setItem(MINI_DRAFTS,JSON.stringify(next));setDrafts(next);setStatus("Mini-site conservé dans Mes mini-sites.");}
+    try{writeStoredJSON(MINI_DRAFTS,JSON.stringify(next),everyStored(safeMiniSite));setDrafts(next);setStatus("Mini-site conservé dans Mes mini-sites.");}
     catch{setStatus("Stockage saturé : exportez ce mini-site en JSON.");}
   };
   const changeOrder=(id:string,delta:number)=>{
@@ -79,9 +86,9 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
     };
     reader.readAsDataURL(file);
   };
-  const exportHTML=()=>{saveStudioFile(slug(doc.name)+".html",miniSiteToHTML(doc),"text/html;charset=utf-8");
+  const exportHTML=()=>{if(projectionError){setStatus(projectionError);return;}saveStudioFile(slug(doc.name)+".html",miniSiteToHTML(effectiveDoc),"text/html;charset=utf-8");
     setStatus("HTML exporté. "+evaluation.errors+" correction(s) prioritaires restantes selon le pré-audit local ; publication et vérifications humaines à effectuer.");};
-  const preview=miniSiteToHTML(doc);
+  const preview=projectionError?"<!doctype html><html lang=fr><body>Source du programme indisponible. Aperçu et export liés bloqués.</body></html>":miniSiteToHTML(effectiveDoc);
   const actions=<div className="flex gap-1">
     {onLegal&&<button type="button" className={studioButton+" !px-2"} onClick={()=>{localStorage.setItem(LEGAL_ACTIVE_KEY,"mini-site:"+doc.id);onLegal();}} title="Vérifier les obligations juridiques" aria-label="Vérifier Juridique RGPD du mini-site"><Scale size={16}/></button>}
     <button type="button" className={studioButton+" !px-2"} onClick={store} title="Enregistrer dans Mes mini-sites" aria-label="Enregistrer le mini-site"><Save size={16}/></button>
@@ -92,6 +99,12 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
   return <StudioFrame title="Mini-site" subtitle="Une seule page · responsive · export HTML statique" onBack={onBack}
     leftLabel="Bibliothèque de mini-sites" rightLabel="Contenu du mini-site" actions={actions}
     left={<>
+      <label className="block text-xs">Composition responsive<select className={studioInput} aria-label="Composition du mini-site" value={doc.compositionMode??''} onChange={e=>update({compositionMode:e.target.value?e.target.value as 'editorial'|'regular'|'immersive':undefined})}><option value="">Présentation originale</option><option value="editorial">Éditoriale</option><option value="regular">Régulière</option><option value="immersive">Immersive</option></select></label>
+
+      {doc.dossierBinding&&<div role="status"><p>Programme {doc.dossierBinding.programmeMode==="linked"?"lié au Dossier Universel":"personnalisé, non synchronisé"}. Local uniquement.</p><p>{projectionError}</p>
+      <button type="button" onClick={()=>{if(!projectionError&&window.confirm("Dissocier le programme et conserver son contenu actuel ?"))setDoc({...effectiveDoc,dossierBinding:{...doc.dossierBinding!,programmeMode:"custom"}})}}>Conserver une version personnalisée</button>
+      {doc.dossierBinding.programmeMode==="custom"&&<button type="button" onClick={()=>{if(window.confirm("Remplacer l’affichage du programme par la source canonique ? Le texte personnalisé reste dans le JSON local."))update({dossierBinding:{...doc.dossierBinding!,programmeMode:"linked"}})}}>Suivre le programme du dossier</button>}</div>}
+
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-[5px] border border-white/15 p-1">
         <button aria-label="Voir le plan du mini-site" aria-pressed={leftMode==="plan"} className={"rounded-[4px] px-2 py-2 text-xs "+(leftMode==="plan"?"bg-white font-semibold text-black":"text-white/80")} onClick={()=>setLeftMode("plan")}><GitBranch size={14} className="mr-1 inline"/>Plan</button>
         <button aria-label="Ouvrir le parcours Academy du mini-site" aria-pressed={leftMode==="academy"} className={"rounded-[4px] px-2 py-2 text-xs "+(leftMode==="academy"?"bg-white font-semibold text-black":"text-white/80")} onClick={()=>setLeftMode("academy")}><BookOpen size={14} className="mr-1 inline"/>Apprendre</button>
@@ -190,7 +203,7 @@ export default function MiniSiteStudio({onBack,incomingDraft,onLegal}:Props) {
           <p className="text-[11px] leading-relaxed text-white/55">Sur le site exporté, le visiteur choisira explicitement de charger l'iframe. Si l'application l'interdit, un lien dans un nouvel onglet reste disponible. Dans l'aperçu isolé ci-dessous, les scripts sont volontairement désactivés.</p>
         </div>}
         <p className="text-[11px] text-white/55">Pour une galerie, ajoutez un intitulé par ligne. Le modèle affiche des cartes, pas encore des images indépendantes.</p>
-        <button className={studioButton+" w-full"} onClick={()=>{if(!window.confirm("Supprimer cette section ?"))return;setDoc(d=>({...d,sections:d.sections.filter(s=>s.id!==section.id)}));setSelected(null);}}><Trash2 size={14}/> Supprimer la section</button>
+        <button className={studioButton+" w-full"} onClick={()=>{if(!window.confirm("Supprimer cette section ?"))return;setDoc(d=>({...d,sections:d.sections.filter(s=>s.id!==section.id),dossierBinding:d.dossierBinding?.programmeSectionId===section.id?undefined:d.dossierBinding}));setSelected(null);}}><Trash2 size={14}/> Supprimer la section</button>
       </div>:<div className="space-y-3">
         <label className="block text-xs text-white/75">Nom du projet<input aria-label="Nom du mini-site" className={studioInput+" mt-1"} value={doc.name} maxLength={140} onChange={e=>update({name:e.target.value})}/></label>
         <label className="block text-xs text-white/75">Titre principal<input aria-label="Titre principal" className={studioInput+" mt-1"} value={doc.title} maxLength={300} onChange={e=>update({title:e.target.value})}/></label>

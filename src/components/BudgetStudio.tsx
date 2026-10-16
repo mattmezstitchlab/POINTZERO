@@ -1,3 +1,4 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDownLeft, ArrowUpRight, Download, FolderOpen, Plus, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioInput, studioButton, SummaryTile, saveStudioFile } from "./StudioFrame";
@@ -40,7 +41,7 @@ export default function BudgetStudio({onBack,linkedProject}:Props){
     setData(current=>current.categories.some(c=>c.scope==="project"&&c.projectId===projectId)
       ?current:{...current,categories:[...current.categories,...starter(projectId)]});
   },[projectId,scope]);
-  useEffect(()=>{try{localStorage.setItem(BUDGET_STORAGE,JSON.stringify(data));}
+  useEffect(()=>{try{writeStoredJSON(BUDGET_STORAGE,JSON.stringify(data),safeBudget);}
     catch{setNotice("Stockage local saturé : exportez le budget en JSON.");}},[data]);
   const relevant=data.categories.filter(c=>c.scope===scope&&(scope==="personal"||c.projectId===projectId));
   const available=relevant.filter(c=>c.kind===kind);

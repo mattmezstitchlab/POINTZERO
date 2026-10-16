@@ -1,11 +1,13 @@
+import {writeStoredJSON} from "../lib/storageSafety";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Code2, Download, Eye, GraduationCap, Layers3, Monitor, Palette, Plus, RotateCcw, Save, Scale, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
 import { StudioFrame, studioButton, studioInput, saveStudioFile } from "./StudioFrame";
 import { LEGAL_ACTIVE_KEY } from "../lib/legalCore";
+import {AIME_WORLD_CHANGED,academyDossierKey,attachAcademyResource,readDossier} from "../lib/universalDossier";
 import { contrastGrade } from "../lib/accessibilityCore";
 import {
  ACADEMY_KEY, ACADEMY_PROGRESS_KEY, ACADEMY_LESSONS, ACADEMY_TEMPLATES,
- courseProgress,defaultLearning,exportAcademyHTML,makeAcademyProject,makeSection,palettes,
+ academyDisplayProject,courseProgress,defaultLearning,exportAcademyHTML,makeAcademyProject,makeSection,palettes,
  readAcademy,readLearning,safeHref,validLearning,validProject,
  type SiteProject,type SiteSection,type SectionKind,type Device,type LearningState,type AcademyTemplate
 } from "../lib/academyCore";
@@ -21,9 +23,32 @@ const sectionNames:{kind:SectionKind;label:string;description:string}[]=[
 const localToday=()=>new Date().toISOString().slice(0,10);
 const studioTxt="text-xs text-white/70";
 const bounded=(value:string,n:number)=>value.slice(0,n);
-export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:()=>void;onAccessibility:()=>void;onLegal?:()=>void}){
- const [project,setProject]=useState<SiteProject>(readAcademy);
- const [learning,setLearning]=useState<LearningState>(readLearning);
+export default function AcademyStudio({onBack,onAccessibility,onLegal,linkedDossierId}:{onBack:()=>void;onAccessibility:()=>void;onLegal?:()=>void;linkedDossierId?:string}){
+ const readContext=():SiteProject=>{
+  if(!linkedDossierId||!readDossier(linkedDossierId))return readAcademy();
+  try{
+   const saved=validProject(JSON.parse(localStorage.getItem(academyDossierKey(linkedDossierId))??"null"));
+   if(saved?.dossierBinding?.spaceId===linkedDossierId)return saved;
+  }catch{/* Unlinked legacy Academy remains untouched. */}
+  return {...makeAcademyProject(),dossierBinding:{spaceId:linkedDossierId,titleMode:"linked",objectivesMode:"linked"}};
+ };
+ const readProgress=():LearningState=>{
+  if(!linkedDossierId)return readLearning();
+  try{return validLearning(JSON.parse(localStorage.getItem(ACADEMY_PROGRESS_KEY+":"+linkedDossierId)??"null"))??defaultLearning();}
+  catch{return defaultLearning();}
+ };
+ const [project,setProject]=useState<SiteProject>(readContext);
+ const [learning,setLearning]=useState<LearningState>(readProgress);
+ const [,refreshSpace]=useState(0);
+ useEffect(()=>{
+  const refresh=()=>refreshSpace(n=>n+1);
+  window.addEventListener(AIME_WORLD_CHANGED,refresh);window.addEventListener("storage",refresh);
+  return()=>{window.removeEventListener(AIME_WORLD_CHANGED,refresh);window.removeEventListener("storage",refresh)};
+ },[]);
+ const linked=linkedDossierId?readDossier(linkedDossierId):null;
+ const isLinked=!!linked&&project.dossierBinding?.spaceId===linked.id;
+ const effectiveTitle=isLinked&&project.dossierBinding?.titleMode==="linked"?linked.title:project.siteTitle;
+ const effectiveProject=academyDisplayProject(project,linked?{id:linked.id,title:linked.title,objectives:linked.dossier?.objectives}:null);
  const [device,setDevice]=useState<Device>("desktop");
  const [selected,setSelected]=useState<string|null>(null);
  const [mode,setMode]=useState<"apprenant"|"formateur">("apprenant");
@@ -33,18 +58,35 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
  const [collapsed,setCollapsed]=useState(false);
  const picker=useRef<HTMLInputElement>(null);
  const selectedSection=project.sections.find(s=>s.id===selected)??project.sections[0]??null;
- const tasks=useMemo(()=>courseProgress(project,learning),[project,learning]);
+ const displayedSection=effectiveProject.sections.find(s=>s.id===selectedSection?.id)??null;
+ const tasks=courseProgress(effectiveProject,learning);
  const inspectorSelected=selectedSection!==null;
  const grades=useMemo(()=>contrastGrade(project.foreground,project.background),[project.foreground,project.background]);
  const accentGrade=useMemo(()=>contrastGrade("#ffffff",project.accent),[project.accent]);
  const chosenLesson=ACADEMY_LESSONS.find(t=>t.id===lesson)??ACADEMY_LESSONS[0];
- useEffect(()=>{try{localStorage.setItem(ACADEMY_KEY,JSON.stringify(project));}catch{setNotice("Stockage local saturé : exportez votre site.");}},[project]);
- useEffect(()=>{try{localStorage.setItem(ACADEMY_PROGRESS_KEY,JSON.stringify(learning));}catch{setNotice("Stockage des exercices impossible : exportez votre projet.");}},[learning]);
+ useEffect(()=>{try{
+ const key=linkedDossierId?academyDossierKey(linkedDossierId):ACADEMY_KEY;
+ if(linkedDossierId){
+  if(!readDossier(linkedDossierId))throw Error("Dossier lié introuvable : aucune sauvegarde liée effectuée.");
+  const raw=localStorage.getItem(key);
+  if(raw!==null){
+   let old:SiteProject|null=null;
+   try{old=validProject(JSON.parse(raw));}catch{/* Preserve original bytes. */}
+   if(!old||old.dossierBinding?.spaceId!==linkedDossierId)
+    throw Error("Support Academy stocké invalide ou étranger : contenu original conservé. Exportez votre support avant toute réparation.");
+  }
+ }
+ writeStoredJSON(key,JSON.stringify(project),validProject);
+ if(linkedDossierId)attachAcademyResource(linkedDossierId,project.id);
+ }catch(error){setNotice(error instanceof Error?error.message:"Stockage local indisponible : exportez votre site.");}},[project,linkedDossierId]);
+ useEffect(()=>{try{writeStoredJSON(linkedDossierId?ACADEMY_PROGRESS_KEY+":"+linkedDossierId:ACADEMY_PROGRESS_KEY,JSON.stringify(learning),validLearning);}catch{setNotice("Stockage des exercices impossible : exportez votre projet.");}},[learning,linkedDossierId]);
  const update=(fn:(p:SiteProject)=>SiteProject)=>setProject(p=>({...fn(p),updated:localToday()}));
  const patchSite=(patch:Partial<SiteProject>)=>update(p=>({...p,...patch}));
  const patchSection=(patch:Partial<SiteSection>)=>{
   if(!selectedSection)return;
-  update(p=>({...p,sections:p.sections.map(s=>s.id===selectedSection.id?{...s,...patch}:s)}));
+  update(p=>({...p,sections:p.sections.map(s=>s.id===selectedSection.id?{...s,...patch}:s),
+   dossierBinding:patch.body!==undefined&&selectedSection.kind==="intro"&&p.dossierBinding?
+    {...p.dossierBinding,objectivesMode:"custom"}:p.dossierBinding}));
  };
  const addSection=(kind:SectionKind)=>{
   if(project.sections.length>=45)return setNotice("Maximum 45 sections.");
@@ -66,7 +108,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
  };
  const chooseTemplate=(template:AcademyTemplate)=>{
   if(!window.confirm("Créer un site depuis ce modèle ? Le site actuel sera remplacé. Exportez-le avant pour le conserver."))return;
-  const next=makeAcademyProject(template);setProject(next);setSelected(null);setNotice("Nouveau projet prêt. Suivez les étapes de formation à gauche.");
+  const next={...makeAcademyProject(template),dossierBinding:project.dossierBinding};setProject(next);setSelected(null);setNotice("Nouveau projet prêt. Suivez les étapes de formation à gauche.");
  };
  const addExercise=()=>{
   if(!newTitle.trim()||!newInstructions.trim())return setNotice("Ajoutez le titre et la consigne de l'exercice.");
@@ -75,7 +117,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
   setLearning(l=>({...l,exercises:[...l.exercises,exercise]}));setNewTitle("");setNewInstructions("");
   setNotice("Exercice ajouté au projet local. Aucun élève distant ne reçoit de notification.");
  };
- const exportProject=()=>saveStudioFile("pointzero-academy-projet.json",JSON.stringify({kind:"pointzero:academy-bundle",project,learning},null,2));
+ const exportProject=()=>saveStudioFile("pointzero-academy-projet.json",JSON.stringify({kind:"pointzero:academy-bundle",project:effectiveProject,learning},null,2));
  const importProject=async(e:ChangeEvent<HTMLInputElement>)=>{
   const file=e.target.files?.[0];e.target.value="";if(!file)return;
   if(file.size>500000)return setNotice("Fichier trop volumineux (500 Ko maximum).");
@@ -85,11 +127,11 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
    const state=parsed?.kind==="pointzero:academy-bundle"?validLearning(parsed.learning):defaultLearning();
    if(!p||!state)throw Error("Projet Academy non reconnu.");
    if(!window.confirm("Remplacer votre projet actuel par le fichier importé ?"))return;
-   setProject(p);setLearning(state);setSelected(null);setNotice("Projet et exercices restaurés sur cet appareil.");
+   setProject(linkedDossierId?{...p,dossierBinding:{spaceId:linkedDossierId,titleMode:"custom"}}:p);setLearning(state);setSelected(null);setNotice("Projet et exercices restaurés sur cet appareil.");
   }catch(e){setNotice(e instanceof Error?e.message:"Import impossible.");}
  };
  const exportHTML=()=>{
-  try{saveStudioFile("site-"+project.id.slice(0,8)+".html",exportAcademyHTML(project),"text/html;charset=utf-8");setNotice("Fichier HTML téléchargé. Contrôlez son contenu, son hébergement, ses liens et son accessibilité avant publication.");}
+  try{saveStudioFile("site-"+project.id.slice(0,8)+".html",exportAcademyHTML(effectiveProject),"text/html;charset=utf-8");setNotice("Fichier HTML téléchargé. Contrôlez son contenu, son hébergement, ses liens et son accessibilité avant publication.");}
   catch(e){setNotice(e instanceof Error?e.message:"Export indisponible.");}
  };
  const contrastOK=grades.normalAA&&accentGrade.normalAA;
@@ -152,8 +194,8 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
    <details open className="rounded-[6px] border border-white/15 p-3">
      <summary className="cursor-pointer text-xs font-semibold">Identité du site</summary>
      <div className="mt-3 space-y-3">
-       <label className={studioTxt}>Nom du projet<input aria-label="Nom du projet Academy" className={studioInput+" mt-1"} maxLength={100} value={project.name} onChange={e=>patchSite({name:e.target.value})}/></label>
-       <label className={studioTxt}>Nom affiché dans l'en-tête<input aria-label="Nom public du site Academy" className={studioInput+" mt-1"} maxLength={100} value={project.siteTitle} onChange={e=>patchSite({siteTitle:e.target.value})}/></label>
+       <label className={studioTxt}>Nom du projet<input aria-label="Nom du projet Academy" className={studioInput+" mt-1"} maxLength={100} value={effectiveProject.name} onChange={e=>patchSite({name:e.target.value,dossierBinding:project.dossierBinding?{...project.dossierBinding,titleMode:"custom"}:undefined})}/></label>
+       <label className={studioTxt}>Nom affiché dans l'en-tête<input aria-label="Nom public du site Academy" className={studioInput+" mt-1"} maxLength={100} value={effectiveTitle} onChange={e=>patchSite({siteTitle:e.target.value,dossierBinding:project.dossierBinding?{...project.dossierBinding,titleMode:"custom"}:undefined})}/></label>
        <label className={studioTxt}>Typographie
          <select aria-label="Typographie du site Academy" value={project.font} className={studioInput+" mt-1"} onChange={e=>patchSite({font:e.target.value as SiteProject["font"]})}>
            <option value="sans">Moderne · Sans serif</option><option value="serif">Éditoriale · Serif</option></select></label>
@@ -179,7 +221,7 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
        <label className={studioTxt}>Titre du bloc<input aria-label="Titre du bloc Academy" className={studioInput+" mt-1"} maxLength={150}
          value={selectedSection.title} onChange={e=>patchSection({title:e.target.value})}/></label>
        <label className={studioTxt}>Contenu<textarea aria-label="Texte du bloc Academy" className={studioInput+" mt-1 min-h-28 resize-y"} maxLength={1800}
-         value={selectedSection.body} onChange={e=>patchSection({body:e.target.value})}/></label>
+         value={displayedSection?.body??selectedSection.body} onChange={e=>patchSection({body:e.target.value})}/></label>
        <label className={studioTxt}>Texte du bouton (facultatif)<input aria-label="Bouton du bloc Academy" className={studioInput+" mt-1"} maxLength={80}
          value={selectedSection.actionLabel} onChange={e=>patchSection({actionLabel:e.target.value})}/></label>
        <label className={studioTxt}>Destination HTTPS, email, téléphone ou ancre
@@ -207,13 +249,26 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
    <button type="button" aria-label="Exporter le site Academy en HTML" onClick={exportHTML} className="flex min-h-9 items-center gap-1.5 rounded-[5px] bg-white px-3 text-xs font-semibold text-black"><Code2 size={15}/> <span className="hidden sm:inline">Export site</span></button>
  </div>;
  const selectedStyle={backgroundColor:project.background,color:project.foreground,fontFamily:project.font==="serif"?"Georgia,serif":"system-ui,Arial,sans-serif"};
- const rootPreview=selectedSection??project.sections[0];
+ const rootPreview=displayedSection??effectiveProject.sections[0];
  return <StudioFrame title="UI/UX & Academy" subtitle="No Code · apprendre et construire un véritable site dans le même espace"
    onBack={onBack} leftLabel="Projets et cours Academy" rightLabel="Inspecteur UI UX" actions={actions} left={left} right={right}>
    <div className="mx-auto max-w-[1320px] space-y-4 pb-28">
+     {isLinked&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-[#a6899c]/35 bg-[#29212d] px-4 py-3 text-xs" aria-label="Lien canonique Dossier Universel">
+       <div>Source AIME · <strong>{linked.title}</strong> · {linked.id.slice(0,8)} · {project.dossierBinding?.titleMode==="linked"?"Titre synchronisé":"Titre personnalisé conservé"}</div>
+       <div className="flex flex-wrap gap-2">
+       {project.dossierBinding?.titleMode==="custom"&&<button type="button" className={studioButton} onClick={()=>{if(window.confirm("Réutiliser le titre canonique du dossier ? Le titre personnalisé reste conservé dans le projet JSON local."))patchSite({dossierBinding:{...project.dossierBinding!,titleMode:"linked"}})}}>Suivre le titre du dossier</button>}
+       {project.dossierBinding?.objectivesMode==="custom"&&<button type="button" className={studioButton} onClick={()=>{if(window.confirm("Afficher les objectifs canonique du dossier ? Le texte personnalisé reste conservé dans le projet JSON local."))patchSite({dossierBinding:{...project.dossierBinding!,objectivesMode:"linked"}})}}>Suivre les objectifs du dossier</button>}
+       {linked.dossier?.references.some(r=>r.studio==="academy"&&r.type==="studio"&&r.targetId!==project.id)&&
+        <button type="button" className={studioButton} onClick={()=>{
+         if(!window.confirm("Le dossier référence déjà un autre support Academy. Remplacer explicitement cette référence ? Le changement sera historisé."))return;
+         try{attachAcademyResource(linked.id,project.id,true);setNotice("Référence Academy remplacée sur validation et historisée.");}
+         catch(error){setNotice(error instanceof Error?error.message:"Réparation refusée.");}
+        }}>Confirmer le remplacement de la référence Academy</button>}
+       </div>
+     </div>}
      <div className="flex flex-wrap items-center justify-between gap-3">
        <div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-white/50">Créer · Comprendre · Transmettre</p>
-         <h2 className="mt-1 text-lg font-semibold">{project.name}</h2></div>
+         <h2 className="mt-1 text-lg font-semibold">{effectiveProject.name}</h2></div>
        <div className="flex items-center gap-1 rounded-[6px] border border-white/15 bg-[#0c0c10] p-1" role="group" aria-label="Aperçu responsive Academy">
          {([{name:"Ordinateur",id:"desktop",icon:Monitor},{name:"Tablette",id:"tablet",icon:Tablet},{name:"Mobile",id:"mobile",icon:Smartphone}] as const).map(d=><button key={d.id}
            aria-label={"Aperçu "+d.name} aria-pressed={device===d.id} onClick={()=>setDevice(d.id)}
@@ -233,12 +288,12 @@ export default function AcademyStudio({onBack,onAccessibility,onLegal}:{onBack:(
        <div className="min-w-0 overflow-hidden rounded-[7px] border border-black/15 shadow-[0_20px_65px_#0006] transition-[width] duration-150"
          style={{width:device==="desktop"?"100%":device==="tablet"?680:390,maxWidth:"100%",...selectedStyle}} aria-label="Prévisualisation du site No Code">
          <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-black/10 px-5 py-4 sm:px-8">
-           <strong className="text-sm">{project.siteTitle||"Votre site"}</strong><div className="flex flex-wrap gap-3">
+           <strong className="text-sm">{effectiveTitle||"Votre site"}</strong><div className="flex flex-wrap gap-3">
              {project.sections.filter(s=>s.kind!=="hero"&&s.kind!=="footer").slice(0,3).map(s=><button key={s.id}
                onClick={()=>setSelected(s.id)} className="text-[11px] opacity-75 hover:underline">{s.title||"Rubrique"}</button>)}</div>
          </header>
          <main>
-           {project.sections.map(s=><section key={s.id} tabIndex={0} role="button"
+           {effectiveProject.sections.map(s=><section key={s.id} tabIndex={0} role="button"
              aria-label={"Modifier "+s.title} aria-pressed={rootPreview.id===s.id}
              onClick={()=>setSelected(s.id)}
              onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setSelected(s.id);}}}

@@ -1,3 +1,4 @@
+import {assertStorageWritable,writeStoredJSON} from "./storageSafety";
 import { deltaE2000 } from "./colorScience";
 import { FLOSS, flossIndex } from "./dmc";
 import { clonePattern, computeStats, ensurePalette, type Count, type Pattern } from "./pattern";
@@ -75,14 +76,18 @@ export function loadBrodeuseProfile():BrodeuseProfile {
     }]))});
   } catch {return defaultBrodeuseProfile();}
 }
+const storedProfile=(v:unknown)=>!!v&&typeof v==='object'&&!Array.isArray(v)&&(v as {version?:unknown}).version===1&&JSON.stringify(validatedProfile(v))===JSON.stringify(v);
+const storedInventory=(v:unknown)=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.values(v).every(q=>!!q&&typeof q==='object'&&Number.isFinite(q.whole)&&q.whole>=0&&Number.isFinite(q.partialMeters)&&q.partialMeters>=0);
 export function saveBrodeuseProfile(profile:BrodeuseProfile):void {
   try {
     const valid=validatedProfile(profile);
-    localStorage.setItem(KEY,JSON.stringify(valid));
+    assertStorageWritable(KEY,storedProfile);
+    assertStorageWritable("point-zero:inventory",storedInventory);
+    writeStoredJSON(KEY,JSON.stringify(valid),storedProfile);
     const old=JSON.parse(localStorage.getItem("point-zero:inventory")??"{}") as Record<string,{lot?:string}>;
-    localStorage.setItem("point-zero:inventory",JSON.stringify(Object.fromEntries(Object.entries(valid.stock).map(([code,q])=>[code,{
+    writeStoredJSON("point-zero:inventory",JSON.stringify(Object.fromEntries(Object.entries(valid.stock).map(([code,q])=>[code,{
       whole:q.skeins,partialMeters:q.remainingMeters,lot:old[code]?.lot??""
-    }]))));
+    }]))),storedInventory);
     window.dispatchEvent(new Event("pointzero:inventory-changed"));
   } catch {throw new Error("Profil non sauvegardé : stockage local indisponible.");}
 }
