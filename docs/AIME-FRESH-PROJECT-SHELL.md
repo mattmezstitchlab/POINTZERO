@@ -38,3 +38,18 @@ Vérifier le Bureau vide → Nouveau projet → nouvel espace vide ; absence de 
 - La barre permet de tester le langage visuel universel sans inventer de capacité. Le vrai repositionnement de calques, la segmentation photo, la sélection multi-objets, l'undo et les réglages couleur sont des incréments séparés.
 
 Recette : projet vide sans écriture, ouvrir +, ajouter une page et du texte, sélectionner, changer d'outil, tester la gomme avec Annuler et Confirmer, afficher différentes largeurs, zoomer, rouvrir le projet, vérifier les données, vérifier la capsule sans icône. Vérifier le rendu réel sur 390/768/1440 px et au clavier avant toute fusion.
+
+## Interface compacte : famille d'outils et commandes universelles
+
+Cette étape stabilise la coque sans brancher les moteurs métier et sans afficher des actions inertes.
+
+- **Projet** dans le header : ouvre une liste courte (Bureau, renommer/informations). Le seul export existant demeure une commande unique JSON en haut à droite.
+- **Format** dans le header : aperçu Auto, Ordinateur, Tablette, Mobile. Il ne transforme pas les données.
+- **Composition** dans le header : flux vertical ou deux colonnes, appliqués aux blocs texte existants, sans sauvegarder de variante indépendante. Ce n'est pas encore MÉTAMORPHOSE.
+- **Outils** en rail : sélectionner, déplacer la vue, effacer avec confirmation. Les futures variantes d'une même famille (flèche, plume, lasso, tampon, pipette, etc.) doivent rester dans le sous-menu de cette famille et n'apparaître que si leur capacité est réellement implémentée.
+- **Bas** : panneau d'aide *Learn* rétractable, capsule textuelle `AI + ME` avec un unique `+` de création, et zoom - / 100 % / +. Pas d'icône IA, pas de fonction IA simulée.
+- **Non affiché** : lecteur multimédia universel, palette DMC, bibliothèque d'import universel, Studio PDF et tous les contrôles dépendants de moteurs non branchés. Ces éléments apparaîtront dans les mêmes emplacements une fois testés.
+
+### Règle pour les futures variantes d'outils
+
+Une famille d'outils = un emplacement stable + un outil actif + un menu de variantes. Chaque variante fournit son intention et ses capacités compatibles avec l'objet sélectionné. Un outil « gomme » peut enlever un pixel ou retirer un bloc, mais il ne peut pas détruire une donnée métier ou un fichier source sans validation explicite. Les variantes seront développées et testées par famille, avec annulation possible, avant de rejoindre la coque publique.
