@@ -1,3 +1,6 @@
+import {referenceCurrentDesign,resolveCollection} from "../lib/fragmentResources";
+import {GRID_CONTENT_CSS,cellSpan} from "../lib/gridConstraints";
+import {designCSS,DESIGN_SYSTEM} from "../lib/designSystem";
 import {fragmentsHTML} from "../lib/compositionLayout";
 import {saveStudioFile} from "./StudioFrame";
 import {writeStoredJSON} from "../lib/storageSafety";
@@ -23,13 +26,18 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
   const [device,setDevice]=useState<"desktop"|"tablet"|"phone">("desktop");
   const [notice,setNotice]=useState("");
   const chooser=useRef<HTMLInputElement>(null);
+  const [,refreshResources]=useState(0);
+  useEffect(()=>{const refresh=()=>refreshResources(n=>n+1);window.addEventListener('aime:design-changed',refresh);window.addEventListener('storage',refresh);return()=>{window.removeEventListener('aime:design-changed',refresh);window.removeEventListener('storage',refresh)}},[]);
+  let display=collection,resourceError='';
+  try{display=resolveCollection(collection,'private')}catch(e){resourceError=String(e)}
+  let html='';try{html=fragmentsHTML(collection,layout,'private')}catch{html='<!doctype html><html lang=fr><body>Source liée indisponible. Original conservé.</body></html>'}
   const active=collection.fragments.find(f=>f.id===selected)??null;
   useEffect(()=>{
     if(!incoming)return;
     setCollection(incoming);setSelected(null);setNotice("Analyse intégrée : "+incoming.fragments.length+" fragments disponibles.");
   },[incoming]);
   useEffect(()=>{try{writeStoredJSON(STORAGE,JSON.stringify(collection),validStoredFragments);}catch{setNotice("Stockage local plein : exportez votre JSON.")}},[collection]);
-  function patch(id:string,change:Partial<Fragment>){setCollection(c=>updateFragment(c,id,change))}
+  function patch(id:string,change:Partial<Fragment>){setCollection(c=>{const f=c.fragments.find(v=>v.id===id);return updateFragment(c,id,{...change,...(change.title!==undefined&&f?.source?{source:{...f.source,titleMode:'custom' as const}}:{})})})}
   function toggleLock(id:string){setCollection(c=>({...c,fragments:c.fragments.map(f=>f.id===id?{...f,locked:!f.locked}:f)}))}
   function add(){
     const id=globalThis.crypto?.randomUUID?.()??String(Date.now());
@@ -41,7 +49,7 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
     if(!file)return;
     if(file.size>1024*1024){setNotice("Fichier limité à 1 Mo.");return}
     try{const doc=readFragments(JSON.parse(await file.text()));if(!doc)throw Error("Le JSON ne contient pas de collection valide.");
-      setCollection(doc);setSelected(null);setNotice(doc.fragments.length+" fragments importés, sources conservées.");
+      setCollection({...doc,fragments:doc.fragments.map(f=>f.source?{...f,source:{...f.source,allowExport:false}}:f)});setSelected(null);setNotice(doc.fragments.length+" fragments importés, sources conservées. Autorisations d’export liées à reconfirmer.");
     }catch(err){setNotice(err instanceof Error?err.message:"Fichier incompatible.")}
   }
   function exportJSON(){
@@ -49,7 +57,8 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
     const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="pointzero-fragments.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   return <>
-    <main aria-label="Grille universelle de fragments" className="pz-design-stage min-w-0 flex-1 overflow-y-auto bg-[#f7f6f3] p-4 text-[#222] sm:p-6">
+    <main aria-label="Grille universelle de fragments" data-aime-design={DESIGN_SYSTEM.version} className="pz-design-stage min-w-0 flex-1 overflow-y-auto bg-[#f7f6f3] p-4 text-[#222] sm:p-6">
+      <style>{designCSS()+GRID_CONTENT_CSS}</style>
       <div className="mx-auto max-w-[1120px]">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div><p className="mb-2 text-[10px] font-semibold tracking-[.14em] text-[#97918d]">MÉTAMORPHOSE / GRILLE UNIVERSELLE</p>
@@ -59,7 +68,8 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>chooser.current?.click()}><Upload size={13} className="mr-1 inline"/> Importer JSON</button>
             <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={exportJSON}><ArrowDownToLine size={13} className="mr-1 inline"/> Exporter</button>
-            <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>saveStudioFile("aime-recomposition.html",fragmentsHTML(collection,layout),"text/html;charset=utf-8")}>Exporter HTML responsive</button>
+            <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>{try{saveStudioFile("aime-recomposition.html",fragmentsHTML(collection,layout),"text/html;charset=utf-8")}catch(e){setNotice(String(e))}}}>Exporter HTML responsive</button>
+            <button className="rounded-[5px] border border-[#ddd] bg-white px-3 py-2" onClick={()=>{try{const ref=referenceCurrentDesign();if(collection.fragments.length>=120&&!collection.fragments.some(f=>f.source?.resourceId===ref.source?.resourceId))throw Error('Limite de 120 fragments : aucun remplacement');setCollection(c=>c.fragments.some(f=>f.source?.resourceId===ref.source?.resourceId)?c:{...c,fragments:[...c.fragments,ref]});setNotice('Référence ajoutée, création originale non copiée. Export interdit par défaut.')}catch(e){setNotice(String(e))}}}>Relier ma création Design</button>
             <button className="rounded-[5px] bg-[#242424] px-3 py-2 text-white" onClick={add}><Plus size={13} className="mr-1 inline"/> Fragment</button>
           </div>
         </div>
@@ -76,30 +86,31 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
           </div>
         </div>
         <div className={"mx-auto transition-[max-width] duration-200 "+(device==="phone"?"max-w-[360px]":device==="tablet"?"max-w-[750px]":"max-w-full")}>
-          <div className={"grid gap-2 "+(device==="phone"?"grid-cols-2":device==="tablet"?"grid-cols-3":"grid-cols-4")} style={{gridAutoRows:device==="phone"?124:165}}>
-            {collection.fragments.map((f,i)=>{
+          <div className={"aime-content-grid grid gap-2 "+(device==="phone"?"grid-cols-2":device==="tablet"?"grid-cols-3":"grid-cols-4")}>
+            {display.fragments.map((f,i)=>{
               const span=layout==="regular"?1:layout==="immersive"&&i===0?3:f.span;
-              const actual=Math.min(span,device==="phone"?2:device==="tablet"?3:4);
+              const actual=cellSpan(span,device==="phone"?2:device==="tablet"?3:4);
               const selectedHere=selected===f.id,back=tones[i%tones.length];
               return <button key={f.id} type="button" draggable={!f.locked} data-fragment-id={f.id}
                 onClick={()=>{setSelected(f.id);setInspectorOpen(true)}} onDragStart={e=>{e.dataTransfer.setData("text/plain",f.id);e.dataTransfer.effectAllowed="move"}}
                 onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const from=e.dataTransfer.getData("text/plain");setCollection(c=>reorderFragments(c,from,f.id))}}
-                className={"relative flex min-w-0 flex-col justify-between overflow-hidden rounded-[5px] border p-3 text-left transition-shadow hover:shadow-lg "+(selectedHere?"border-[#333] ring-2 ring-[#333]":"border-black/5")}
-                style={{gridColumn:"span "+actual,background:back[0],color:back[1],gridRow:layout==="immersive"&&i===0?"span 2":"span 1"}}>
-                {f.image&&<img src={f.image} alt="" loading="lazy" referrerPolicy="no-referrer" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-45"
-                   style={{objectPosition:f.crop.x+"% "+f.crop.y+"%",transform:"scale("+(f.crop.zoom/100)+")"}}/>}
+                className={"aime-content-cell relative flex min-w-0 flex-col rounded-[5px] border p-3 text-left transition-shadow hover:shadow-lg "+(selectedHere?"border-[#333] ring-2 ring-[#333]":"border-black/5")}
+                style={{gridColumn:"span "+actual,background:back[0],color:back[1],minHeight:layout==="immersive"&&i===0?280:device==="phone"?124:165}}>
+                {f.image&&<span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-[5px]"><img src={f.image} alt="" loading="lazy" referrerPolicy="no-referrer" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20"
+                   style={{objectPosition:f.crop.x+"% "+f.crop.y+"%",transform:"scale("+(f.crop.zoom/100)+")"}}/></span>}
                 <div className="relative flex w-full justify-between gap-2 text-[10px] font-semibold uppercase tracking-[.08em]">
                   <span>{f.kind}</span>{f.locked?<Lock size={13}/>:<span>{String(i+1).padStart(2,"0")}</span>}
                 </div>
-                <div className="relative font-serif text-[clamp(15px,2vw,30px)] leading-tight">{f.title}</div>
-                <p className="relative line-clamp-2 text-[10px] leading-snug opacity-80">{f.description}</p>
+                <div className="relative aime-fragment-title">{f.title}</div>
+                <p className="relative aime-fragment-description">{f.description}</p>
               </button>;
             })}
           </div>
         </div>
-        <details className="mt-5"><summary>Aperçu responsive exportable — même moteur que le HTML</summary><div style={{overflowX:'auto'}}><iframe title="Recomposition responsive des fragments" sandbox="" srcDoc={fragmentsHTML(collection,layout)} style={{width:device==='phone'?390:device==='tablet'?768:1200,height:600,maxWidth:'none',border:'1px solid #aaa'}}/></div><p>Largeur réelle du document : 390 / 768 / 1200 px. Défilement horizontal possible dans les écrans étroits.</p></details>
+        <details className="mt-5"><summary>Aperçu responsive exportable — même moteur que le HTML</summary><div style={{overflowX:'auto'}}><iframe title="Recomposition responsive des fragments" sandbox="" srcDoc={html} style={{width:device==='phone'?390:device==='tablet'?768:1200,height:600,maxWidth:'none',border:'1px solid #aaa'}}/></div><p>Largeur réelle du document : 390 / 768 / 1200 px. Défilement horizontal possible dans les écrans étroits.</p></details>
         <p className="mt-5 text-[11px] text-[#8c8580]">Sélectionnez une case pour la modifier ; agrandissez-la et la grille se réorganise. Déplacez une case non verrouillée pour changer sa place.</p>
         <input ref={chooser} type="file" accept=".json,application/json" className="sr-only" onChange={e=>void importJSON(e)} aria-label="Importer des fragments JSON"/>
+        {resourceError&&<p role="alert">{resourceError}</p>}
         {notice&&<p role="status" className="mt-3 rounded-[5px] border border-[#e5dfdb] bg-white p-3 text-[12px]">{notice}</p>}
       </div>
     </main>
@@ -110,6 +121,7 @@ export default function FragmentGridWorkspace({incoming}:{incoming?:FragmentColl
         <button type="button" className="min-h-9 rounded-[5px] border border-white/20 px-2 text-xs xl:hidden" onClick={()=>setInspectorOpen(false)}>Fermer</button>
       </div>
       {active ? <>
+        {active.source&&<><p>Référence Design · titre {active.source.titleMode==='linked'?'lié':'personnalisé'} · export {active.source.allowExport?'autorisé':'privé'}</p><button className={btn} onClick={()=>{if(window.confirm('Autoriser explicitement cette ressource liée dans les exports HTML ?'))patch(active.id,{source:{...active.source!,allowExport:true}})}}>Autoriser cette ressource dans l’export</button><button className={btn} onClick={()=>patch(active.id,{source:{...active.source!,allowExport:false}})}>Retirer l’autorisation d’export futur</button></>}
         <p className="mb-3 text-[11px] text-white/60">Source conservée. La composition ne modifie pas l'original.</p>
         {([["title","Titre"],["description","Description"],["kind","Catégorie"],["sourceUrl","URL source"],["image","URL image"],["notes","Notes"]] as const).map(([key,label])=>
           <label key={key} className="mb-3 block text-[11px] text-white/65">{label}

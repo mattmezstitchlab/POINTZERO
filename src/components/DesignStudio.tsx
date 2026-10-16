@@ -108,7 +108,7 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
     return () => observer.disconnect();
   }, [doc.width,doc.height,leftTab]);
   useEffect(() => {
-    try { writeStoredJSON(CURRENT,JSON.stringify(doc),safeDesign); }
+    try { writeStoredJSON(CURRENT,JSON.stringify(doc),safeDesign);window.dispatchEvent(new Event("aime:design-changed")); }
     catch { setNotice("Stockage local plein : exportez le fichier JSON pour conserver cette création."); }
   }, [doc]);
   useEffect(() => {
