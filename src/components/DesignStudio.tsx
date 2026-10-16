@@ -1,4 +1,6 @@
 import {writeStoredJSON,everyStored} from "../lib/storageSafety";
+import {readWorld,writeWorld} from "../lib/oneSpaceCore";
+import {AIME_WORLD_CHANGED,writableWorld} from "../lib/universalDossier";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as RPointerEvent, type DragEvent as RDragEvent } from "react";
 import { Accessibility, GraduationCap, GitBranch, Gamepad2, Sparkles, Layers3, Scale, ArrowLeft, BookOpen, Camera, ChevronDown, Copy, Download, FileText, Files, FolderOpen, Globe, HeartHandshake, ImagePlus, LayoutTemplate, Music2, Redo2, Save, Search, Shirt, Shapes, Trash2, Type, Undo2, Wallet, WandSparkles, X } from "lucide-react";
 import { jsPDF } from "jspdf";
@@ -71,12 +73,11 @@ interface Props {
   onGame?: () => void;
   onLegal?: () => void;
   onArtWorld?: () => void;
-  onManifest?: () => void;
   onUniversal?: () => void;
   incomingPhoto?: {id:string;dataUrl:string}|null;
   onPhotoConsumed?: () => void;
 }
-export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onManifest, onUniversal, incomingPhoto, onPhotoConsumed }: Props) {
+export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudget, onProgramme, onAdmin, onMiniSite, onPDF, onGeneration, onMusic, onMusicProduction, onAccessibility, onAcademy, onSpace, onCausal, onMetamorphose, onRippleCircle, onGame, onLegal, onArtWorld, onUniversal, incomingPhoto, onPhotoConsumed }: Props) {
   const [doc, setDoc] = useState<DesignDocument>(restore);
   const [past, setPast] = useState<DesignDocument[]>([]);
   const [future, setFuture] = useState<DesignDocument[]>([]);
@@ -91,6 +92,9 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   const [showExport,setShowExport] = useState(false);
   const [showDecline,setShowDecline] = useState(false);
   const [showStudios,setShowStudios] = useState(false);
+  const [showDossiers,setShowDossiers] = useState(false);
+  const [world,setWorld] = useState(readWorld);
+  const selectedDossier = world.spaces.find(space=>space.id===world.selectedSpaceId)??null;
   const stage = useRef<HTMLDivElement>(null);
   const artboard = useRef<HTMLDivElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
@@ -100,6 +104,28 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
   const element = doc.elements.find(e => e.id===selected) ?? null;
   const [patternPreviews] = useState(() => MOTIF_PRESETS.map(p => ({...p, pattern:p.make()})));
 
+  useEffect(() => {
+    const update=()=>setWorld(readWorld());
+    window.addEventListener(AIME_WORLD_CHANGED,update);
+    window.addEventListener("storage",update);
+    return()=>{window.removeEventListener(AIME_WORLD_CHANGED,update);window.removeEventListener("storage",update);};
+  },[]);
+  useEffect(()=>{
+    if(!showDossiers)return;
+    const onEscape=(event:KeyboardEvent)=>{if(event.key==="Escape")setShowDossiers(false);};
+    window.addEventListener("keydown",onEscape);
+    return()=>window.removeEventListener("keydown",onEscape);
+  },[showDossiers]);
+  const selectDossier=(id:string)=>{
+    try{
+      const current=writableWorld();
+      if(!current.spaces.some(space=>space.id===id))throw Error("Dossier introuvable sur cet appareil.");
+      writeWorld({...current,selectedSpaceId:id});
+      window.dispatchEvent(new Event(AIME_WORLD_CHANGED));
+      setShowDossiers(false);
+      setNotice("Dossier sélectionné. Les documents existants restent indépendants tant qu'ils ne sont pas reliés explicitement.");
+    }catch(error){setNotice(error instanceof Error?error.message:"Impossible d'ouvrir ce dossier.");}
+  };
   useEffect(() => {
     const el = stage.current;
     if (!el) return;
@@ -241,17 +267,39 @@ export default function DesignStudio({ onEmbroidery, onPhoto, onFashion, onBudge
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <span className="shrink-0 text-[13px] font-bold tracking-tight">× <span className="hidden sm:inline">POINTZERO</span></span>
         <span className="hidden text-[11px] text-white/40 sm:inline">/</span>
-        <span className="hidden truncate text-[12px] text-white/75 sm:inline">Studio universel</span>
-        {onManifest&&<button type="button" aria-label="Retour à l’accueil POINTZERO" onClick={onManifest} className={action+" whitespace-nowrap"}>Accueil</button>}
+        <span className="hidden truncate text-[12px] text-white/75 sm:inline">Édition</span>
+        <div className="relative">
+          <button type="button" aria-label="Ouvrir les dossiers" aria-expanded={showDossiers}
+            onClick={()=>{setShowDossiers(value=>!value);setShowStudios(false);setShowDecline(false);setShowExport(false);}}
+            className={action+" max-w-[210px] gap-1.5"}>
+            <FolderOpen size={15}/><span>Dossier</span>
+            {selectedDossier&&<span className="hidden max-w-[90px] truncate text-white/55 xl:inline">{selectedDossier.title}</span>}
+            <ChevronDown size={13}/>
+          </button>
+          {showDossiers&&<div aria-label="Dossiers POINTZERO" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[min(320px,85vw)] max-h-[75dvh] overflow-y-auto p-3">
+            <p className="mb-2 text-[11px] font-semibold text-white/70">Dossiers existants sur cet appareil</p>
+            {world.spaces.map(space=><button key={space.id} type="button" aria-label={"Sélectionner le dossier "+space.title}
+              aria-pressed={space.id===world.selectedSpaceId} onClick={()=>selectDossier(space.id)}
+              className={"mb-1 flex min-h-11 w-full items-center justify-between gap-2 rounded-[5px] px-3 text-left text-xs hover:bg-white/10 "+(space.id===world.selectedSpaceId?"bg-white/15 text-white":"text-white/80")}>
+              <span className="min-w-0 truncate">{space.title||"Sans titre"}</span>
+              {space.id===world.selectedSpaceId&&<span className="shrink-0 text-[10px] text-white/55">Actif</span>}
+            </button>)}
+            {!world.spaces.length&&<p className="px-2 py-3 text-xs text-white/55">Aucun Dossier pour l'instant. Vos créations existantes sont conservées.</p>}
+            {onUniversal&&<div className="mt-2 grid gap-1 border-t border-white/15 pt-2">
+              <button type="button" aria-label="Créer un dossier" onClick={()=>{setShowDossiers(false);onUniversal();}} className={action+" w-full justify-start"}>Nouveau dossier</button>
+              <button type="button" aria-label="Ouvrir le Dossier Universel" onClick={()=>{setShowDossiers(false);onUniversal();}} className={action+" w-full justify-start"}>Gérer le Dossier Universel</button>
+            </div>}
+            <p className="mt-2 text-[10px] leading-relaxed text-white/45">Choisir un Dossier n'associe pas automatiquement le document graphique en cours.</p>
+          </div>}
+        </div>
         <button onClick={onEmbroidery} className={action+" ml-1"} aria-label="Ouvrir l'atelier broderie"><ArrowLeft size={14}/><span className="hidden sm:inline">Broderie</span><span className="sm:hidden">Fil</span></button>
         <div className="relative">
           <button type="button" aria-label="Ouvrir le menu des studios" aria-expanded={showStudios}
-            onClick={()=>{setShowStudios(x=>!x);setShowDecline(false);setShowExport(false);}} className={action}>
+            onClick={()=>{setShowStudios(x=>!x);setShowDossiers(false);setShowDecline(false);setShowExport(false);}} className={action}>
             <LayoutTemplate size={15}/><span className="hidden sm:inline">Studios</span><ChevronDown size={13}/>
           </button>
           {showStudios&&<div aria-label="Choix du studio" className="pz-design-menu absolute left-0 top-[calc(100%+8px)] z-50 w-[220px] max-h-[76dvh] overflow-y-auto p-2">
             {([
-              {name:"Dossier Universel AIME",icon:<Layers3 size={16}/>,onClick:onUniversal},
               {name:"Photo",icon:<Camera size={16}/>,onClick:onPhoto},
               {name:"Stylisme",icon:<Shirt size={16}/>,onClick:onFashion},
               {name:"Budget",icon:<Wallet size={16}/>,onClick:onBudget},
