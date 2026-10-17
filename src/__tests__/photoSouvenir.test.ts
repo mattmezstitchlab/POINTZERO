@@ -1,3 +1,4 @@
+import { preparePhotoHandoff } from '../lib/photoHandoff';
 import { describe, expect, it } from 'vitest';
 import { quantizePixels } from '../lib/quantize';
 import { computeStats, fromObject, toObject } from '../lib/pattern';
@@ -49,6 +50,15 @@ describe('Parcours photo souvenir', () => {
     expect(isSimpleSouvenir(pattern)).toBe(false);
     pattern.fwd[0]=-1; pattern.back.push({x1:0,y1:0,x2:1,y2:1,c:0});
     expect(isSimpleSouvenir(pattern)).toBe(false);
+  });
+  it('archive avant transfert et bloque le transfert si la sauvegarde échoue', async () => {
+    const next=souvenirPattern('Nouveau','image.png',20,20,14,new Int16Array(400),[0]);
+    const previous={...next,name:'Ancien'}; const archived:string[]=[];
+    const result=await preparePhotoHandoff(next,previous,async p=>{archived.push(p.name);});
+    expect(archived).toEqual(['Ancien']); expect(result.cross).toEqual(next.cross);
+    expect(result.cross).not.toBe(next.cross);
+    await expect(preparePhotoHandoff(next,previous,async()=>{throw Error('Stockage refusé');})).rejects.toThrow('Stockage refusé');
+    expect(previous.name).toBe('Ancien');
   });
   it('refuse une image entièrement vide ou une grille incohérente', () => {
     expect(()=>souvenirPattern('','empty.png',20,20,14,new Int16Array(400).fill(-1),[])).toThrow();

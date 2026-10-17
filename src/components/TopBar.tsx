@@ -43,6 +43,7 @@ export default function TopBar(p: Props) {
       <span className="hidden max-w-[220px] truncate text-[11px] text-white/45 2xl:inline" title={p.pattern.name}>{p.pattern.name}</span>
     </div>
     <div className="flex min-w-0 shrink items-center gap-0.5">
+      <select aria-label="Affichage de la grille" value={p.view} onChange={event=>p.onView(event.target.value as ViewMode)} className="w-[90px] sm:w-[115px] shrink rounded border border-white/20 bg-[#202124] px-2 py-2 text-[11px] text-white"><option value="flat">Couleurs</option><option value="pattern">Symboles</option><option value="real">Broderie</option></select>
       {p.onToggleLeft && <button className={iconButton + " lg:hidden"} type="button" aria-label="Afficher la bibliothèque broderie" onClick={p.onToggleLeft}><PanelLeft size={18}/></button>}
       {p.onToggleRight && <button className={iconButton + " xl:hidden"} type="button" aria-label="Afficher les propriétés broderie" onClick={p.onToggleRight}><PanelRight size={18}/></button>}
       <button type="button" className={iconButton} aria-label="Annuler" title="Annuler" disabled={!p.canUndo} onClick={p.onUndo}><Undo2 size={17}/></button>

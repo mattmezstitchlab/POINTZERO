@@ -7,7 +7,7 @@ import { buildPdf, pdfFileName } from '../lib/pdf';
 import { hasSouvenirContent, isSimpleSouvenir, souvenirDimensions, souvenirPattern, souvenirShoppingCsv } from '../lib/photoSouvenir';
 import './photo-souvenir.css';
 
-export default function PhotoSouvenir() {
+export default function PhotoSouvenir({ onContinue }: { onContinue?: (pattern: Pattern) => Promise<void> }) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [source, setSource] = useState('');
   const [name, setName] = useState('Mon souvenir');
@@ -91,7 +91,8 @@ export default function PhotoSouvenir() {
         if(!Number.isInteger(row)||!Number.isInteger(column)||row<1||row>pattern.h||column<1||column>pattern.w){setError('Coordonnées hors du motif.');return;}
         const next = clonePattern(pattern); next.cross[(row-1)*pattern.w+column-1]=thread; if(thread>=0)ensurePalette(next,thread); setPattern(next); setError(''); setNotice(`Case ${row}, ${column} modifiée. Les sorties seront recalculées.`);
       }}>Appliquer à la case</button></fieldset></section>
-      <section><h2>3 · Télécharger et garder une sauvegarde</h2><p>Les trois fichiers proviennent du même motif. Quantités estimées, sans déduction de votre stock : modèle de consommation avec marge de chute et démarrages, pas une mesure fabricant. La longueur affichée cumule les brins simples ; un écheveau standard fournit 48 m de brins simples (8 m × 6).</p><div className="souvenir-settings">
+      <section>{onContinue && <><h2>Continuer dans la grille couleur</h2><p>Le motif affiché est transmis directement, sans reconversion. Le projet actif précédent doit être sauvegardé dans la bibliothèque avant de continuer ; si cette sauvegarde échoue, le transfert est bloqué. Téléchargez aussi le JSON pour votre sauvegarde personnelle.</p><button type="button" disabled={busy} onClick={() => { if (window.confirm('Continuer dans la grille avec ce motif ? Pensez à garder votre fichier JSON.')) void run(async () => { await onContinue(pattern); }); }}>Continuer dans la grille</button></>}
+      <h2>3 · Télécharger et garder une sauvegarde</h2><p>Les trois fichiers proviennent du même motif. Quantités estimées, sans déduction de votre stock : modèle de consommation avec marge de chute et démarrages, pas une mesure fabricant. La longueur affichée cumule les brins simples ; un écheveau standard fournit 48 m de brins simples (8 m × 6).</p><div className="souvenir-settings">
         <button disabled={busy || !hasSouvenirContent(pattern)} onClick={()=>void run(async()=>{const blob=await buildPdf(pattern,{bw:true,paper:'a4',overlap:true});if(alive.current){downloadBlob(blob,pdfFileName(pattern,{bw:true,paper:'a4',overlap:true}));setNotice('PDF préparé. Imprimez à 100 %, sans ajustement, puis mesurez la règle de contrôle.');}})}>Patron PDF A4</button>
         <button disabled={busy || !hasSouvenirContent(pattern)} onClick={()=>downloadBlob(new Blob([souvenirShoppingCsv(pattern)],{type:'text/csv;charset=utf-8'}),`${slugify(pattern.name)}-fils.csv`)}>Liste des fils CSV</button>
         <button disabled={busy} onClick={()=>saveProjectFile(pattern)}>Projet réimportable JSON</button>

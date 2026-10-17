@@ -77,3 +77,17 @@ Contrôle complet `npm run verify` : tests API (7), TypeScript, Vitest (68 fichi
 jsdom Canvas/navigation et taille de bundle sont signalés ; aucun test n'est
 masqué pour les faire disparaître. Le manifeste vérifié ne constitue pas une
 recette hors ligne réelle dans un navigateur.
+
+## Studio sombre et passage direct à la grille
+
+La page photo reprend maintenant le gris foncé du studio. Un bouton « Continuer
+dans la grille » transmet le motif en mémoire, sans reconversion ni fichier
+intermédiaire. Confirmation explicite ; le projet actif précédent est archivé
+avec checkpoint dans la bibliothèque avant le passage. Si cette sauvegarde échoue,
+le transfert est bloqué et l'utilisateur garde la page photo. Le transfert clone
+les tableaux pour ne pas partager un brouillon mutable.
+L'atelier s'ouvre en affichage couleur ; les imports JSON/OXS ouverts dans l'atelier
+passent aussi en couleur. Un sélecteur visible « Couleurs / Symboles / Broderie »
+remplace la nécessité de deviner le cycle des modes (ancien cycle conservé).
+L'interface complète n'est pas refondue dans cette passe. Conserver le JSON comme
+sauvegarde portable, la bibliothèque étant limitée à l'appareil.
