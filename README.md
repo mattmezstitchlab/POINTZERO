@@ -172,3 +172,12 @@ pour qu'elle survive au partage du motif.
 
 Les images de démonstration et les visuels d'accueil sont des illustrations de mise en scène, pas
 des captures d'un appareil testé.
+
+## Parcours ciblé : photo → souvenir à broder
+
+L'URL `/?parcours=photo-souvenir` ouvre un parcours séparé : photo locale,
+conversion proportionnelle, correction par coordonnées, PDF A4, liste de fils CSV
+et JSON réimportable. Aucun écrasement des projets existants et aucune sauvegarde
+automatique. Les quantités restent des estimations. Voir
+[`docs/PHOTO-SOUVENIR.md`](docs/PHOTO-SOUVENIR.md) pour les limites, preuves de tests
+et la recette navigateur/impression qui reste nécessaire avant validation finale.
