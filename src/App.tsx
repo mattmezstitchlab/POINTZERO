@@ -86,8 +86,8 @@ function initialPreferences(): Preferences {
 }
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
-export default function App() {
-  const [boot] = useState(loadStored);
+export default function App({ initialPattern }: { initialPattern?: Pattern } = {}) {
+  const [boot] = useState(() => initialPattern ?? loadStored());
   // The domain root opens the single AIME landing, regardless of stored projects.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
@@ -153,7 +153,7 @@ export default function App() {
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
   const [autoImage, setAutoImage] = useState<File | null>(null);
   const P = remote ?? store.present;
-  const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>("real"), [workspace, setWorkspace] = useState<Workspace>("create");
+  const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>(initialPattern ? "flat" : "real"), [workspace, setWorkspace] = useState<Workspace>("create");
   const [symbols, setSymbols] = useState(false), [panel, setPanel] = useState<Panel>(null), [file, setFile] = useState<File | null>(null), [pdfFile, setPdfFile] = useState<File | null>(null), [promptOpen, setPromptOpen] = useState(false), [selection, setSelection] = useState<Selection | null>(null), [clipboard, setClipboard] = useState<Pattern | null>(null);
   const [prefs, setPrefs] = useState(initialPreferences), [inventory, setInventory] = useState(readInventory), [saving, setSaving] = useState("Sauvegarde locale"), [toast, setToast] = useState("");
   const [fitKey, setFitKey] = useState(0), desktop = useMedia("(min-width: 1024px)"), wide = useMedia("(min-width: 1280px)");
@@ -313,7 +313,7 @@ export default function App() {
       if (!p) throw new Error("Projet invalide ou format JSON incompatible. Le fichier original reste intact.");
       await loadPattern(p);
       setWorkspace("create");
-      setView("pattern");
+      setView("flat");
       setTool("cross");
       notify(`« ${p.name} » ouvert · ${p.w} × ${p.h} points · ${p.palette.length} couleurs DMC`);
       return null;
