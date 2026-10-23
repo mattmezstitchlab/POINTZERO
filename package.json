@@ -33,7 +33,7 @@
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.3.7",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "description": "Atelier de broderie point de croix : un seul projet pour créer le patron et le broder. PWA hors ligne, palette DMC, import PDF, export PDF/SVG/OXS.",
   "license": "MIT",
