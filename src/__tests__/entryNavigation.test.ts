@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import { entryStudio, isStudioRoute } from "../lib/entryNavigation";
 
 describe("POINTZERO — navigation publique non destructive",()=>{
- it("affiche toujours AIME sur le domaine racine",()=>{
-  expect(entryStudio("","")).toBe("aime-home");
-  expect(entryStudio("?utm_source=share","")).toBe("aime-home");
+ it("ouvre le Bureau AIME à la racine, sans modèle",()=>{
+  expect(entryStudio("","")).toBe("bureau");
+  expect(entryStudio("?utm_source=share","")).toBe("bureau");
   expect(entryStudio("?page=manifest","")).toBe("manifest");
   expect(entryStudio("","","/pointzero")).toBe("manifest");
+  expect(entryStudio("","","/aime")).toBe("aime-home");
+  expect(entryStudio("","","/projet/prj-0123")).toBe("project");
+  expect(entryStudio("?project=prj-0123","","/atelier")).toBe("project");
   expect(entryStudio("","","/atelier")).toBe("design");
   expect(entryStudio("","","/le-monde-aime")).toBe("aime-landing");
   expect(entryStudio("","","/univers")).toBe("universe-index");
@@ -24,8 +27,8 @@ describe("POINTZERO — navigation publique non destructive",()=>{
   expect(entryStudio("?studio=ripplecircle","")).toBe("ripplecircle");
  });
  it("ne permet pas une navigation par route non reconnue ou par accès direct à l'administration du manifeste",()=>{
-  expect(entryStudio("?studio=not-a-real-studio","")).toBe("aime-home");
-  expect(entryStudio("?studio=manifest-admin","")).toBe("aime-home");
+  expect(entryStudio("?studio=not-a-real-studio","")).toBe("bureau");
+  expect(entryStudio("?studio=manifest-admin","")).toBe("bureau");
   expect(isStudioRoute("not-a-real-studio")).toBe(false);
  });
 });

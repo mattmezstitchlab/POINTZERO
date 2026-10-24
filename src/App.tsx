@@ -14,6 +14,8 @@ import Canvas, { type Insets, type ViewMode } from "./components/Canvas";
 import EmbroideryToolbox from "./components/EmbroideryToolbox";
 import TopBar from "./components/TopBar";
 import DesignStudio from "./components/DesignStudio";
+import BureauStudio from "./components/BureauStudio";
+import AimeProjectWorkspace from "./components/AimeProjectWorkspace";
 import ManifestLanding from "./components/ManifestLanding";
 import AimeEcosystem from "./components/AimeEcosystem";
 import AimeDossier from "./components/AimeDossier";
@@ -88,18 +90,20 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 export default function App() {
   const [boot] = useState(loadStored);
-  // The domain root opens the single AIME landing, regardless of stored projects.
+  // Domain root opens the new clean AIME Bureau; legacy Studios keep their explicit URLs.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
     try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
-    catch { return "aime-home"; }
+    catch { return "bureau"; }
   });
   useEffect(()=>{
     if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
-    else if(studioMode==="design")document.title="Atelier — POINTZERO";
+    else if(studioMode==="bureau")document.title="Bureau — AIME";
+    else if(studioMode==="project")document.title="Projet — AIME";
+    else if(studioMode==="design")document.title="Éditeur historique — AIME";
     else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
       document.title="Studios — POINTZERO";
     }
@@ -126,7 +130,7 @@ export default function App() {
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
   const switchStudio = (mode: StudioRoute) => {
-    if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+    if(mode==="bureau"||mode==="project"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
@@ -455,7 +459,11 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "universal-dossier"
+  return studioMode === "bureau"
+    ? <BureauStudio onOpenProject={id=>navigatePage("/projet/"+encodeURIComponent(id))} onLegacyEditor={()=>navigatePage("/atelier?legacy=1")}/>
+    : studioMode === "project"
+    ? <AimeProjectWorkspace key={window.location.pathname+window.location.search} projectId={window.location.pathname.startsWith("/projet/")?decodeURIComponent(window.location.pathname.slice("/projet/".length)):new URLSearchParams(window.location.search).get("project")??""} onBureau={()=>navigatePage("/")}/>
+    : studioMode === "universal-dossier"
     ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))} onOpenMiniSite={site=>{setMiniSiteHandoff(site);switchStudio("mini-site")}}/>
     : studioMode === "reference-dossier"
     ? <AimeDossier onNavigate={navigatePage}/>
