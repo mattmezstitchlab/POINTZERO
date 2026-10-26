@@ -11,6 +11,8 @@ import { createPattern, ensurePalette } from "../lib/pattern";
 import { flossIndex } from "../lib/dmc";
 import { loadStored, saveStored } from "../lib/store";
 
+// Navigation tests isolate persistence; failure handling is covered by unifiedImport.
+vi.mock("../lib/library", async importOriginal => ({...await importOriginal<typeof import("../lib/library")>(),saveLibrary:vi.fn().mockResolvedValue(undefined)}));
 const saved = {
   matchMedia: globalThis.matchMedia,
   ResizeObserver: globalThis.ResizeObserver,

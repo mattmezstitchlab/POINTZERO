@@ -18,7 +18,9 @@ async function request<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => I
     let value: T;
     req.onsuccess = () => { value = req.result; };
     transaction.oncomplete = () => { database.close(); resolve(value); };
-    transaction.onerror = () => { database.close(); reject(transaction.error); };
+    const failed = () => { database.close(); reject(transaction.error ?? new Error("Transaction de sauvegarde interrompue.")); };
+    transaction.onerror = failed;
+    transaction.onabort = failed;
   });
 }
 export const listProjects = () => request<ProjectRecord[]>("readonly", (s) => s.getAll());

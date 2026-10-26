@@ -215,19 +215,23 @@ export default function App() {
     if (!remote) { setInventory(values); try { writeInventory(values); } catch { notify("Stock non sauvegardé : exportez votre JSON."); } }
     setPattern({ ...P, supplies: { ...P.supplies, [code]: supply } }, true);
   };
-  const loadPattern = async (p: Pattern, requireArchive = false) => {
-    if (!remote) {
-      try { await saveLibrary(store.present, true); }
-      catch {
-        if (requireArchive) {
+  const openingPattern = useRef(false);
+  const loadPattern = async (p: Pattern) => {
+    if (openingPattern.current) { notify("Un ouvrage est déjà en cours d’ouverture."); return false; }
+    openingPattern.current = true;
+    try {
+      if (!remote) {
+        try { await saveLibrary(store.present, true); }
+        catch {
           notify("Ouverture bloquée : impossible de conserver le projet actif. Exportez son JSON avant de réessayer.");
-          throw new Error("Archivage du projet actif impossible");
+          return false;
         }
       }
-    }
-    const next = { ...p, supplies: { ...p.supplies, ...inventory } };
-    setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
-    setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setShowWelcome(false);
+      const next = { ...p, supplies: { ...p.supplies, ...inventory } };
+      setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
+      setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setShowWelcome(false);
+      return true;
+    } finally { openingPattern.current = false; }
   };
 
   useEffect(() => {
@@ -326,7 +330,7 @@ export default function App() {
       if (f.size > 25 * 1024 * 1024) throw new Error("Ce projet dépasse 25 Mo.");
       const p = /\.oxs$/i.test(f.name) ? fromOxs(await readTextFile(f)) : await readProjectFile(f);
       if (!p) throw new Error("Projet invalide ou format JSON incompatible. Le fichier original reste intact.");
-      await loadPattern(p);
+      if (!await loadPattern(p)) return "Ouverture bloquée : ouvrage précédent conservé.";
       setWorkspace("create");
       setView("pattern");
       setTool("cross");
@@ -465,7 +469,7 @@ export default function App() {
   };
   const useImportedPattern = async (p: Pattern) => {
     try {
-      await loadPattern(p, true);
+      if (!await loadPattern(p)) return false;
       setWorkspace("create"); setView("flat"); setTool("hand");
       setActiveCategory("compose"); setRightSection("properties");
       setAutoImage(null); setPromptOpen(false); setPdfFile(null);
@@ -735,10 +739,10 @@ export default function App() {
           pattern={compositionInput}
           embedded
           onCancel={() => setCompositionInput(null)}
-          onUse={p => {
+          onUse={async p => {
+            if (!await loadPattern(p)) return;
             setCompositionInput(null);
             setWorkspace("create"); setView("pattern");
-            void loadPattern(p);
             notify("Motif composé. La source reste dans le JSON ; contrôlez les détails avant de broder.");
           }}
         />

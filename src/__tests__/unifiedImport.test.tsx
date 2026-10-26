@@ -48,3 +48,25 @@ it("bloque le transfert PDF si le précédent ouvrage ne peut pas être archivé
   expect(host!.textContent).toContain("Ouverture bloquée");
   expect(host!.textContent).not.toContain("PDF assemblé");
 });
+it("ne lance pas deux ouvertures pendant l’archivage du projet actif", async () => {
+  await mountAndImport("patron.pdf", "application/pdf");
+  let finish: (()=>void) | undefined;
+  vi.mocked(saveLibrary).mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve}));
+  const button=[...host!.querySelectorAll("button")].find(b=>b.textContent==="Valider puzzle test")!;
+  const before=vi.mocked(saveLibrary).mock.calls.length;
+  await act(async()=>{button.click();button.click()});
+  expect(vi.mocked(saveLibrary).mock.calls.length-before).toBe(1);
+  expect(host!.textContent).toContain("déjà en cours d’ouverture");
+  await act(async()=>finish?.());
+  expect(host!.textContent).toContain("PDF assemblé");
+});
+it("une nouvelle grille ne remplace pas l’ouvrage si son archivage échoue",async()=>{
+  await mountAndImport("patron.pdf","application/pdf");
+  await act(async()=>[...host!.querySelectorAll("button")].find(b=>b.textContent==="Valider puzzle test")!.click());
+  const create=[...host!.querySelectorAll<HTMLButtonElement>('nav[aria-label="Catégories de l\'atelier"] button')].find(b=>b.textContent==="Créer")!;
+  await act(async()=>create.click());
+  vi.mocked(saveLibrary).mockRejectedValueOnce(new Error("quota"));
+  await act(async()=>[...host!.querySelectorAll("button")].find(b=>b.textContent?.includes("Grille vierge"))!.click());
+  expect(host!.textContent).toContain("PDF assemblé");
+  expect(host!.textContent).toContain("Ouverture bloquée");
+});
