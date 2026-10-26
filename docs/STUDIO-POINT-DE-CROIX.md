@@ -47,3 +47,17 @@ La livraison se fait en PR, sans fusion ni promotion en production.
 Le puzzle et les moteurs restent les mêmes : intégration ne signifie pas réécriture. Les outils de préparation ont encore leur propre panneau de travail au sein du studio. Les PDF difficiles nécessitent toujours un contrôle humain. Le service de génération externe peut échouer ou mal interpréter une demande ; aucun test avec un modèle distant ni gain de fidélité visuelle mesuré n’est revendiqué. Les tests de génération emploient une image simulée pour vérifier l’enchaînement, pas la qualité artistique. Les tests d’import isolent le transfert ; les algorithmes réels du puzzle restent couverts par `pdfPuzzle.test.ts`.
 
 Recette supplémentaire : importer un PDF multipage réel, déplacer les cartes du puzzle et comparer toutes les limites de pages ; générer une scène avec plusieurs sujets, décor et prénom ; comparer image et grille ; vérifier la conservation de l’ouvrage précédent en cas de quota plein.
+
+## Génération authentifiée — activation requise
+
+Le studio ne fait plus appel à l’ancien endpoint anonyme pour la génération par description. `/api/pattern-generate` appelle `gen.pollinations.ai` côté serveur et refuse les erreurs HTTP, les formats inattendus et les réponses supérieures à 8 Mo. Aucun faux résultat de repli. Cela ne constitue pas une vérification sémantique de l’image.
+
+Activation par le propriétaire uniquement : Vercel → projet pointzero → Settings → Environment Variables, environnement Preview :
+- `POINTZERO_IMAGE_API_KEY` : clé secrète Pollinations avec accès au modèle `black-forest-labs/flux.1-schnell` et budget plafonné chez le fournisseur.
+- `POINTZERO_GENERATION_ACCESS_CODE` : code privé long et aléatoire, à saisir dans le champ masqué du studio ; jamais dans une URL, le dépôt ou le stockage navigateur.
+
+Redéployer la Preview après configuration. Ne pas activer Production avant recette. Aucune clé ni dépense n’est créée par cette PR. Le code d’accès est une protection pour essai privé, pas une authentification publique multi-utilisateurs ni un rate-limit distribué : avant ouverture publique, ajouter identité, quotas et protection anti-abus. Une clé à budget plafonné est indispensable même pour l’essai privé.
+
+La mention « 30 couleurs » ou « 30 fils » impose au convertisseur un maximum de 30 références, indépendamment du texte envoyé au modèle. Valeurs acceptées : 1 à 64 ; hors limites, erreur explicite. Un maximum n’est pas un nombre exact de couleurs garanties.
+
+Recette réelle non réalisée sans clé : au minimum animal, portrait, paysage, scène multi-sujets, composition abstraite et texte demandé ; comparer l’image source à la description puis la grille à l’image. Vérifier chaque export et la limite DMC. Les tests réseau simulés ne prouvent pas la fidélité du modèle. Documentation fournisseur : https://gen.pollinations.ai/docs.

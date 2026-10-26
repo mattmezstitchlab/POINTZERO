@@ -9,7 +9,7 @@ import {
   STYLES,
   buildPrompt,
   gridHeightFor,
-  pollinationsUrl,
+  requestedColorLimit,
   type DetailId,
   type FormatId,
   type StyleId,
@@ -42,6 +42,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
   const [colors, setColors] = useState(DETAILS_DEFAULTS.tres);
   const [dropWhite, setDropWhite] = useState(false);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000000));
+  const [accessCode, setAccessCode] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [imgUrl, setImgUrl] = useState("");
@@ -64,27 +65,41 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
   const fullPrompt = () =>
     buildPrompt({ subject: prompt, main, second, relation, style, detail, format });
 
-  const genUrl = (seedValue: number) => {
-    const f = FORMATS.find((f) => f.id === format) ?? FORMATS[0];
-    return pollinationsUrl(fullPrompt(), f.w, f.h, seedValue);
-  };
-
   const generate = async (seedValue = seed) => {
     if (prompt.trim().length < 3) {
       setError("Décrivez le motif en quelques mots (sujet, couleurs, ambiance).");
       return;
     }
-    setBusy("Génération de l'image… (jusqu'à une minute)");
+    setBusy("Génération authentifiée de l’image…");
     setError("");
     setPattern(null);
     setPreview("");
+    setImgUrl(""); imgRef.current = null;
     try {
-      const img = await loadRemoteImage(genUrl(seedValue));
+      const limit = requestedColorLimit(prompt) ?? colors;
+      const f = FORMATS.find(f => f.id === format)!;
+      const response = await fetch("/api/pattern-generate", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-generation-code": accessCode },
+        body: JSON.stringify({ prompt: fullPrompt(), width: f.w, height: f.h, seed: seedValue }),
+        signal: AbortSignal.timeout(65000),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Le service de génération n’a pas répondu.");
+      }
+      const objectUrl = URL.createObjectURL(await response.blob());
+      let img: HTMLImageElement;
+      try { img = await loadRemoteImage(objectUrl); } finally { URL.revokeObjectURL(objectUrl); }
+      // A durable local data URL keeps the source preview independent of the provider.
+      const source = document.createElement("canvas");
+      source.width = img.naturalWidth || f.w; source.height = img.naturalHeight || f.h;
+      source.getContext("2d")!.drawImage(img, 0, 0);
+      const sourcePreview = source.toDataURL("image/png");
       imgRef.current = img;
-      setImgUrl(img.src);
-      await convert(img);
-    } catch {
-      setError("Génération impossible pour le moment — réessayez avec une nouvelle graine.");
+      setImgUrl(sourcePreview);
+      await convert(img, limit);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Génération indisponible.");
     } finally {
       setBusy("");
     }
@@ -96,14 +111,14 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
     void generate(next);
   };
 
-  const convert = async (source?: HTMLImageElement) => {
+  const convert = async (source?: HTMLImageElement, limit?: number) => {
     const img = source ?? imgRef.current;
     if (!img) return;
     setBusy("Conversion réaliste en grille DMC…");
     setError("");
     try {
       const gridH = gridHeightFor(size, format);
-      const { cross, palette } = imageToDmc(img, size, gridH, { mode, maxColors: colors, dropWhite });
+      const { cross, palette } = imageToDmc(img, size, gridH, { mode, maxColors: limit ?? requestedColorLimit(prompt) ?? colors, dropWhite });
       const p = createPattern(prompt.trim().slice(0, 60) || "Motif généré", size, gridH, 14, 2);
       p.cross = cross;
       for (const v of palette) ensurePalette(p, v);
@@ -161,6 +176,10 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
               </div>
             </div>
 
+            <label className="block text-xs">Code d’accès à la génération
+              <input type="password" autoComplete="off" value={accessCode} onChange={e => setAccessCode(e.target.value)} className="field mt-2" />
+            </label>
+            <p className="text-xs text-label-2">Limite DMC demandée : {(() => { try { return requestedColorLimit(prompt) ?? colors; } catch { return "1 à 64 couleurs requises"; } })()} couleurs maximum. Le code reste en mémoire, jamais sauvegardé.</p>
             <details className="space-y-4 rounded-[12px] border border-white/10 p-3">
               <summary className="cursor-pointer text-sm">Réglages facultatifs · style, taille et fils</summary>
             <details className="rounded-[12px] bg-white/[.04] px-3 py-2">

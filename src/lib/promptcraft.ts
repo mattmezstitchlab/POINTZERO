@@ -87,3 +87,12 @@ export function gridHeightFor(base: number, format: FormatId): number {
   const h = Math.round((base * f.h) / f.w / 2) * 2;
   return Math.max(20, Math.min(400, h));
 }
+
+/** Explicit colour limits are technical constraints, not image-provider hints. */
+export function requestedColorLimit(text: string): number | null {
+  const match = /\b(\d{1,3})\s*(?:couleurs?|colors?|fils?)\b/i.exec(text);
+  if (!match) return null;
+  const value = Number(match[1]);
+  if (value < 1 || value > 64) throw new Error("Choisissez entre 1 et 64 couleurs pour ce studio.");
+  return value;
+}
