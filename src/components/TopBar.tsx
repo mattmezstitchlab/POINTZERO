@@ -53,8 +53,10 @@ export default function TopBar(p: Props) {
       <div className="relative">
         <button type="button" className={iconButton} aria-label="Plus d'options" aria-expanded={more} onClick={() => setMore(v => !v)}><Ellipsis size={19}/></button>
         {more && <div className="pz-surface absolute right-0 top-[calc(100%+8px)] z-50 grid w-[215px] gap-1 p-2 text-sm text-white" aria-label="Options d'affichage">
-          <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onLibrary(); setMore(false); }}><FolderOpen size={16}/> Bibliothèque</button>
-          <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onSettings(); setMore(false); }}><Settings2 size={16}/> Réglages et aide</button>
+          <button disabled={!p.canUndo} className="flex min-h-11 items-center gap-2 rounded-[5px] px-2 text-left disabled:opacity-30 sm:hidden" onClick={() => {p.onUndo();setMore(false);}}><Undo2 size={16}/> Annuler</button>
+          <button disabled={!p.canRedo} className="flex min-h-11 items-center gap-2 rounded-[5px] px-2 text-left disabled:opacity-30 sm:hidden" onClick={() => {p.onRedo();setMore(false);}}><Redo2 size={16}/> Rétablir</button>
+          <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 sm:hidden" onClick={() => { p.onLibrary(); setMore(false); }}><FolderOpen size={16}/> Bibliothèque</button>
+          <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10 sm:hidden" onClick={() => { p.onSettings(); setMore(false); }}><Settings2 size={16}/> Réglages et aide</button>
           {p.onAdvanced && <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onAdvanced?.(); setMore(false); }}><Layers size={16}/> Options de composition</button>}
           {p.onDrawing && <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onDrawing?.(); setMore(false); }} aria-pressed={!!p.drawing}><Pencil size={16}/> {p.drawing ? "Masquer les outils" : "Outils de dessin"}</button>}
           <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { cycle(); setMore(false); }}><Layers size={16}/> Affichage · {p.view}</button>

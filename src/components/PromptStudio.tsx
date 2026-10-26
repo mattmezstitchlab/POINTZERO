@@ -140,7 +140,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
   };
 
   return (
-    <div className={`glass-strong fixed ${embedded ? "inset-x-0 bottom-0 top-[58px] z-[35]" : "inset-0 z-[75]"} flex flex-col bg-[#0e0e11]`} role="dialog" aria-modal="true" aria-label="Générer dans le studio">
+    <div className={`glass-strong fixed ${embedded ? "inset-x-0 bottom-0 top-[110px] z-[35]" : "inset-0 z-[75]"} flex flex-col bg-[#0e0e11]`} role="dialog" aria-modal="true" aria-label="Générer dans le studio">
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3">
         <button type="button" className="btn-icon" onClick={onClose} disabled={!!busy} aria-label="Fermer">
           <X size={18} />

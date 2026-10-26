@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import type { InterfaceLevel } from "../lib/interfaceLevel";
 import { Check, FileUp, FolderOpen, ImagePlus, Layers, Lock, Plus, Radio, ShieldCheck, Unlock, X } from "lucide-react";
 import { COUNTS, ensurePalette, fabricInfo, type Pattern } from "../lib/pattern";
 import { addLayer, replaceColor, resizePattern, stampText, switchLayer } from "../lib/editing";
@@ -14,6 +15,8 @@ import Sheet from "./Sheet";
 import BrodeuseProfilePanel from "./BrodeuseProfilePanel";
 import { loadBrodeuseProfile } from "../lib/brodeuseProfile";
 
+const LevelContext = createContext<InterfaceLevel>("intermediate");
+
 export interface Preferences {
   highContrast: boolean; largeText: boolean; pencilOnly: boolean; onlyActive: boolean; keepAwake: boolean;
   symmetry: "none" | "x" | "y" | "both"; annotation: string;
@@ -25,12 +28,13 @@ export interface PanelActions {
   new: (w: number, h: number) => void; library: () => void; share: () => void; prompt: () => void;
   notify: (msg: string) => void;
 }
-export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actions, prefs, onPrefs, color, onColor, workspace, section = "prepare", extraActions, inline = false }: {
+export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actions, prefs, onPrefs, color, onColor, workspace, section = "prepare", extraActions, inline = false, level = "intermediate" }: {
+  level?: InterfaceLevel;
   open: boolean; onClose: () => void; pattern: Pattern; onSet: (p: Pattern) => void; actions: PanelActions;
   prefs: Preferences; onPrefs: (v: Preferences) => void; color: number; onColor: (c: number) => void; workspace: "create" | "stitch"; section?: "prepare" | "edit" | "follow" | "settings"; extraActions?: ReactNode; inline?: boolean;
 }) {
   const importRef = useRef<HTMLInputElement>(null), manualRef = useRef<HTMLInputElement>(null), pdfRef = useRef<HTMLInputElement>(null), fileRef = useRef<HTMLInputElement>(null);
-  const [w, setW] = useState(80), [h, setH] = useState(80), [text, setText] = useState("BONJOUR"), [scale, setScale] = useState(1), [to, setTo] = useState(""), [mixA, setMixA] = useState("321"), [mixB, setMixB] = useState("Blanc"), [aStrands, setAStrands] = useState(1), [bStrands, setBStrands] = useState(1), [tests, setTests] = useState<CheckResult[] | null>(null);
+  const [w, setW] = useState(p.w), [h, setH] = useState(p.h), [text, setText] = useState("BONJOUR"), [scale, setScale] = useState(1), [to, setTo] = useState(""), [mixA, setMixA] = useState("321"), [mixB, setMixB] = useState("Blanc"), [aStrands, setAStrands] = useState(1), [bStrands, setBStrands] = useState(1), [tests, setTests] = useState<CheckResult[] | null>(null);
   const [brodeuseProfile, setBrodeuseProfile] = useState(loadBrodeuseProfile);
   useEffect(() => {
     const refresh = () => setBrodeuseProfile(loadBrodeuseProfile());
@@ -52,7 +56,7 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
     : [];
   const change = <K extends keyof Preferences>(key: K, value: Preferences[K]) => onPrefs({ ...prefs, [key]: value });
 
-  const content = <>
+  const content = <LevelContext.Provider value={level}>
     <input type="file" accept="image/*" className="hidden" ref={manualRef} onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)actions.importAdvanced(selected);}} />
     <input type="file" accept="image/*" className="hidden" ref={importRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) actions.importFile(file); e.target.value = ""; }} />
     <input type="file" accept=".pdf,application/pdf" className="hidden" ref={pdfRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) actions.importFile(file); e.target.value = ""; }} />
@@ -66,12 +70,13 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
           <NumberField title="Marge de fil estimée (%)" min={0} max={100} value={Math.round(((p.waste ?? 1.15) - 1) * 100)} onChange={(v) => onSet({ ...p, waste: 1 + v / 100 })} />
           <p className="mt-2 text-[11px] leading-relaxed text-label-3">Métrage exprimé en équivalent 6 brins. Un écheveau DMC de 8 m fournit 48 m de brin simple. Tension, technique et trajets au dos font varier la consommation.</p>
         </Block>
-        <Block title="Nouvelle grille ou redimensionnement"><div className="grid grid-cols-2 gap-3"><NumberField title="Colonnes" value={w} min={1} max={1000} onChange={setW} /><NumberField title="Rangées" value={h} min={1} max={1000} onChange={setH} /></div><div className="mt-3 flex gap-2"><button className="btn-tinted flex-1" onClick={() => actions.new(w, h)}><Plus size={16} />Nouvelle</button><button className="btn-quiet flex-1" onClick={() => { onSet(resizePattern(p, w, h)); actions.notify("Grille redimensionnée, centrée. Les calques sont aplatis sur le calque actif."); }}>Redimensionner</button></div><p className="mt-2 text-[11px] text-label-3">Réduire la grille coupe les points hors limites. Cette opération est annulable.</p></Block>
+
         <Block title="Auteur, source et droits"><Label title="Auteur"><input className="field" value={p.provenance?.author ?? ""} onChange={(e) => onSet({ ...p, provenance: { kind: "original", source: "", license: "Tous droits réservés", personalOnly: false, ...p.provenance, author: e.target.value } })} /></Label><Label title="Source originale"><input className="field" value={p.provenance?.source ?? ""} onChange={(e) => onSet({ ...p, provenance: { kind: "original", author: "", license: "Tous droits réservés", personalOnly: false, ...p.provenance, source: e.target.value } })} /></Label><p className="mt-2 text-[12px] text-label-3">{p.provenance?.license || "Création originale"}{p.provenance?.personalOnly ? " · Usage personnel uniquement" : ""}. Ces informations accompagnent le PDF et le fichier projet.</p><Label title="Dossier"><input className="field" value={p.folder ?? ""} onChange={(e) => onSet({ ...p, folder: e.target.value })} placeholder="Ex. Botanique" /></Label></Block>
       </>}
 
       {tab === "edit" && <>
         {workspace === "stitch" && <p className="border-l-2 border-warn pl-3 text-[12px] text-warn">Passez en mode Créer pour modifier le patron. Le suivi reste séparé du dessin.</p>}
+        <Block title="Dimensions de la grille"><div className="grid grid-cols-2 gap-3"><NumberField title="Colonnes" value={w} min={1} max={1000} onChange={setW} /><NumberField title="Rangées" value={h} min={1} max={1000} onChange={setH} /></div><div className="mt-3 grid gap-2"><button className="btn-quiet flex-1" onClick={() => { if (!window.confirm("Redimensionner le patron ? Les points hors limites seront coupés et les calques aplatis. Cette action est annulable.")) return; onSet(resizePattern(p, w, h)); actions.notify("Grille redimensionnée, centrée. Les calques sont aplatis sur le calque actif."); }}>Redimensionner</button></div><p className="mt-2 text-[11px] text-label-3">Réduire la grille coupe les points hors limites. Cette opération est annulable.</p></Block>
         <fieldset disabled={workspace === "stitch"} className="space-y-5 disabled:opacity-50">
         <Label title="Sens du demi-point"><select className="field" value={prefs.halfDirection} onChange={(e) => change("halfDirection", e.target.value as Preferences["halfDirection"])}><option value="forward">Diagonale /</option><option value="backward">Diagonale inverse</option><option value="auto">Selon le côté touché</option></select></Label>
         <Block title="Symétrie du dessin"><Label title="Symétrie du dessin"><select className="field" value={prefs.symmetry} onChange={(e) => change("symmetry", e.target.value as Preferences["symmetry"])}><option value="none">Aucune</option><option value="x">Miroir horizontal</option><option value="y">Miroir vertical</option><option value="both">Les deux axes</option></select></Label></Block>
@@ -123,11 +128,11 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
         <Block title="Import avancé"><button type="button" className="menu-row" onClick={()=>manualRef.current?.click()}><ImagePlus size={17}/> Calage manuel et lecture des symboles</button><p className="mt-2 text-[11px] text-label-3">Les anciens réglages sont conservés pour les grilles photographiées et les cas difficiles.</p></Block>
         <Block title="Bibliothèque et partage"><button className="menu-row" onClick={actions.library}><FolderOpen size={17} />Mes projets et versions</button><button className="menu-row" onClick={() => fileRef.current?.click()}><FileUp size={17} />Importer un projet POINTZERO JSON ou OXS</button><button className="menu-row" onClick={actions.share}><Radio size={17} />Lecture partagée en direct</button></Block>
         <Block title="Vérifications locales"><button className="btn-tinted w-full" onClick={() => setTests(runChecks())}><ShieldCheck size={16} />Exécuter les tests du moteur</button>{tests && <div className="mt-3 space-y-2">{tests.map((t) => <p key={t.name} className={`flex items-start gap-2 text-[11px] ${t.ok ? "text-ok" : "text-danger"}`}>{t.ok ? <Check size={13} className="mt-0.5 shrink-0" /> : <X size={13} />}{t.name}{!t.ok && ` : ${t.detail}`}</p>)}</div>}<p className="mt-3 text-[11px] leading-relaxed text-label-3">{BASE_FLOSS.length} références couleur documentées. DMC commercialise 500 teintes ; les références sans valeur fiable ne sont pas inventées. {SYMBOL_COUNT} définitions vectorielles disponibles, mêmes formes dans le PDF et l’écran. La lisibilité des symboles complexes à petite taille doit être testée à l’impression.</p></Block>
-        <Block title="Confidentialité et droits"><p className="text-[12px] leading-relaxed text-label-2">Images, patrons, stock et versions sont traités et conservés localement. Pas de compte, d’abonnement ou d’analytique intégré. Effacer les données du navigateur peut supprimer vos projets : exportez vos sauvegardes JSON.</p><p className="mt-3 text-[12px] leading-relaxed text-label-2">Un PDF acheté reste la propriété de son auteur. L’import et le suivi ne transfèrent aucun droit de redistribution. Vérifiez la licence avant de partager, modifier pour diffusion ou vendre un patron. Chaque participant d’un atelier doit disposer de sa propre autorisation. Il ne s’agit pas d’un avis juridique.</p><p className="mt-3 text-[11px] text-label-3">Couleurs : craft-color-codes, MakeBead, CC BY 4.0. Les teintes sont approximatives. Le visuel d’accueil est une illustration de mise en scène, pas une preuve de fonctionnement sur un appareil testé.</p><a className="mt-2 block text-[12px] text-accent-2" href="https://github.com/makebead/craft-color-codes" target="_blank" rel="noreferrer">Source des valeurs DMC</a></Block>
+        <Block title="Confidentialité et droits"><p className="text-[12px] leading-relaxed text-label-2">Les imports, patrons, stock et versions sont traités et conservés localement. La génération par description envoie votre demande au fournisseur d’images via notre serveur. Pas de compte, d’abonnement ou d’analytique intégré. Effacer les données du navigateur peut supprimer vos projets : exportez vos sauvegardes JSON.</p><p className="mt-3 text-[12px] leading-relaxed text-label-2">Un PDF acheté reste la propriété de son auteur. L’import et le suivi ne transfèrent aucun droit de redistribution. Vérifiez la licence avant de partager, modifier pour diffusion ou vendre un patron. Chaque participant d’un atelier doit disposer de sa propre autorisation. Il ne s’agit pas d’un avis juridique.</p><p className="mt-3 text-[11px] text-label-3">Couleurs : craft-color-codes, MakeBead, CC BY 4.0. Les teintes sont approximatives. Le visuel d’accueil est une illustration de mise en scène, pas une preuve de fonctionnement sur un appareil testé.</p><a className="mt-2 block text-[12px] text-accent-2" href="https://github.com/makebead/craft-color-codes" target="_blank" rel="noreferrer">Source des valeurs DMC</a></Block>
       </>}
       {(tab === "settings" || tab === "prepare") && <Block title="Notes et image de référence"><textarea className="field min-h-[90px] py-2" value={p.notes ?? ""} onChange={(e) => onSet({ ...p, notes: e.target.value })} aria-label="Notes du projet" placeholder="Consignes de broderie, références, finitions…" />{p.reference && <details className="mt-3"><summary className="cursor-pointer text-[12px] text-accent-2">Voir l’image source</summary><img src={p.reference} className="mt-2 max-h-[260px] w-full rounded-[12px] object-contain" alt="Image de référence du projet" /></details>}</Block>}
     </div>
-  </>;
+  </LevelContext.Provider>;
   if (inline) return <div className="pz-panel pz-embroidery-inline min-h-0 text-white">
     {extraActions && <div className="mb-3 flex flex-wrap gap-2">{extraActions}</div>}
     {content}
@@ -138,18 +143,19 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
     toolbar={extraActions ? <div className="flex flex-wrap gap-2">{extraActions}</div> : undefined}>{content}</Sheet>;
 }
 
-function Label({ title, children }: { title: string; children: React.ReactNode }) { return <label className="mt-2 block text-[12px] text-label-2"><span className="mb-1.5 block">{title}</span>{children}</label>; }
+function Label({ title, children }: { title: string; children: React.ReactNode }) { return <label className="mt-2 block min-w-0 text-[12px] text-label-2"><span className="mb-1.5 block">{title}</span>{children}</label>; }
 function NumberField({ title, value, onChange, min, max, step = 1 }: { title: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number }) { return <Label title={title}><input type="number" className="field" value={value} min={min} max={max} step={step} onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, Math.round(n / step) * step))); }} /></Label>; }
 function Toggle({ title, checked, onChange }: { title: string; checked: boolean; onChange: () => void }) { return <div className="flex min-h-12 items-center justify-between gap-4"><span className="text-[13px] text-label-2">{title}</span><button type="button" role="switch" className="switch" aria-label={title} aria-checked={checked} onClick={onChange} /></div>; }
 /** Les réglages secondaires se découvrent à la demande : aucune fonction supprimée. */
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  const openByDefault = [
+  const level = useContext(LevelContext);
+  const openByDefault = level === "expert" || (level === "intermediate" && ["Symétrie du dessin","Lettrage compté"].includes(title)) || [
     "Outils de conception",
     "Mon stock de fils et préférences",
     "Marquer sans modifier le patron",
     "Confort et accessibilité",
   ].includes(title);
-  return <details className="group rounded-[6px] border border-white/15 bg-white/[.035] px-3 py-2" open={openByDefault}>
+  return <details key={`${level}:${title}`} className="group rounded-[6px] border border-white/15 bg-white/[.035] px-3 py-2" open={openByDefault}>
     <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 text-left text-[12px] font-semibold text-white/90 [&::-webkit-details-marker]:hidden">
       <span>{title}</span><span aria-hidden="true" className="text-white/55 transition-transform group-open:rotate-180">⌄</span>
     </summary>

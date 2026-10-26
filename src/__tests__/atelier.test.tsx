@@ -434,6 +434,48 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(restored.w).toBe(20);
   });
 
+  it("change les trois affichages sans altérer points, palette ni suivi", async () => {
+    const p = createPattern("Patron protégé", 20, 20);
+    const red = flossIndex("321"); p.cross[5] = red; p.done[5] = 1; ensurePalette(p, red);
+    expect(saveStored(p)).toBe(true);
+    await mount();
+    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
+    expect(select).toBeTruthy();
+    for (const level of ["beginner", "expert", "intermediate"]) {
+      await act(async () => { select.value = level; select.dispatchEvent(new Event("change", {bubbles:true})); });
+      expect(localStorage.getItem("pointzero:interface-level")).toBe(level);
+      expect(container!.textContent).toContain("Patron protégé");
+      await act(async () => window.dispatchEvent(new Event("pagehide")));
+      const after = loadStored()!;
+      expect(after.cross).toEqual(p.cross); expect(after.done).toEqual(p.done); expect(after.palette).toEqual(p.palette);
+      if (level === "expert") expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
+    }
+  });
+
+  it("conserve l’outil actif et rend les autres accessibles en Débutant", async () => {
+    await mount();
+    const buttons = () => [...container!.querySelectorAll("button")];
+    await click(buttons().find(b => b.textContent?.includes("Afficher tous les outils")));
+    await click(buttons().find(b => b.textContent === "Quart"));
+    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
+    await act(async () => {select.value="beginner";select.dispatchEvent(new Event("change",{bubbles:true}));});
+    expect(buttons().find(b => b.textContent === "Quart")?.getAttribute("aria-pressed")).toBe("true");
+    expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
+  });
+
+  it("centralise la navigation et protège le redimensionnement", async () => {
+    await mount();
+    const sections=container!.querySelector(".pz-embroidery-right nav");
+    expect([...sections!.querySelectorAll("button")].map(b=>b.textContent)).toEqual(["Objet","Réglages"]);
+    await click(category("Fils"));
+    expect(container!.textContent).not.toContain("Nouvelle grille ou redimensionnement");
+    await click(category("Dessiner"));
+    expect(container!.textContent).toContain("Dimensions de la grille");
+    const confirm=vi.spyOn(window,"confirm").mockReturnValue(false);
+    await click([...container!.querySelectorAll("button")].find(b=>b.textContent==="Redimensionner"));
+    expect(confirm).toHaveBeenCalled();
+  });
+
   it("ouvre directement la préparation depuis l’accueil spécialisé", async () => {
     await mount(true);
     const prepare = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Préparer mon ouvrage"));

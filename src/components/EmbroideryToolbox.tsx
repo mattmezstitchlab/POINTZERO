@@ -1,8 +1,10 @@
+import type { InterfaceLevel } from "../lib/interfaceLevel";
 import { useMemo } from "react";
 import { CheckSquare, Circle, Eraser, Hand, PaintBucket, Pencil, Pipette, Scan, Rows3, Scissors, Minus, Plus } from "lucide-react";
 import type { Tool } from "../lib/stitch";
 
 interface Props {
+  level?: InterfaceLevel;
   tool: Tool;
   onTool: (tool: Tool) => void;
   workspace: "create" | "stitch";
@@ -31,9 +33,11 @@ const stitchBasics = [
 ] as const;
 const stitchMore = [["park","Parking"],["unpick","À défaire"],["note","Note"]] as const;
 
-export default function EmbroideryToolbox({ tool,onTool,workspace,expanded,onToggleExpanded,readOnly=false }:Props){
-  const basics = workspace==="stitch" ? stitchBasics : createBasics;
+export default function EmbroideryToolbox({ tool,onTool,workspace,level="intermediate",expanded,onToggleExpanded,readOnly=false }:Props){
+  const allBasics = workspace==="stitch" ? stitchBasics : createBasics;
+  const basics = level === "beginner" ? allBasics.filter(([id]) => ["hand","cross","erase","pick","mark"].includes(id) || id === tool) : allBasics;
   const more = useMemo(()=>workspace==="stitch" ? stitchMore : createMore,[workspace]);
+  const visibleMore = expanded || more.some(([id]) => id === tool);
   return <section aria-label="Outils de broderie" className="shrink-0 border-b border-white/10 px-3 pb-3 pt-3 text-white">
     <div className="mb-2 flex items-center justify-between">
       <h2 className="text-[11px] font-semibold uppercase tracking-[.08em] text-white/65">{workspace==="stitch"?"Outils de suivi":"Outils de dessin"}</h2>
@@ -46,11 +50,14 @@ export default function EmbroideryToolbox({ tool,onTool,workspace,expanded,onTog
         <Icon size={17}/><span>{name}</span>
       </button>)}
     </div>
-    <button type="button" aria-expanded={expanded} onClick={onToggleExpanded}
+    <button type="button" aria-expanded={visibleMore} onClick={onToggleExpanded}
       className="mt-2 flex min-h-9 w-full items-center justify-between rounded-[5px] border border-white/15 px-2 text-left text-[11px] text-white/75 hover:bg-white/10">
-      <span>{expanded?"Masquer les outils avancés":"Afficher tous les outils"}</span>{expanded?<Minus size={14}/>:<Plus size={14}/>}
+      <span>{visibleMore?"Masquer les outils avancés":"Afficher tous les outils"}</span>{visibleMore?<Minus size={14}/>:<Plus size={14}/>}
     </button>
-    {expanded&&<div className="mt-2 grid grid-cols-2 gap-1" aria-label="Outils avancés">
+    {level === "beginner" && <div className="mt-2 flex flex-wrap gap-1" aria-label="Autres outils courants">
+      {expanded && allBasics.filter(([id]) => !basics.some(([shown]) => shown === id)).map(([id,name]) => <button type="button" key={id} disabled={readOnly} onClick={() => onTool(id)} className="min-h-11 rounded border border-white/20 px-2 text-xs">{name}</button>)}
+    </div>}
+    {visibleMore&&<div className="mt-2 grid grid-cols-2 gap-1" aria-label="Outils avancés">
       {more.map(([id,name])=><button key={id} type="button" aria-pressed={tool===id}
         disabled={readOnly} onClick={()=>onTool(id as Tool)}
         className={`min-h-9 rounded-[5px] border px-2 py-1 text-left text-[11px] disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 text-white/75 hover:bg-white/10"}`}>{name}</button>)}

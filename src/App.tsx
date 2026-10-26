@@ -1,3 +1,5 @@
+import InterfaceLevelBar from "./components/InterfaceLevelBar";
+import { readInterfaceLevel, INTERFACE_LEVEL_KEY, type InterfaceLevel } from "./lib/interfaceLevel";
 import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
 import {writeStoredJSON} from "./lib/storageSafety";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
@@ -148,7 +150,8 @@ export default function App() {
   const [promptText, setPromptText] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const subjectMove = useRef<{ scene: SubjectScene; base: Pattern; id: string; x: number; y: number } | null>(null);
-  const [showDrawingTools, setShowDrawingTools] = useState(false);
+  const [interfaceLevel, setInterfaceLevel] = useState(readInterfaceLevel);
+  const [showDrawingTools, setShowDrawingTools] = useState(() => readInterfaceLevel() === "expert");
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [rightSection, setRightSection] = useState<RightSection>("properties");
@@ -167,7 +170,7 @@ export default function App() {
   // Les outils sont de véritables panneaux, comme dans Photo.
   // Canvas conserve son moteur plein écran mais centre/ajuste le patron
   // dans la surface libre, entre les panneaux et la bande DMC.
-  const insets: Insets = { top: 58, right: wide ? 260 : 0, bottom: 94, left: desktop ? 252 : 0 };
+  const insets: Insets = { top: 110, right: wide ? 260 : 0, bottom: 94, left: desktop ? 252 : 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -589,7 +592,7 @@ export default function App() {
         onMiniSite={site=>{
           setMiniSiteHandoff(site);switchStudio("mini-site");
         }} />
-    : <div className={`pz-atelier pz-embroidery-studio fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+    : <div data-interface-level={interfaceLevel} className={`pz-atelier pz-embroidery-studio fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
       type="file"
@@ -617,6 +620,11 @@ export default function App() {
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
       onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
       onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
+    <InterfaceLevelBar value={interfaceLevel} onChange={(value: InterfaceLevel) => {
+      setInterfaceLevel(value);
+      setShowDrawingTools(value === "expert");
+      try { localStorage.setItem(INTERFACE_LEVEL_KEY, value); } catch { notify("Affichage changé pour cette session uniquement."); }
+    }}/>
     <TopBar pattern={P} onDesign={() => switchStudio("stitch-home")}
       onToggleLeft={() => { setMobileLibraryOpen(v=>!v); setMobileInspectorOpen(false); }}
       onToggleRight={() => { setMobileInspectorOpen(v=>!v); setMobileLibraryOpen(false); }}
@@ -632,11 +640,11 @@ export default function App() {
       onShare={() => { setPanel("share"); }}
       saving={saving} drawing={showDrawingTools}
       onAdvanced={() => openCategory("compose")}
-      onDrawing={() => { setTool(showDrawingTools ? "hand" : "cross"); setShowDrawingTools(!showDrawingTools); setActiveCategory("compose"); setMobileInspectorOpen(false); if (window.matchMedia("(max-width: 1023px)").matches) setMobileLibraryOpen(true); }} />
-    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[58px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
+      onDrawing={undefined} />
+    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[110px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
       aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
     <aside aria-label="Bibliothèque et outils de broderie"
-      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[58px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[110px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
       <CategoryBar docked active={activeCategory} onChoose={openCategory} />
       {activeCategory === "create" ? (
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="Créer un nouveau motif">
@@ -645,7 +653,7 @@ export default function App() {
         </div>
       ) : <>
         <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
-          expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
+          level={interfaceLevel} expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
         {activeCategory === "compose" ? (
           <MotifLibrary docked readOnly={!!remote}
             onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileLibraryOpen(false); }}
@@ -661,14 +669,13 @@ export default function App() {
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
-      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
-      <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
+      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
+      <nav className="sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
         {([
-          ["properties","Objet"],["edit","Dessin"],["prepare","Fils"],
-          ["follow","Suivi"],["settings","Réglages"],
+          ["properties","Objet"],["settings","Réglages"],
         ] as [RightSection,string][]).map(([id,label]) =>
           <button key={id} type="button" aria-pressed={rightSection===id}
-            onClick={() => id==="edit" ? openCategory("compose") : id==="prepare" ? openCategory("threads") : id==="follow" ? openCategory("stitch") : openRightPanel(id)}
+            onClick={() => openRightPanel(id)}
             className={rightSection===id ? "min-h-9 rounded-[5px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
       </nav>
       {rightSection === "properties" ? (
@@ -687,7 +694,7 @@ export default function App() {
             }[contextSection]}</h2>
             <p className="mt-1 truncate text-[11px] text-white/50">{P.name}</p>
           </div>
-          <WorkspacePanel key={contextSection} inline open onClose={() => openRightPanel("properties")} pattern={P} onSet={setPattern}
+          <WorkspacePanel key={contextSection} level={interfaceLevel} inline open onClose={() => openRightPanel("properties")} pattern={P} onSet={setPattern}
             actions={panelActions} prefs={prefs} onPrefs={setPrefs} color={color}
             onColor={setColor} workspace={workspace} section={contextSection}
             extraActions={contextSection === "edit" ? <button type="button" className="btn-tinted" disabled={!!remote} onClick={openComposition}>Composer / décomposer le motif</button> : undefined} />
