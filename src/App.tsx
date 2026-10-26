@@ -1,3 +1,4 @@
+import StudioActionBar from "./components/StudioActionBar";
 import InterfaceLevelBar from "./components/InterfaceLevelBar";
 import { readInterfaceLevel, INTERFACE_LEVEL_KEY, type InterfaceLevel } from "./lib/interfaceLevel";
 import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
@@ -170,7 +171,7 @@ export default function App() {
   // Les outils sont de véritables panneaux, comme dans Photo.
   // Canvas conserve son moteur plein écran mais centre/ajuste le patron
   // dans la surface libre, entre les panneaux et la bande DMC.
-  const insets: Insets = { top: 110, right: wide ? 260 : 0, bottom: 94, left: desktop ? 252 : 0 };
+  const insets: Insets = { top: 110, right: wide ? 260 : 0, bottom: 158, left: desktop ? 252 : 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -352,6 +353,7 @@ export default function App() {
   };
 
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const actionImportRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const openComposition = () => { if (!remote) { closePanel(); setCompositionInput(P); } };
   const onRemote = useCallback((p: Pattern | null) => {
@@ -613,6 +615,11 @@ export default function App() {
         if (chosen) void openProjectFromFile(chosen);
       }}
     />
+    <input ref={actionImportRef} type="file" className="sr-only" aria-label="Importer depuis la barre d’actions" accept="image/png,image/jpeg,image/webp,.pdf,.json,.oxs" onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)importAnyFile(selected);}}/>
+    {!pdfFile && !promptOpen && !compositionInput && !file && !autoImage && <StudioActionBar onImport={()=>actionImportRef.current?.click()} onExport={()=>setPanel("export")}
+      onZoom={direction=>window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:direction==="in"?"zoomIn":"zoomOut"}}))}
+      onMagnify={()=>window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:"magnify"}}))}
+      onFit={()=>setFitKey(k=>k+1)}/> }
     <Canvas pattern={P} tool={remote ? "hand" : tool} color={color} view={view} symbols={symbols} highlightActive={workspace === "stitch"} insets={insets} fitKey={fitKey} onlyActive={prefs.onlyActive} highContrast={prefs.highContrast} pencilOnly={prefs.pencilOnly} symmetry={prefs.symmetry} annotation={prefs.annotation} readOnly={!!remote} selection={selection} halfDirection={prefs.halfDirection}
       onSelection={setSelection} onBegin={() => { if (!remote) dispatch({ type: "begin" }); }}
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
@@ -639,12 +646,11 @@ export default function App() {
       onSettings={() => openRightPanel("settings")}
       onShare={() => { setPanel("share"); }}
       saving={saving} drawing={showDrawingTools}
-      onAdvanced={() => openCategory("compose")}
-      onDrawing={undefined} />
-    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[110px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
+      onAdvanced={() => openCategory("compose")} />
+    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[110px] bottom-[158px] z-20 bg-black/35 lg:bottom-[158px] xl:hidden"
       aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
     <aside aria-label="Bibliothèque et outils de broderie"
-      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[110px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      className={`pz-embroidery-left fixed bottom-[158px] left-0 top-[110px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
       <CategoryBar docked active={activeCategory} onChoose={openCategory} />
       {activeCategory === "create" ? (
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="Créer un nouveau motif">
@@ -669,7 +675,7 @@ export default function App() {
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
-      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
+      className={'pz-embroidery-right thin-scroll fixed bottom-[158px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
       <nav className="sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
         {([
           ["properties","Objet"],["settings","Réglages"],

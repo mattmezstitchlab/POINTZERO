@@ -38,6 +38,9 @@ describe("Point Zéro spécialisé", () => {
     expect(view.textContent).toContain("Roses de famille");
     expect(view.textContent).toContain("son effacement supprime les projets locaux");
     expect(view.querySelector("iframe")).toBeNull();
+    expect(view.textContent).toContain("LE PUZZLE PDF");
+    expect(view.textContent).toContain("pas une capture d’écran");
+    expect(view.querySelectorAll("h1")).toHaveLength(1);
     expect(write).not.toHaveBeenCalled();
     expect(onOpen).not.toHaveBeenCalled();
     expect(localStorage.getItem("ouvrage")).toBe("données existantes");

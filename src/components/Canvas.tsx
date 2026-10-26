@@ -941,6 +941,10 @@ export default function Canvas(props: Props) {
     const control = (e: Event) => {
       const d = (e as CustomEvent<{ action: string; x?: number; y?: number; scale?: number }>).detail;
       if (d.action === "fit") fitView();
+      if (["zoomIn", "zoomOut", "magnify"].includes(d.action)) {
+        const c = content();
+        zoomAt(d.action === "zoomOut" ? .8 : d.action === "magnify" ? 2 : 1.25, (c.x0+c.x1)/2, (c.y0+c.y1)/2);
+      }
       if (d.action === "focus") {
         const c = content(), v = view.current;
         v.s = d.scale ?? 24; v.ox = (c.x0 + c.x1) / 2 - (d.x ?? 0) * v.s; v.oy = (c.y0 + c.y1) / 2 - (d.y ?? 0) * v.s;

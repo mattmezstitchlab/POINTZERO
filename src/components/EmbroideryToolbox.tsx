@@ -43,11 +43,11 @@ export default function EmbroideryToolbox({ tool,onTool,workspace,level="interme
       <h2 className="text-[11px] font-semibold uppercase tracking-[.08em] text-white/65">{workspace==="stitch"?"Outils de suivi":"Outils de dessin"}</h2>
       <span className="text-[10px] text-white/45">À GAUCHE</span>
     </div>
-    <div className="grid grid-cols-3 gap-1.5">
+    <div className="pz-tool-rail grid grid-cols-2 gap-2">
       {basics.map(([id,name,Icon])=><button key={id} type="button" aria-pressed={tool===id}
         disabled={readOnly&&id!=="hand"} title={name} onClick={()=>onTool(id)}
-        className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[5px] border p-1 text-[10px] transition-colors disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 bg-white/[.04] text-white/80 hover:bg-white/10"}`}>
-        <Icon size={17}/><span>{name}</span>
+        className={`flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-[5px] border p-1 text-[12px] transition-colors disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 bg-white/[.04] text-white/80 hover:bg-white/10"}`}>
+        <Icon size={22} aria-hidden="true"/><span>{name}</span>
       </button>)}
     </div>
     <button type="button" aria-expanded={visibleMore} onClick={onToggleExpanded}

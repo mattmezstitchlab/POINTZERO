@@ -2097,3 +2097,16 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 .pz-embroidery-studio[data-interface-level="beginner"] :is(.pz-embroidery-left,.pz-embroidery-right) :is(.text-\[10px\],.text-\[11px\],.text-\[12px\]) { font-size: 13px; line-height: 1.5; }
 .pz-embroidery-studio .pz-embroidery-right nav button { min-height: 44px; }
 .pz-embroidery-studio .pz-panel .flex-1 { min-width: 0; }
+/* Named actions are separate from the floss rail. */
+.pz-action-bar { position:fixed;inset:auto 0 0;z-index:41;height:64px;display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 12px max(6px,env(safe-area-inset-bottom));background:#17171b;border-top:1px solid #44444c;color:#fafafa; }
+.pz-action-bar button { display:flex;align-items:center;justify-content:center;gap:9px;min-height:44px;min-width:44px;padding:8px 16px;border:1px solid #ffffff20;border-radius:10px;background:#24242b;font-size:13px;font-weight:600; }
+.pz-action-bar button:hover { background:#353540; }
+.pz-action-bar button:focus-visible {outline:3px solid #82c6ff;outline-offset:2px;}
+.pz-action-divider { width:1px;height:26px;background:#ffffff25;margin-inline:6px; }
+.pz-embroidery-studio .pz-embroidery-dmc { bottom:64px;padding-bottom:0; }
+.pz-embroidery-studio .pz-embroidery-dmc ~ .pz-surface { bottom:168px; }
+@media(max-width:639px){
+ .pz-action-bar {gap:4px;padding-inline:4px;}
+ .pz-action-bar button {padding:5px;gap:3px;font-size:10px;flex-direction:column;min-width:44px;}
+ .pz-action-divider {margin-inline:0;}
+}

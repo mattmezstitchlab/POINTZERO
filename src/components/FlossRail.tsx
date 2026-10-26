@@ -132,7 +132,7 @@ export default function FlossRail({ pattern, active, onActive, onPattern, onBrow
 
       {row && (
         <section
-          className={fullWidth ? "pz-surface thin-scroll fixed bottom-[104px] right-3 z-40 max-h-[min(55dvh,500px)] w-[min(310px,calc(100vw-24px))] overflow-y-auto p-4" : "pz-surface thin-scroll fixed right-3 bottom-[160px] z-40 max-h-[calc(100dvh-250px)] w-[300px] overflow-y-auto p-4 lg:right-auto lg:bottom-[88px] lg:left-1/2 lg:max-h-[calc(100dvh-180px)] lg:-translate-x-1/2"}
+          className={fullWidth ? "pz-surface thin-scroll fixed bottom-[168px] right-3 z-40 max-h-[min(55dvh,500px)] w-[min(310px,calc(100vw-24px))] overflow-y-auto p-4" : "pz-surface thin-scroll fixed right-3 bottom-[160px] z-40 max-h-[calc(100dvh-250px)] w-[300px] overflow-y-auto p-4 lg:right-auto lg:bottom-[88px] lg:left-1/2 lg:max-h-[calc(100dvh-180px)] lg:-translate-x-1/2"}
           aria-label={`Informations DMC ${row.code}`}
         >
           <button type="button" onClick={() => setDetail(null)} className="btn-icon absolute top-2 right-2 h-8 w-8 rounded-full bg-white/[0.07]" aria-label="Fermer">

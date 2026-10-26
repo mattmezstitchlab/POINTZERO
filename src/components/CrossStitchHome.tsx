@@ -37,6 +37,22 @@ export default function CrossStitchHome({ projectName, onOpen, onImport }: Props
           <figcaption>Une image de départ. Une palette DMC. Votre prochain ouvrage.</figcaption>
         </figure>
       </section>
+      <section className="csh-immersive" aria-labelledby="csh-immersive-title">
+        <div className="csh-immersive-copy">
+          <p className="csh-eyebrow">LE GESTE CRÉATIF, EN GRAND</p>
+          <h2 id="csh-immersive-title">Moins de fenêtres.<br/><em>Plus de création.</em></h2>
+          <p>Une toile pour dessiner. Des fils à portée de main. Les bons outils, au bon endroit.</p>
+          <div className="csh-actions"><button className="csh-primary" onClick={()=>onOpen("create")}>Entrer dans le studio <ArrowRight size={18} aria-hidden="true"/></button><button className="csh-secondary" onClick={()=>onOpen("library")}>Reprendre mon ouvrage</button></div>
+        </div>
+        <figure className="csh-studio-scene">
+          <div className="csh-scene-top"><span>× POINT ZÉRO / STUDIO</span><span>Créer · Préparer · Broder</span></div>
+          <div className="csh-scene-body"><div className="csh-scene-tools" aria-hidden="true"><span>✥<small>Main</small></span><span>×<small>Croix</small></span><span>◇<small>Gomme</small></span><span>▧<small>Sélection</small></span></div><div className="csh-scene-art"><img src="/images/grille-roses.png" alt="Motif de roses illustrant la place centrale de la grille dans le studio" width="680" height="680" loading="lazy"/><span className="csh-scene-tag">Chaque croix compte.</span></div></div>
+          <div className="csh-scene-floss" aria-hidden="true">{["#7f1936","#c84160","#e48691","#ebc2b7","#e7dfc7","#8b9d72","#435f49","#233e35"].map(color=><span key={color} style={{background:color}}/>)}</div>
+          <figcaption>Illustration de l’organisation du studio — pas une capture d’écran ni un ouvrage brodé.</figcaption>
+        </figure>
+        <div className="csh-proof-row"><article><span>01 / IMAGE</span><h3>Votre idée prend forme.</h3><p>Importez une image ou décrivez votre motif. La génération dépend du service configuré.</p></article><article><span>02 / GRILLE</span><h3>La couleur devient fil.</h3><p>Vérifiez les détails, ajustez la palette DMC et composez votre patron.</p></article><article><span>03 / OUVRAGE</span><h3>À vous de broder.</h3><p>Préparez la toile, exportez ou suivez chaque croix dans le même projet.</p></article></div>
+      </section>
+      <section className="csh-pdf-feature" aria-labelledby="csh-pdf-title"><div><p className="csh-eyebrow">LE PUZZLE PDF</p><h2 id="csh-pdf-title">Les pages se séparent.<br/>Votre patron se retrouve.</h2><p>Importez votre PDF, recomposez les cartes sur le plateau magnétique et retrouvez le patron assemblé dans votre grille. Contrôlez les raccords et les symboles avant de broder.</p><a className="csh-secondary" href="#csh-import">Importer mon patron PDF <ArrowRight size={16} aria-hidden="true"/></a></div><div className="csh-puzzle-visual" aria-hidden="true">{[1,2,3,4].map(n=><div key={n}><span>PAGE {n}</span><b>× × ×<br/>× × ×<br/>× × ×</b></div>)}</div></section>
       <section className="csh-resume" aria-label="Reprendre un ouvrage">
         <div><p className="csh-eyebrow">PROJET ACTIF SUR CET APPAREIL</p><h2>{projectName}</h2><p>Ouvrez le projet actif, ou retrouvez les ouvrages enregistrés dans votre bibliothèque locale.</p></div>
         <button className="csh-secondary" onClick={() => onOpen("stitch")}>Continuer à broder <ArrowRight size={17} aria-hidden="true"/></button>

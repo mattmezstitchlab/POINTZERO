@@ -476,6 +476,26 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(confirm).toHaveBeenCalled();
   });
 
+  it("relie la barre inférieure au zoom, au recentrage, à l’import et à l’export", async () => {
+    await mount();
+    const bar=container!.querySelector('nav[aria-label="Actions rapides du studio"]')!;
+    const send=vi.spyOn(window,"dispatchEvent");
+    const action=(text:string)=>[...bar.querySelectorAll("button")].find(b=>b.textContent===text);
+    await click(action("Loupe"));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"magnify"}}));
+    await click(bar.querySelector('[aria-label="Zoomer la grille"]'));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomIn"}}));
+    await click(bar.querySelector('[aria-label="Dézoomer la grille"]'));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomOut"}}));
+    await click(action("Recentrer"));
+    const picker=container!.querySelector<HTMLInputElement>('input[aria-label="Importer depuis la barre d’actions"]')!;
+    const choose=vi.spyOn(picker,"click");await click(action("Importer"));expect(choose).toHaveBeenCalled();
+    expect(picker.accept).toContain(".pdf");
+    await click(action("Exporter"));
+    expect(container!.textContent).toContain("PDF");
+    expect(container!.querySelectorAll('[aria-label="Exporter et partager"]')).toHaveLength(1);
+  });
+
   it("ouvre directement la préparation depuis l’accueil spécialisé", async () => {
     await mount(true);
     const prepare = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Préparer mon ouvrage"));

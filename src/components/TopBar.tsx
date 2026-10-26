@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDownToLine, ArrowLeft, Ellipsis, FolderOpen, Layers, Maximize, PanelLeft, PanelRight, Pencil, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
+import { ArrowLeft, Ellipsis, FolderOpen, Layers, PanelLeft, PanelRight, Pencil, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
 import type { Pattern } from "../lib/pattern";
 import type { ViewMode } from "./Canvas";
 
@@ -48,7 +48,7 @@ export default function TopBar(p: Props) {
       <button type="button" className={iconButton} aria-label="Annuler" title="Annuler" disabled={!p.canUndo} onClick={p.onUndo}><Undo2 size={17}/></button>
       <button type="button" className={iconButton + " hidden sm:grid"} aria-label="Rétablir" title="Rétablir" disabled={!p.canRedo} onClick={p.onRedo}><Redo2 size={17}/></button>
       <button type="button" className={iconButton + " hidden sm:grid"} aria-label="Bibliothèque" title="Bibliothèque" onClick={p.onLibrary}><FolderOpen size={17}/></button>
-      <button type="button" className={iconButton} aria-label="Exporter et partager" title="Exporter" onClick={p.onExport}><ArrowDownToLine size={17}/></button>
+
       <button type="button" className={iconButton + " hidden sm:grid"} aria-label="Réglages et aide" title="Réglages" onClick={p.onSettings}><Settings2 size={17}/></button>
       <div className="relative">
         <button type="button" className={iconButton} aria-label="Plus d'options" aria-expanded={more} onClick={() => setMore(v => !v)}><Ellipsis size={19}/></button>
@@ -61,7 +61,6 @@ export default function TopBar(p: Props) {
           {p.onDrawing && <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onDrawing?.(); setMore(false); }} aria-pressed={!!p.drawing}><Pencil size={16}/> {p.drawing ? "Masquer les outils" : "Outils de dessin"}</button>}
           <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { cycle(); setMore(false); }}><Layers size={16}/> Affichage · {p.view}</button>
           <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onSymbols(); setMore(false); }} aria-pressed={p.symbols}><Type size={16}/> Symboles</button>
-          <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onFit(); setMore(false); }}><Maximize size={16}/> Recentrer</button>
           <button className="flex min-h-10 items-center gap-2 rounded-[5px] px-2 text-left text-white/85 hover:bg-white/10" onClick={() => { p.onShare(); setMore(false); }}><Share2 size={16}/> Partager</button>
         </div>}
       </div>
