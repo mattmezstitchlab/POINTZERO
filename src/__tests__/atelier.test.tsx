@@ -7,6 +7,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import App from "../App";
+import { createPattern, ensurePalette } from "../lib/pattern";
+import { flossIndex } from "../lib/dmc";
+import { loadStored, saveStored } from "../lib/store";
 
 const saved = {
   matchMedia: globalThis.matchMedia,
@@ -36,7 +39,7 @@ let root: Root | null = null;
 let container: HTMLElement | null = null;
 async function mount(publicHome=false) {
   // Legacy atelier regression tests now use the explicit studio deep link.
-  // The real domain root is reserved for the POINTZERO public manifesto.
+  // The domain root now opens the cross-stitch welcome.
   const requested=localStorage.getItem("pointzero:workspace");
   if(!publicHome&&requested&&!window.location.search){
     window.history.replaceState(null,"","/?studio="+encodeURIComponent(requested));
@@ -68,7 +71,8 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
-  it("ouvre AIME à la racine, puis POINTZERO et l'Atelier sans perdre le projet", async () => {
+  it("conserve le parcours historique AIME sur son lien explicite", async () => {
+    window.history.replaceState(null, "", "/aime");
     localStorage.setItem("pointzero:workspace","design");
     await mount(true);
     expect(container?.querySelector('[aria-label="AIME — Architecture mère"]')).toBeTruthy();
@@ -405,15 +409,38 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
   });
 
-  it("permet de revenir au Studio multiformat sans altérer la broderie", async () => {
+  it("revient à l’accueil spécialisé et reprend le suivi sans remplacer le motif", async () => {
+    const existing = createPattern("Ouvrage à préserver", 20, 20);
+    const red = flossIndex("321");
+    existing.cross[4] = red;
+    existing.done[4] = 1;
+    ensurePalette(existing, red);
+    expect(saveStored(existing)).toBe(true);
     await mount();
-    expect(button("Créer des supports graphiques")).toBeTruthy();
-    await click(button("Créer des supports graphiques"));
-    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
-    expect(localStorage.getItem("pointzero:workspace")).toBe("design");
-    await click(button("Ouvrir l'atelier broderie"));
-    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+    const before = container?.querySelector('canvas[role="application"]')?.getAttribute("aria-label");
+    await click(button("Accueil Point Zéro"));
+    expect(container?.querySelector("h1")?.textContent).toContain("dernière croix");
+    expect(window.location.pathname).toBe("/");
+    const resume = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Continuer à broder"));
+    await click(resume);
+    expect(container?.querySelector('canvas[role="application"]')?.getAttribute("aria-label")).toBe(before);
     expect(localStorage.getItem("pointzero:workspace")).toBe("embroidery");
+    expect(category("Broder")?.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => window.dispatchEvent(new Event("pagehide")));
+    const restored = loadStored()!;
+    expect(restored.name).toBe(existing.name);
+    expect(restored.cross[4]).toBe(red);
+    expect(restored.done[4]).toBe(1);
+    expect(restored.w).toBe(20);
+  });
+
+  it("ouvre directement la préparation depuis l’accueil spécialisé", async () => {
+    await mount(true);
+    const prepare = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Préparer mon ouvrage"));
+    await click(prepare);
+    expect(category("Fils")?.getAttribute("aria-pressed")).toBe("true");
+    expect(container?.textContent).toContain("Fils & toile");
+    expect(window.location.search).toBe("?studio=embroidery");
   });
 
   it("ouvre directement la grille et la bibliothèque de motifs, sans écran d'accueil", async () => {

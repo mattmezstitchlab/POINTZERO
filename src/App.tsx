@@ -1,3 +1,4 @@
+import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
 import {writeStoredJSON} from "./lib/storageSafety";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
@@ -88,19 +89,20 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 export default function App() {
   const [boot] = useState(loadStored);
-  // The domain root opens the single AIME landing, regardless of stored projects.
+  // The root opens the cross-stitch welcome without replacing stored projects.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
     try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
-    catch { return "aime-home"; }
+    catch { return "stitch-home"; }
   });
   useEffect(()=>{
-    if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
+    if(studioMode==="stitch-home")document.title="Point Zéro — Studio de point de croix";
+    else if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
     else if(studioMode==="design")document.title="Atelier — POINTZERO";
-    else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
+    else if(!["stitch-home","aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
       document.title="Studios — POINTZERO";
     }
   },[studioMode]);
@@ -126,7 +128,7 @@ export default function App() {
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
   const switchStudio = (mode: StudioRoute) => {
-    if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+    if(mode==="stitch-home"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
@@ -135,7 +137,7 @@ export default function App() {
       if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
       navigatePage(publicPathFor(mode));
     }
-    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
+    if(!["stitch-home","aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
       try { localStorage.setItem("pointzero:workspace", mode); } catch { /* keep existing data */ }
     }
   };
@@ -221,8 +223,8 @@ export default function App() {
     if (window.location.hash === "#atelier" || window.location.hash === "#slame") {
       history.replaceState(null, "", window.location.pathname + window.location.search);
     }
-    document.title = `${P.name} | POINTZERO · Atelier`;
-  }, [P.name]);
+    if (studioMode === "embroidery") document.title = `${P.name} | POINTZERO · Atelier`;
+  }, [P.name, studioMode]);
   useEffect(() => {
     try { writeStoredJSON("point-zero:preferences", JSON.stringify(prefs),v=>!!v&&typeof v==="object"&&!Array.isArray(v)); } catch { /* Optional preferences do not block the editor. */ }
   }, [prefs]);
@@ -249,7 +251,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (workspace !== "stitch" || remote) return;
+    if (studioMode !== "embroidery" || workspace !== "stitch" || remote) return;
     let start = performance.now(), lastDone = computeStats(snapshot.current.P).totals.doneCells;
     const accrue = () => {
       if (document.hidden) { start = performance.now(); return; }
@@ -264,14 +266,14 @@ export default function App() {
     const timer = setInterval(accrue, 30000); const visible = () => { if (!document.hidden) start = performance.now(); };
     document.addEventListener("visibilitychange", visible);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
-  }, [workspace, !!remote]);
+  }, [workspace, !!remote, studioMode]);
   useEffect(() => {
-    if (workspace !== "stitch" || !prefs.keepAwake || !navigator.wakeLock) return;
+    if (studioMode !== "embroidery" || workspace !== "stitch" || !prefs.keepAwake || !navigator.wakeLock) return;
     let lock: WakeLockSentinel | null = null, stopped = false;
     const request = async () => { if (document.hidden) return; try { const result = await navigator.wakeLock.request("screen"); if (stopped) void result.release(); else lock = result; } catch { /* Power-saving policies can deny the request. */ } };
     void request(); document.addEventListener("visibilitychange", request);
     return () => { stopped = true; void lock?.release(); document.removeEventListener("visibilitychange", request); };
-  }, [workspace, prefs.keepAwake]);
+  }, [workspace, prefs.keepAwake, studioMode]);
 
   const selectionAction = (action: string) => {
     if (!selection) return;
@@ -288,6 +290,7 @@ export default function App() {
   };
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
+      if (studioMode !== "embroidery") return;
       // Rien ne doit passer pendant qu'on écrit : un raccourci déclenché dans un
       // champ mange des lettres. La cible peut ne pas être un Element.
       const cible = e.target;
@@ -302,7 +305,7 @@ export default function App() {
       else if (key === "escape") { closePanel(); setSelection(null); }
     };
     window.addEventListener("keydown", keys); return () => window.removeEventListener("keydown", keys);
-  }, [chooseTool, remote, workspace, closePanel]);
+  }, [chooseTool, remote, workspace, closePanel, studioMode]);
 
   /** Même décodeur pour tous les fichiers de projet, depuis le même atelier. */
   const openProjectFromFile = async (f: File): Promise<string | null> => {
@@ -436,6 +439,7 @@ export default function App() {
     setPanel(null);
     setShowWelcome(false);
     if (next === "create") {
+      chooseWorkspace("create");
       setRightSection("properties");
       setMobileInspectorOpen(false);
       if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) setMobileLibraryOpen(true);
@@ -455,7 +459,15 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "universal-dossier"
+  const enterStitchStudio = (entry: StitchEntry) => {
+    switchStudio("embroidery");
+    if (entry === "library") { setShowWelcome(false); setPanel("library"); }
+    else openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
+  };
+  return studioMode === "stitch-home"
+    ? <CrossStitchHome projectName={P.name} onOpen={enterStitchStudio}
+        onImport={chosen => { switchStudio("embroidery"); importAnyFile(chosen); }}/>
+    : studioMode === "universal-dossier"
     ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))} onOpenMiniSite={site=>{setMiniSiteHandoff(site);switchStudio("mini-site")}}/>
     : studioMode === "reference-dossier"
     ? <AimeDossier onNavigate={navigatePage}/>
@@ -587,7 +599,7 @@ export default function App() {
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
       onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
       onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
-    <TopBar pattern={P} onDesign={() => switchStudio("design")}
+    <TopBar pattern={P} onDesign={() => switchStudio("stitch-home")}
       onToggleLeft={() => { setMobileLibraryOpen(v=>!v); setMobileInspectorOpen(false); }}
       onToggleRight={() => { setMobileInspectorOpen(v=>!v); setMobileLibraryOpen(false); }}
       onCreate={() => openCategory("create")}

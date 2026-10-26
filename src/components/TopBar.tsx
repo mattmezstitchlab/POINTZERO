@@ -34,7 +34,7 @@ export default function TopBar(p: Props) {
   const cycle = () => p.onView(views[(views.indexOf(p.view) + 1) % views.length]);
   return <header className="pz-embroidery-header fixed inset-x-0 top-0 z-40 flex h-[58px] items-center justify-between gap-2 border-b border-white/15 bg-[#09090b] px-3 text-white" aria-label="En-tête de l'atelier">
     <div className="flex min-w-0 shrink-0 items-center gap-2">
-      {p.onDesign && <button type="button" onClick={p.onDesign} aria-label="Créer des supports graphiques" title="Retour aux studios"
+      {p.onDesign && <button type="button" onClick={p.onDesign} aria-label="Accueil Point Zéro" title="Accueil point de croix"
         className={iconButton + " border border-white/20"}><ArrowLeft size={17}/></button>}
       <button type="button" onClick={p.onCreate} aria-label="POINTZERO : créer un motif"
         className="min-w-0 text-left text-[13px] font-semibold tracking-tight text-white hover:text-white/80">
