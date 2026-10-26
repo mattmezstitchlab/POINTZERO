@@ -1,6 +1,8 @@
 {
+  "functions": {"api/pattern-generate.mjs": {"maxDuration": 60}},
   "rewrites": [
     {"source": "/pointzero", "destination": "/index.html"},
+    {"source": "/aime", "destination": "/index.html"},
     {"source": "/atelier", "destination": "/index.html"},
     {"source": "/le-monde-aime", "destination": "/index.html"},
     {"source": "/univers", "destination": "/index.html"},

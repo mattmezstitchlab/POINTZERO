@@ -1,3 +1,7 @@
+import StudioActionBar from "./components/StudioActionBar";
+import InterfaceLevelBar from "./components/InterfaceLevelBar";
+import { readInterfaceLevel, INTERFACE_LEVEL_KEY, type InterfaceLevel } from "./lib/interfaceLevel";
+import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
 import {writeStoredJSON} from "./lib/storageSafety";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
@@ -88,19 +92,20 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 export default function App() {
   const [boot] = useState(loadStored);
-  // The domain root opens the single AIME landing, regardless of stored projects.
+  // The root opens the cross-stitch welcome without replacing stored projects.
   // Explicit deep links continue to open their original studios without clearing data.
   const [studioMode, setStudioMode] = useState<StudioRoute>(() => {
     try { return entryStudio(window.location.search,window.location.hash,window.location.pathname); }
-    catch { return "aime-home"; }
+    catch { return "stitch-home"; }
   });
   useEffect(()=>{
-    if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
+    if(studioMode==="stitch-home")document.title="Point Zéro — Studio de point de croix";
+    else if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
     else if(studioMode==="design")document.title="Atelier — POINTZERO";
-    else if(!["aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
+    else if(!["stitch-home","aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
       document.title="Studios — POINTZERO";
     }
   },[studioMode]);
@@ -126,7 +131,7 @@ export default function App() {
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
   const switchStudio = (mode: StudioRoute) => {
-    if(mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+    if(mode==="stitch-home"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
@@ -135,7 +140,7 @@ export default function App() {
       if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
       navigatePage(publicPathFor(mode));
     }
-    if(!["aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
+    if(!["stitch-home","aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
       try { localStorage.setItem("pointzero:workspace", mode); } catch { /* keep existing data */ }
     }
   };
@@ -146,7 +151,8 @@ export default function App() {
   const [promptText, setPromptText] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const subjectMove = useRef<{ scene: SubjectScene; base: Pattern; id: string; x: number; y: number } | null>(null);
-  const [showDrawingTools, setShowDrawingTools] = useState(false);
+  const [interfaceLevel, setInterfaceLevel] = useState(readInterfaceLevel);
+  const [showDrawingTools, setShowDrawingTools] = useState(() => readInterfaceLevel() === "expert");
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [rightSection, setRightSection] = useState<RightSection>("properties");
@@ -165,7 +171,7 @@ export default function App() {
   // Les outils sont de véritables panneaux, comme dans Photo.
   // Canvas conserve son moteur plein écran mais centre/ajuste le patron
   // dans la surface libre, entre les panneaux et la bande DMC.
-  const insets: Insets = { top: 58, right: wide ? 260 : 0, bottom: 94, left: desktop ? 252 : 0 };
+  const insets: Insets = { top: 110, right: wide ? 260 : 0, bottom: 158, left: desktop ? 252 : 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -209,11 +215,23 @@ export default function App() {
     if (!remote) { setInventory(values); try { writeInventory(values); } catch { notify("Stock non sauvegardé : exportez votre JSON."); } }
     setPattern({ ...P, supplies: { ...P.supplies, [code]: supply } }, true);
   };
+  const openingPattern = useRef(false);
   const loadPattern = async (p: Pattern) => {
-    if (!remote) { try { await saveLibrary(store.present, true); } catch { /* The explicit file backup remains available. */ } }
-    const next = { ...p, supplies: { ...p.supplies, ...inventory } };
-    setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
-    setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setShowWelcome(false);
+    if (openingPattern.current) { notify("Un ouvrage est déjà en cours d’ouverture."); return false; }
+    openingPattern.current = true;
+    try {
+      if (!remote) {
+        try { await saveLibrary(store.present, true); }
+        catch {
+          notify("Ouverture bloquée : impossible de conserver le projet actif. Exportez son JSON avant de réessayer.");
+          return false;
+        }
+      }
+      const next = { ...p, supplies: { ...p.supplies, ...inventory } };
+      setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
+      setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setShowWelcome(false);
+      return true;
+    } finally { openingPattern.current = false; }
   };
 
   useEffect(() => {
@@ -221,8 +239,8 @@ export default function App() {
     if (window.location.hash === "#atelier" || window.location.hash === "#slame") {
       history.replaceState(null, "", window.location.pathname + window.location.search);
     }
-    document.title = `${P.name} | POINTZERO · Atelier`;
-  }, [P.name]);
+    if (studioMode === "embroidery") document.title = `${P.name} | POINTZERO · Atelier`;
+  }, [P.name, studioMode]);
   useEffect(() => {
     try { writeStoredJSON("point-zero:preferences", JSON.stringify(prefs),v=>!!v&&typeof v==="object"&&!Array.isArray(v)); } catch { /* Optional preferences do not block the editor. */ }
   }, [prefs]);
@@ -249,7 +267,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (workspace !== "stitch" || remote) return;
+    if (studioMode !== "embroidery" || workspace !== "stitch" || remote) return;
     let start = performance.now(), lastDone = computeStats(snapshot.current.P).totals.doneCells;
     const accrue = () => {
       if (document.hidden) { start = performance.now(); return; }
@@ -264,14 +282,14 @@ export default function App() {
     const timer = setInterval(accrue, 30000); const visible = () => { if (!document.hidden) start = performance.now(); };
     document.addEventListener("visibilitychange", visible);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
-  }, [workspace, !!remote]);
+  }, [workspace, !!remote, studioMode]);
   useEffect(() => {
-    if (workspace !== "stitch" || !prefs.keepAwake || !navigator.wakeLock) return;
+    if (studioMode !== "embroidery" || workspace !== "stitch" || !prefs.keepAwake || !navigator.wakeLock) return;
     let lock: WakeLockSentinel | null = null, stopped = false;
     const request = async () => { if (document.hidden) return; try { const result = await navigator.wakeLock.request("screen"); if (stopped) void result.release(); else lock = result; } catch { /* Power-saving policies can deny the request. */ } };
     void request(); document.addEventListener("visibilitychange", request);
     return () => { stopped = true; void lock?.release(); document.removeEventListener("visibilitychange", request); };
-  }, [workspace, prefs.keepAwake]);
+  }, [workspace, prefs.keepAwake, studioMode]);
 
   const selectionAction = (action: string) => {
     if (!selection) return;
@@ -288,6 +306,7 @@ export default function App() {
   };
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
+      if (studioMode !== "embroidery") return;
       // Rien ne doit passer pendant qu'on écrit : un raccourci déclenché dans un
       // champ mange des lettres. La cible peut ne pas être un Element.
       const cible = e.target;
@@ -302,7 +321,7 @@ export default function App() {
       else if (key === "escape") { closePanel(); setSelection(null); }
     };
     window.addEventListener("keydown", keys); return () => window.removeEventListener("keydown", keys);
-  }, [chooseTool, remote, workspace, closePanel]);
+  }, [chooseTool, remote, workspace, closePanel, studioMode]);
 
   /** Même décodeur pour tous les fichiers de projet, depuis le même atelier. */
   const openProjectFromFile = async (f: File): Promise<string | null> => {
@@ -311,7 +330,7 @@ export default function App() {
       if (f.size > 25 * 1024 * 1024) throw new Error("Ce projet dépasse 25 Mo.");
       const p = /\.oxs$/i.test(f.name) ? fromOxs(await readTextFile(f)) : await readProjectFile(f);
       if (!p) throw new Error("Projet invalide ou format JSON incompatible. Le fichier original reste intact.");
-      await loadPattern(p);
+      if (!await loadPattern(p)) return "Ouverture bloquée : ouvrage précédent conservé.";
       setWorkspace("create");
       setView("pattern");
       setTool("cross");
@@ -338,6 +357,7 @@ export default function App() {
   };
 
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const actionImportRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const openComposition = () => { if (!remote) { closePanel(); setCompositionInput(P); } };
   const onRemote = useCallback((p: Pattern | null) => {
@@ -436,6 +456,7 @@ export default function App() {
     setPanel(null);
     setShowWelcome(false);
     if (next === "create") {
+      chooseWorkspace("create");
       setRightSection("properties");
       setMobileInspectorOpen(false);
       if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) setMobileLibraryOpen(true);
@@ -446,6 +467,16 @@ export default function App() {
     if (next === "compose") setTool("hand");
     openRightPanel(next === "stitch" ? "follow" : next === "threads" ? "prepare" : "edit");
   };
+  const useImportedPattern = async (p: Pattern) => {
+    try {
+      if (!await loadPattern(p)) return false;
+      setWorkspace("create"); setView("flat"); setTool("hand");
+      setActiveCategory("compose"); setRightSection("properties");
+      setAutoImage(null); setPromptOpen(false); setPdfFile(null);
+      notify("Motif ouvert dans la grille. Composer / décomposer reste disponible dans Dessiner.");
+      return true;
+    } catch { return false; }
+  };
   const createActions = {
     prompt: promptText, onPrompt: setPromptText,
     onGenerate: () => setPromptOpen(true),
@@ -455,7 +486,15 @@ export default function App() {
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" ? "edit" : rightSection;
-  return studioMode === "universal-dossier"
+  const enterStitchStudio = (entry: StitchEntry) => {
+    switchStudio("embroidery");
+    if (entry === "library") { setShowWelcome(false); setPanel("library"); }
+    else openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
+  };
+  return studioMode === "stitch-home"
+    ? <CrossStitchHome projectName={P.name} onOpen={enterStitchStudio}
+        onImport={chosen => { switchStudio("embroidery"); importAnyFile(chosen); }}/>
+    : studioMode === "universal-dossier"
     ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))} onOpenMiniSite={site=>{setMiniSiteHandoff(site);switchStudio("mini-site")}}/>
     : studioMode === "reference-dossier"
     ? <AimeDossier onNavigate={navigatePage}/>
@@ -559,7 +598,7 @@ export default function App() {
         onMiniSite={site=>{
           setMiniSiteHandoff(site);switchStudio("mini-site");
         }} />
-    : <div className={`pz-atelier pz-embroidery-studio fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
+    : <div data-interface-level={interfaceLevel} className={`pz-atelier pz-embroidery-studio fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#faf9f7] ${prefs.largeText ? "large-text" : ""} ${prefs.highContrast ? "high-contrast" : ""}`}>
     <input
       ref={imageInputRef}
       type="file"
@@ -580,6 +619,11 @@ export default function App() {
         if (chosen) void openProjectFromFile(chosen);
       }}
     />
+    <input ref={actionImportRef} type="file" className="sr-only" aria-label="Importer depuis la barre d’actions" accept="image/png,image/jpeg,image/webp,.pdf,.json,.oxs" onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)importAnyFile(selected);}}/>
+    {!pdfFile && !promptOpen && !compositionInput && !file && !autoImage && <StudioActionBar onImport={()=>actionImportRef.current?.click()} onExport={()=>setPanel("export")}
+      onZoom={direction=>window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:direction==="in"?"zoomIn":"zoomOut"}}))}
+      onMagnify={()=>window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:"magnify"}}))}
+      onFit={()=>setFitKey(k=>k+1)}/> }
     <Canvas pattern={P} tool={remote ? "hand" : tool} color={color} view={view} symbols={symbols} highlightActive={workspace === "stitch"} insets={insets} fitKey={fitKey} onlyActive={prefs.onlyActive} highContrast={prefs.highContrast} pencilOnly={prefs.pencilOnly} symmetry={prefs.symmetry} annotation={prefs.annotation} readOnly={!!remote} selection={selection} halfDirection={prefs.halfDirection}
       onSelection={setSelection} onBegin={() => { if (!remote) dispatch({ type: "begin" }); }}
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
@@ -587,7 +631,12 @@ export default function App() {
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
       onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
       onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
-    <TopBar pattern={P} onDesign={() => switchStudio("design")}
+    <InterfaceLevelBar value={interfaceLevel} onChange={(value: InterfaceLevel) => {
+      setInterfaceLevel(value);
+      setShowDrawingTools(value === "expert");
+      try { localStorage.setItem(INTERFACE_LEVEL_KEY, value); } catch { notify("Affichage changé pour cette session uniquement."); }
+    }}/>
+    <TopBar pattern={P} onDesign={() => switchStudio("stitch-home")}
       onToggleLeft={() => { setMobileLibraryOpen(v=>!v); setMobileInspectorOpen(false); }}
       onToggleRight={() => { setMobileInspectorOpen(v=>!v); setMobileLibraryOpen(false); }}
       onCreate={() => openCategory("create")}
@@ -601,12 +650,11 @@ export default function App() {
       onSettings={() => openRightPanel("settings")}
       onShare={() => { setPanel("share"); }}
       saving={saving} drawing={showDrawingTools}
-      onAdvanced={() => openCategory("compose")}
-      onDrawing={() => { setTool(showDrawingTools ? "hand" : "cross"); setShowDrawingTools(!showDrawingTools); setActiveCategory("compose"); setMobileInspectorOpen(false); if (window.matchMedia("(max-width: 1023px)").matches) setMobileLibraryOpen(true); }} />
-    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[58px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
+      onAdvanced={() => openCategory("compose")} />
+    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[110px] bottom-[158px] z-20 bg-black/35 lg:bottom-[158px] xl:hidden"
       aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
     <aside aria-label="Bibliothèque et outils de broderie"
-      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[58px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      className={`pz-embroidery-left fixed bottom-[158px] left-0 top-[110px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
       <CategoryBar docked active={activeCategory} onChoose={openCategory} />
       {activeCategory === "create" ? (
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="Créer un nouveau motif">
@@ -615,7 +663,7 @@ export default function App() {
         </div>
       ) : <>
         <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
-          expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
+          level={interfaceLevel} expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
         {activeCategory === "compose" ? (
           <MotifLibrary docked readOnly={!!remote}
             onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileLibraryOpen(false); }}
@@ -631,14 +679,13 @@ export default function App() {
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
-      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
-      <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
+      className={'pz-embroidery-right thin-scroll fixed bottom-[158px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
+      <nav className="sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
         {([
-          ["properties","Objet"],["edit","Dessin"],["prepare","Fils"],
-          ["follow","Suivi"],["settings","Réglages"],
+          ["properties","Objet"],["settings","Réglages"],
         ] as [RightSection,string][]).map(([id,label]) =>
           <button key={id} type="button" aria-pressed={rightSection===id}
-            onClick={() => id==="edit" ? openCategory("compose") : id==="prepare" ? openCategory("threads") : id==="follow" ? openCategory("stitch") : openRightPanel(id)}
+            onClick={() => openRightPanel(id)}
             className={rightSection===id ? "min-h-9 rounded-[5px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
       </nav>
       {rightSection === "properties" ? (
@@ -657,10 +704,10 @@ export default function App() {
             }[contextSection]}</h2>
             <p className="mt-1 truncate text-[11px] text-white/50">{P.name}</p>
           </div>
-          <WorkspacePanel key={contextSection} inline open onClose={() => openRightPanel("properties")} pattern={P} onSet={setPattern}
+          <WorkspacePanel key={contextSection} level={interfaceLevel} inline open onClose={() => openRightPanel("properties")} pattern={P} onSet={setPattern}
             actions={panelActions} prefs={prefs} onPrefs={setPrefs} color={color}
             onColor={setColor} workspace={workspace} section={contextSection}
-            extraActions={contextSection === "edit" ? <button type="button" className="btn-tinted" disabled={!!remote} onClick={openComposition}>Composition intelligente · aperçu</button> : undefined} />
+            extraActions={contextSection === "edit" ? <button type="button" className="btn-tinted" disabled={!!remote} onClick={openComposition}>Composer / décomposer le motif</button> : undefined} />
         </div>
       )}
     </aside>
@@ -671,41 +718,31 @@ export default function App() {
     <LibrarySheet open={panel === "library"} onClose={closePanel} onLoad={(p) => void loadPattern(p)} onNew={() => panelActions.new(80, 80)} inventory={inventory} />
     {autoImage && <AutomaticImageImport file={autoImage}
       onCancel={() => setAutoImage(null)}
-      onReady={p => { setAutoImage(null); setCompositionInput(p); setWorkspace("create"); setView("pattern"); }}/> }
+      onReady={async p => { if (!await useImportedPattern(p)) throw new Error("Projet précédent conservé : exportez son JSON puis réessayez."); }}/> }
     {file && <ImportStudio file={file} onClose={() => setFile(null)} onImport={(p) => {
-      setFile(null); setWorkspace("create"); setView("pattern");
-      setCompositionInput(p);
-      notify("Source image analysée. Vérifiez les propositions de composition avant validation.");
+      void useImportedPattern(p);
     }} />}
     {pdfFile && (
       <ErrorBoundary label="La préparation du PDF" onReset={() => setPdfFile(null)}>
         <PdfPrep
           file={pdfFile}
+          integrated
           onClose={() => setPdfFile(null)}
-          onImport={(p) => {
-            setPdfFile(null);
-            setWorkspace("create");
-            setView("pattern");
-            void loadPattern(p);
-            notify("Patron PDF ouvert directement dans la grille. La composition reste facultative.");
-          }}
+          onImport={p => { void useImportedPattern(p); }}
         />
       </ErrorBoundary>
     )}
-    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={(p) => {
-      setPromptOpen(false); setWorkspace("create"); setView("pattern");
-      setCompositionInput(p);
-      notify("Image générée. Choisissez le niveau de composition avant d'utiliser le motif.");
-    }} />}
+    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={p => { void useImportedPattern(p); }} embedded /> }
     {compositionInput && (
       <ErrorBoundary label="Le moteur de composition" onReset={() => setCompositionInput(null)}>
         <CompositionStudio
           pattern={compositionInput}
+          embedded
           onCancel={() => setCompositionInput(null)}
-          onUse={p => {
+          onUse={async p => {
+            if (!await loadPattern(p)) return;
             setCompositionInput(null);
             setWorkspace("create"); setView("pattern");
-            void loadPattern(p);
             notify("Motif composé. La source reste dans le JSON ; contrôlez les détails avant de broder.");
           }}
         />

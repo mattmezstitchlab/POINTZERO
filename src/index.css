@@ -2059,3 +2059,54 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   .pz-guided-lens { transition: none; }
 }
+
+/* Cross-stitch display levels: presentation only, never pattern data. */
+.pz-level-bar {
+  position: fixed; inset: 58px 0 auto; height: 52px; z-index: 39;
+  display: flex; align-items: center; gap: 12px; padding: 4px 12px;
+  background: #151518; color: #eeeef2; border-bottom: 1px solid #424248;
+  font-size: 13px; min-width: 0;
+}
+.pz-level-bar select { min-height: 44px; min-width: 0; max-width: 180px; background: #242428; color: white; border: 1px solid #777780; border-radius: 5px; padding: 4px 10px; }
+.pz-level-bar #pz-level-help { font-size: 12px; color: #ceced6; }
+.pz-embroidery-studio :is(button,select,input,textarea,a):focus-visible { outline: 3px solid #82c6ff; outline-offset: 2px; }
+.pz-embroidery-studio .pz-embroidery-left { overflow-y: auto; max-width: 100vw; }
+.pz-embroidery-studio .pz-embroidery-right { max-width: 100vw; overflow-x: hidden; }
+.pz-embroidery-studio .pz-panel { container-type: inline-size; min-width: 0; }
+.pz-embroidery-studio .pz-panel :is(label,fieldset,.grid > *) { min-width: 0; }
+.pz-embroidery-studio .pz-panel :is(input,select,textarea) { min-width: 0; max-width: 100%; }
+.pz-embroidery-studio .pz-panel :is(button,.menu-row) { min-height: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.pz-embroidery-studio .pz-panel summary { min-height: 44px; }
+.pz-embroidery-studio .pz-panel summary > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.pz-embroidery-studio .pz-embroidery-header button { min-height: 44px; min-width: 44px; }
+.pz-embroidery-studio .pz-embroidery-categories button { min-height: 44px; }
+@container (max-width: 240px) {
+  .pz-embroidery-inline .grid-cols-2 { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 639px) {
+  .pz-level-bar #pz-level-help { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+  .pz-embroidery-header { gap: 0; padding-inline: 4px; }
+  .pz-embroidery-header > div:first-child { flex-shrink: 1; gap: 2px; }
+  .pz-embroidery-header > div:first-child > button:not([aria-label="Accueil Point Zéro"]) { display: none; }
+  .pz-embroidery-header [aria-label="Annuler"] { display: none; }
+  .pz-embroidery-header [aria-label="Options d’affichage"] { max-width: calc(100vw - 16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pz-embroidery-studio * { transition: none !important; animation: none !important; }
+}
+.pz-embroidery-studio[data-interface-level="beginner"] :is(.pz-embroidery-left,.pz-embroidery-right) :is(.text-\[10px\],.text-\[11px\],.text-\[12px\]) { font-size: 13px; line-height: 1.5; }
+.pz-embroidery-studio .pz-embroidery-right nav button { min-height: 44px; }
+.pz-embroidery-studio .pz-panel .flex-1 { min-width: 0; }
+/* Named actions are separate from the floss rail. */
+.pz-action-bar { position:fixed;inset:auto 0 0;z-index:41;height:64px;display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 12px max(6px,env(safe-area-inset-bottom));background:#17171b;border-top:1px solid #44444c;color:#fafafa; }
+.pz-action-bar button { display:flex;align-items:center;justify-content:center;gap:9px;min-height:44px;min-width:44px;padding:8px 16px;border:1px solid #ffffff20;border-radius:10px;background:#24242b;font-size:13px;font-weight:600; }
+.pz-action-bar button:hover { background:#353540; }
+.pz-action-bar button:focus-visible {outline:3px solid #82c6ff;outline-offset:2px;}
+.pz-action-divider { width:1px;height:26px;background:#ffffff25;margin-inline:6px; }
+.pz-embroidery-studio .pz-embroidery-dmc { bottom:64px;padding-bottom:0; }
+.pz-embroidery-studio .pz-embroidery-dmc ~ .pz-surface { bottom:168px; }
+@media(max-width:639px){
+ .pz-action-bar {gap:4px;padding-inline:4px;}
+ .pz-action-bar button {padding:5px;gap:3px;font-size:10px;flex-direction:column;min-width:44px;}
+ .pz-action-divider {margin-inline:0;}
+}

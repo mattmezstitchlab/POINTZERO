@@ -7,11 +7,12 @@
  * lisse, plus le motif final a de « détail réaliste ».
  */
 
-export type StyleId = "reeliste" | "botanique" | "animalier" | "portrait" | "paysage" | "geometrique" | "minimal";
+export type StyleId = "description" | "reeliste" | "botanique" | "animalier" | "portrait" | "paysage" | "geometrique" | "minimal";
 export type DetailId = "delicat" | "equilibre" | "tres";
 export type FormatId = "carre" | "portrait" | "paysage";
 
 export const STYLES: { id: StyleId; label: string; desc: string }[] = [
+  { id: "description", label: "Ma description", desc: "" },
   { id: "reeliste", label: "Réaliste", desc: "photorealistic painterly illustration, highly detailed, lifelike, rich smooth color gradients, fine intricate detail, realistic textures, professional, maximum detail, smooth shading" },
   { id: "botanique", label: "Botanique", desc: "detailed botanical watercolor illustration, delicate detailed botanical art, smooth natural color gradients, rich color, elegant, detailed foliage and petals, smooth painterly" },
   { id: "animalier", label: "Animalier", desc: "detailed wildlife animal illustration, lifelike, fine fur and feather detail, natural rich colors, smooth gradients, professional wildlife art, highly detailed" },
@@ -43,11 +44,6 @@ export interface PromptInput {
   format: FormatId;
 }
 
-const STOP_WORDS = new Set([
-  "un", "une", "des", "de", "du", "sur", "dans", "avec", "et", "au", "aux", "la", "le", "les", "pour",
-  "the", "a", "an", "on", "in", "with", "and", "of",
-]);
-
 export function parseComposition(source: string) {
   const s = source.trim();
   const fr = /\b(.+?)\s+sur\s+(?:un|une|le|la|l['’])\s+(.+)/i.exec(s);
@@ -68,33 +64,21 @@ export function buildPrompt(i: PromptInput): string {
   const second = (i.second || "").trim();
   const relation = (i.relation || "").trim();
 
-  let subject: string;
-  if (second) subject = `${main}, with ${second}${relation ? `, ${relation}` : ""}`;
-  else subject = main;
-
-  const tokens = i.subject
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .match(/[a-z0-9-]{3,}/g) ?? [];
-  const focus = [...new Set(tokens.filter((t) => !STOP_WORDS.has(t)))].slice(0, 8);
-  const focusLine = focus.length > 1 ? `Make sure these elements are all clearly present: ${focus.join(", ")}.` : "";
-
   return [
-    `A highly detailed ${style} of ${subject},`,
-    detail,
-    "rich smooth color gradients, rich color depth, crisp clean shapes, crisp fine detail, professional, smooth shading,",
-    focusLine,
-    "centered single subject, flat front view, plain solid white background, no shading on the background,",
-    "no text, no words, no letters, no numbers, no watermark, no signature, no border, no hoop, no hands, no table, no room, no background clutter, no extra objects, no cross-stitch texture, no stitching texture, no grid",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    "Create a source illustration for a cross-stitch pattern.",
+    `User description (preserve all subjects, colours, relationships, background and requested lettering): ${i.subject.trim()}`,
+    main && main !== i.subject.trim() ? `User-specified main subject: ${main}.` : "",
+    second ? `Also include: ${second}.` : "",
+    relation ? `User-specified relationship: ${relation}.` : "",
+    style ? `Optional visual style, subordinate to the user description: ${style}.` : "",
+    `Detail preference, subordinate to the description: ${detail}.`,
+    "Do not add a grid, simulated stitch texture or a watermark unless explicitly requested. Do not omit requested elements.",
+  ].filter(Boolean).join(" ");
 }
 
 export function pollinationsUrl(prompt: string, w: number, h: number, seed: number): string {
   const p = encodeURIComponent(prompt);
-  return `https://image.pollinations.ai/prompt/${p}?width=${w}&height=${h}&seed=${seed}&model=flux&nologo=true&enhance=true&safe=true`;
+  return `https://image.pollinations.ai/prompt/${p}?width=${w}&height=${h}&seed=${seed}&model=flux&nologo=true&enhance=false&safe=true`;
 }
 
 /** Hauteur de grille qui conserve l'aspect du format, arrondie à un nombre pair. */
@@ -102,4 +86,13 @@ export function gridHeightFor(base: number, format: FormatId): number {
   const f = FORMATS.find((f) => f.id === format) ?? FORMATS[0];
   const h = Math.round((base * f.h) / f.w / 2) * 2;
   return Math.max(20, Math.min(400, h));
+}
+
+/** Explicit colour limits are technical constraints, not image-provider hints. */
+export function requestedColorLimit(text: string): number | null {
+  const match = /\b(\d{1,3})\s*(?:couleurs?|colors?|fils?)\b/i.exec(text);
+  if (!match) return null;
+  const value = Number(match[1]);
+  if (value < 1 || value > 64) throw new Error("Choisissez entre 1 et 64 couleurs pour ce studio.");
+  return value;
 }

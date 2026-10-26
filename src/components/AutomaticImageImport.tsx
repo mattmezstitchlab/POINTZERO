@@ -1,18 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileImage, LoaderCircle, X } from "lucide-react";
 import { asyncRasterToCells, loadImage } from "../lib/convert";
 import { createPattern, ensurePalette, type Pattern } from "../lib/pattern";
 
 /**
  * Simple entry point. Shares image import/quantisation with ImportStudio,
- * does not change any project until Composer confirms a version.
+ * hands the result to the studio, which archives the previous project first.
  * The existing ImportStudio remains available for manual calibration.
  */
 export default function AutomaticImageImport({ file, onCancel, onReady }: {
-  file:File; onCancel:()=>void; onReady:(pattern:Pattern)=>void;
+  file:File; onCancel:()=>void; onReady:(pattern:Pattern)=>void | Promise<void>;
 }) {
   const [status,setStatus]=useState("Lecture de l'image…");
   const [error,setError]=useState("");
+  const readyRef = useRef(onReady);
+  readyRef.current = onReady;
   useEffect(()=>{
     let active=true;
     const run=async()=>{
@@ -38,13 +40,13 @@ export default function AutomaticImageImport({ file, onCancel, onReady }: {
         p.cross=result.cross;
         for(const idx of result.palette)ensurePalette(p,idx);
         p.provenance={kind:"image",source:file.name,author:"",personalOnly:true,license:"Fichier importé : vérifier vos droits avant redistribution."};
-        p.notes="Import automatique en couleurs DMC. La composition analyse ce motif avant validation ; les détails réels doivent être vérifiés.";
-        onReady(p);
+        p.notes="Import automatique en couleurs DMC. Vérifiez les détails dans la grille ; la composition reste facultative.";
+        await readyRef.current(p);
       }catch(e){if(active)setError(e instanceof Error?e.message:"Conversion impossible.");}
     };
     void run();
     return()=>{active=false;};
-  },[file,onReady]);
+  },[file]);
   return <div className="fixed inset-0 z-[74] grid place-items-center bg-black/85 p-4 text-white" role="dialog" aria-modal="true" aria-label="Importation automatique de l'image">
     <section className="w-full max-w-md space-y-4 rounded-lg border border-white/15 bg-[#19191d] p-6">
       <div className="flex items-center justify-between"><FileImage size={22}/><button type="button" onClick={onCancel} aria-label="Annuler l'import"><X size={18}/></button></div>

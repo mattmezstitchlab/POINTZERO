@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { entryStudio, isStudioRoute } from "../lib/entryNavigation";
 
 describe("POINTZERO — navigation publique non destructive",()=>{
- it("affiche toujours AIME sur le domaine racine",()=>{
-  expect(entryStudio("","")).toBe("aime-home");
-  expect(entryStudio("?utm_source=share","")).toBe("aime-home");
+ it("affiche le studio point de croix à la racine, et conserve AIME explicitement",()=>{
+  expect(entryStudio("","")).toBe("stitch-home");
+  expect(entryStudio("?utm_source=share","")).toBe("stitch-home");
+  expect(entryStudio("","","/aime")).toBe("aime-home");
+  expect(entryStudio("?studio=aime-home","")).toBe("aime-home");
   expect(entryStudio("?page=manifest","")).toBe("manifest");
   expect(entryStudio("","","/pointzero")).toBe("manifest");
   expect(entryStudio("","","/atelier")).toBe("design");
@@ -24,8 +26,8 @@ describe("POINTZERO — navigation publique non destructive",()=>{
   expect(entryStudio("?studio=ripplecircle","")).toBe("ripplecircle");
  });
  it("ne permet pas une navigation par route non reconnue ou par accès direct à l'administration du manifeste",()=>{
-  expect(entryStudio("?studio=not-a-real-studio","")).toBe("aime-home");
-  expect(entryStudio("?studio=manifest-admin","")).toBe("aime-home");
+  expect(entryStudio("?studio=not-a-real-studio","")).toBe("stitch-home");
+  expect(entryStudio("?studio=manifest-admin","")).toBe("stitch-home");
   expect(isStudioRoute("not-a-real-studio")).toBe(false);
  });
 });

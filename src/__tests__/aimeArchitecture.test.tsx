@@ -16,7 +16,8 @@ async function open(path:string,page:"aime-home"|"studio-detail"|"universe-index
 }
 describe("AIME — maison mère et dossiers reliés",()=>{
  it("préserve les pages POINTZERO et les anciens liens de l'association",()=>{
-  expect(entryStudio("","","/")).toBe("aime-home");
+  expect(entryStudio("","","/")).toBe("stitch-home");
+  expect(entryStudio("","","/aime")).toBe("aime-home");
   expect(entryStudio("","","/pointzero")).toBe("manifest");
   expect(entryStudio("","","/atelier")).toBe("design");
   expect(entryStudio("?studio=embroidery","","/atelier")).toBe("embroidery");

@@ -7,7 +7,12 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import App from "../App";
+import { createPattern, ensurePalette } from "../lib/pattern";
+import { flossIndex } from "../lib/dmc";
+import { loadStored, saveStored } from "../lib/store";
 
+// Navigation tests isolate persistence; failure handling is covered by unifiedImport.
+vi.mock("../lib/library", async importOriginal => ({...await importOriginal<typeof import("../lib/library")>(),saveLibrary:vi.fn().mockResolvedValue(undefined)}));
 const saved = {
   matchMedia: globalThis.matchMedia,
   ResizeObserver: globalThis.ResizeObserver,
@@ -36,7 +41,7 @@ let root: Root | null = null;
 let container: HTMLElement | null = null;
 async function mount(publicHome=false) {
   // Legacy atelier regression tests now use the explicit studio deep link.
-  // The real domain root is reserved for the POINTZERO public manifesto.
+  // The domain root now opens the cross-stitch welcome.
   const requested=localStorage.getItem("pointzero:workspace");
   if(!publicHome&&requested&&!window.location.search){
     window.history.replaceState(null,"","/?studio="+encodeURIComponent(requested));
@@ -68,7 +73,8 @@ afterEach(async () => {
   localStorage.clear();
 });
 describe("POINTZERO : atelier unique sans assistant", () => {
-  it("ouvre AIME à la racine, puis POINTZERO et l'Atelier sans perdre le projet", async () => {
+  it("conserve le parcours historique AIME sur son lien explicite", async () => {
+    window.history.replaceState(null, "", "/aime");
     localStorage.setItem("pointzero:workspace","design");
     await mount(true);
     expect(container?.querySelector('[aria-label="AIME — Architecture mère"]')).toBeTruthy();
@@ -405,15 +411,100 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
   });
 
-  it("permet de revenir au Studio multiformat sans altérer la broderie", async () => {
+  it("revient à l’accueil spécialisé et reprend le suivi sans remplacer le motif", async () => {
+    const existing = createPattern("Ouvrage à préserver", 20, 20);
+    const red = flossIndex("321");
+    existing.cross[4] = red;
+    existing.done[4] = 1;
+    ensurePalette(existing, red);
+    expect(saveStored(existing)).toBe(true);
     await mount();
-    expect(button("Créer des supports graphiques")).toBeTruthy();
-    await click(button("Créer des supports graphiques"));
-    expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
-    expect(localStorage.getItem("pointzero:workspace")).toBe("design");
-    await click(button("Ouvrir l'atelier broderie"));
-    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+    const before = container?.querySelector('canvas[role="application"]')?.getAttribute("aria-label");
+    await click(button("Accueil Point Zéro"));
+    expect(container?.querySelector("h1")?.textContent).toContain("dernière croix");
+    expect(window.location.pathname).toBe("/");
+    const resume = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Continuer à broder"));
+    await click(resume);
+    expect(container?.querySelector('canvas[role="application"]')?.getAttribute("aria-label")).toBe(before);
     expect(localStorage.getItem("pointzero:workspace")).toBe("embroidery");
+    expect(category("Broder")?.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => window.dispatchEvent(new Event("pagehide")));
+    const restored = loadStored()!;
+    expect(restored.name).toBe(existing.name);
+    expect(restored.cross[4]).toBe(red);
+    expect(restored.done[4]).toBe(1);
+    expect(restored.w).toBe(20);
+  });
+
+  it("change les trois affichages sans altérer points, palette ni suivi", async () => {
+    const p = createPattern("Patron protégé", 20, 20);
+    const red = flossIndex("321"); p.cross[5] = red; p.done[5] = 1; ensurePalette(p, red);
+    expect(saveStored(p)).toBe(true);
+    await mount();
+    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
+    expect(select).toBeTruthy();
+    for (const level of ["beginner", "expert", "intermediate"]) {
+      await act(async () => { select.value = level; select.dispatchEvent(new Event("change", {bubbles:true})); });
+      expect(localStorage.getItem("pointzero:interface-level")).toBe(level);
+      expect(container!.textContent).toContain("Patron protégé");
+      await act(async () => window.dispatchEvent(new Event("pagehide")));
+      const after = loadStored()!;
+      expect(after.cross).toEqual(p.cross); expect(after.done).toEqual(p.done); expect(after.palette).toEqual(p.palette);
+      if (level === "expert") expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
+    }
+  });
+
+  it("conserve l’outil actif et rend les autres accessibles en Débutant", async () => {
+    await mount();
+    const buttons = () => [...container!.querySelectorAll("button")];
+    await click(buttons().find(b => b.textContent?.includes("Afficher tous les outils")));
+    await click(buttons().find(b => b.textContent === "Quart"));
+    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
+    await act(async () => {select.value="beginner";select.dispatchEvent(new Event("change",{bubbles:true}));});
+    expect(buttons().find(b => b.textContent === "Quart")?.getAttribute("aria-pressed")).toBe("true");
+    expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
+  });
+
+  it("centralise la navigation et protège le redimensionnement", async () => {
+    await mount();
+    const sections=container!.querySelector(".pz-embroidery-right nav");
+    expect([...sections!.querySelectorAll("button")].map(b=>b.textContent)).toEqual(["Objet","Réglages"]);
+    await click(category("Fils"));
+    expect(container!.textContent).not.toContain("Nouvelle grille ou redimensionnement");
+    await click(category("Dessiner"));
+    expect(container!.textContent).toContain("Dimensions de la grille");
+    const confirm=vi.spyOn(window,"confirm").mockReturnValue(false);
+    await click([...container!.querySelectorAll("button")].find(b=>b.textContent==="Redimensionner"));
+    expect(confirm).toHaveBeenCalled();
+  });
+
+  it("relie la barre inférieure au zoom, au recentrage, à l’import et à l’export", async () => {
+    await mount();
+    const bar=container!.querySelector('nav[aria-label="Actions rapides du studio"]')!;
+    const send=vi.spyOn(window,"dispatchEvent");
+    const action=(text:string)=>[...bar.querySelectorAll("button")].find(b=>b.textContent===text);
+    await click(action("Loupe"));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"magnify"}}));
+    await click(bar.querySelector('[aria-label="Zoomer la grille"]'));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomIn"}}));
+    await click(bar.querySelector('[aria-label="Dézoomer la grille"]'));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomOut"}}));
+    await click(action("Recentrer"));
+    const picker=container!.querySelector<HTMLInputElement>('input[aria-label="Importer depuis la barre d’actions"]')!;
+    const choose=vi.spyOn(picker,"click");await click(action("Importer"));expect(choose).toHaveBeenCalled();
+    expect(picker.accept).toContain(".pdf");
+    await click(action("Exporter"));
+    expect(container!.textContent).toContain("PDF");
+    expect(container!.querySelectorAll('[aria-label="Exporter et partager"]')).toHaveLength(1);
+  });
+
+  it("ouvre directement la préparation depuis l’accueil spécialisé", async () => {
+    await mount(true);
+    const prepare = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Préparer mon ouvrage"));
+    await click(prepare);
+    expect(category("Fils")?.getAttribute("aria-pressed")).toBe("true");
+    expect(container?.textContent).toContain("Fils & toile");
+    expect(window.location.search).toBe("?studio=embroidery");
   });
 
   it("ouvre directement la grille et la bibliothèque de motifs, sans écran d'accueil", async () => {

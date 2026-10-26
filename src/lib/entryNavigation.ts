@@ -1,4 +1,4 @@
-/** Public AIME hierarchy with compatibility for pre-existing POINTZERO query links.
+/** Cross-stitch entry and legacy AIME hierarchy with compatibility for pre-existing POINTZERO query links.
  * This module never reads or clears a user's saved projects.
  */
 export const STUDIO_ROUTES=[
@@ -6,7 +6,7 @@ export const STUDIO_ROUTES=[
  "mini-site","pdf","generation","music","art-world","aime-landing",
  "music-production","accessibility","academy","one-space","causal",
  "legal","metamorphose","ripplecircle","game","manifest","manifest-admin",
- "aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier"
+ "stitch-home","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier"
 ] as const;
 export type StudioRoute=(typeof STUDIO_ROUTES)[number];
 export function isStudioRoute(value:string|null):value is StudioRoute{
@@ -21,8 +21,9 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
  const path=decodeURI(pathname).replace(/\/+$/,"")||"/";
  if(path==="/") {
   const legacy=params.get("studio");
-  return isStudioRoute(legacy)&&legacy!=="manifest-admin"?legacy:"aime-home";
+  return isStudioRoute(legacy)&&legacy!=="manifest-admin"?legacy:"stitch-home";
  }
+ if(path==="/aime")return "aime-home";
  if(path==="/pointzero")return "manifest";
  if(path==="/le-monde-aime")return "aime-landing";
  if(path==="/vision")return "vision";
@@ -33,12 +34,13 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
  if(/^\/studios\/[a-z0-9-]+$/.test(path))return "studio-detail";
  if(path==="/atelier"){
   const chosen=params.get("studio");
-  return isStudioRoute(chosen)&&!["manifest-admin","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier","manifest","aime-landing"].includes(chosen)?chosen:"design";
+  return isStudioRoute(chosen)&&!["manifest-admin","stitch-home","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier","manifest","aime-landing"].includes(chosen)?chosen:"design";
  }
- return "aime-home";
+ return "stitch-home";
 }
 export function publicPathFor(mode:StudioRoute){
- if(mode==="aime-home")return "/";
+ if(mode==="stitch-home")return "/";
+ if(mode==="aime-home")return "/aime";
  if(mode==="manifest")return "/pointzero";
  if(mode==="aime-landing")return "/le-monde-aime";
  if(mode==="vision")return "/vision";
