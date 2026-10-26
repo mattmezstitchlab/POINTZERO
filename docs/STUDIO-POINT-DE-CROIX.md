@@ -34,3 +34,16 @@ Travail indépendant des PR ouvertes #55 (bureau AIME), #56 (atelier commun), #5
 7. Exécuter `npm run verify`. Les tests jsdom ne constituent pas une recette visuelle ni tactile.
 
 La livraison se fait en PR, sans fusion ni promotion en production.
+
+## Deuxième étape — parcours unifié
+
+- Image importée : conversion puis ouverture directe en grille couleur, sans traverser la composition.
+- PDF : le puzzle magnétique existant reste dans l’import, sous l’en-tête du studio. Assemblage, corrections et validation sont conservés ; le résultat s’ouvre directement en grille.
+- Composition / décomposition : outil facultatif de Dessiner, sous le même en-tête, non imposé après import.
+- Génération : une action génère l’image et calcule sa grille DMC ; les deux aperçus restent visibles avant validation. Style, taille et fils sont dans les réglages facultatifs. Aucun passage obligatoire par Composition après validation.
+- La description intégrale est envoyée, sans décomposition automatique susceptible d’inverser les sujets, sans fond blanc ni sujet unique imposés et sans interdiction systématique des lettres. L’option de réécriture distante `enhance` est désactivée. Le style par défaut respecte la description ; le blanc n’est plus automatiquement supprimé.
+- Les nouveaux transferts directs refusent de remplacer le projet actif si son archivage local échoue. Un changement de description invalide les aperçus précédents.
+
+Le puzzle et les moteurs restent les mêmes : intégration ne signifie pas réécriture. Les outils de préparation ont encore leur propre panneau de travail au sein du studio. Les PDF difficiles nécessitent toujours un contrôle humain. Le service de génération externe peut échouer ou mal interpréter une demande ; aucun test avec un modèle distant ni gain de fidélité visuelle mesuré n’est revendiqué. Les tests de génération emploient une image simulée pour vérifier l’enchaînement, pas la qualité artistique. Les tests d’import isolent le transfert ; les algorithmes réels du puzzle restent couverts par `pdfPuzzle.test.ts`.
+
+Recette supplémentaire : importer un PDF multipage réel, déplacer les cartes du puzzle et comparer toutes les limites de pages ; générer une scène avec plusieurs sujets, décor et prénom ; comparer image et grille ; vérifier la conservation de l’ouvrage précédent en cas de quota plein.

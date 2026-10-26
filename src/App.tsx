@@ -211,8 +211,16 @@ export default function App() {
     if (!remote) { setInventory(values); try { writeInventory(values); } catch { notify("Stock non sauvegardé : exportez votre JSON."); } }
     setPattern({ ...P, supplies: { ...P.supplies, [code]: supply } }, true);
   };
-  const loadPattern = async (p: Pattern) => {
-    if (!remote) { try { await saveLibrary(store.present, true); } catch { /* The explicit file backup remains available. */ } }
+  const loadPattern = async (p: Pattern, requireArchive = false) => {
+    if (!remote) {
+      try { await saveLibrary(store.present, true); }
+      catch {
+        if (requireArchive) {
+          notify("Ouverture bloquée : impossible de conserver le projet actif. Exportez son JSON avant de réessayer.");
+          throw new Error("Archivage du projet actif impossible");
+        }
+      }
+    }
     const next = { ...p, supplies: { ...p.supplies, ...inventory } };
     setRemote(null); dispatch({ type: "load", pattern: next }); ready.current = true;
     setSelection(null); setSelectedSubjectId(null); setMobileLibraryOpen(false); setMobileInspectorOpen(false); setFitKey((k) => k + 1); setColor(next.palette[0] ?? flossIndex("3801")); closePanel(); setFile(null); setShowWelcome(false);
@@ -450,6 +458,16 @@ export default function App() {
     if (next === "compose") setTool("hand");
     openRightPanel(next === "stitch" ? "follow" : next === "threads" ? "prepare" : "edit");
   };
+  const useImportedPattern = async (p: Pattern) => {
+    try {
+      await loadPattern(p, true);
+      setWorkspace("create"); setView("flat"); setTool("hand");
+      setActiveCategory("compose"); setRightSection("properties");
+      setAutoImage(null); setPromptOpen(false); setPdfFile(null);
+      notify("Motif ouvert dans la grille. Composer / décomposer reste disponible dans Dessiner.");
+      return true;
+    } catch { return false; }
+  };
   const createActions = {
     prompt: promptText, onPrompt: setPromptText,
     onGenerate: () => setPromptOpen(true),
@@ -672,7 +690,7 @@ export default function App() {
           <WorkspacePanel key={contextSection} inline open onClose={() => openRightPanel("properties")} pattern={P} onSet={setPattern}
             actions={panelActions} prefs={prefs} onPrefs={setPrefs} color={color}
             onColor={setColor} workspace={workspace} section={contextSection}
-            extraActions={contextSection === "edit" ? <button type="button" className="btn-tinted" disabled={!!remote} onClick={openComposition}>Composition intelligente · aperçu</button> : undefined} />
+            extraActions={contextSection === "edit" ? <button type="button" className="btn-tinted" disabled={!!remote} onClick={openComposition}>Composer / décomposer le motif</button> : undefined} />
         </div>
       )}
     </aside>
@@ -683,36 +701,26 @@ export default function App() {
     <LibrarySheet open={panel === "library"} onClose={closePanel} onLoad={(p) => void loadPattern(p)} onNew={() => panelActions.new(80, 80)} inventory={inventory} />
     {autoImage && <AutomaticImageImport file={autoImage}
       onCancel={() => setAutoImage(null)}
-      onReady={p => { setAutoImage(null); setCompositionInput(p); setWorkspace("create"); setView("pattern"); }}/> }
+      onReady={async p => { if (!await useImportedPattern(p)) throw new Error("Projet précédent conservé : exportez son JSON puis réessayez."); }}/> }
     {file && <ImportStudio file={file} onClose={() => setFile(null)} onImport={(p) => {
-      setFile(null); setWorkspace("create"); setView("pattern");
-      setCompositionInput(p);
-      notify("Source image analysée. Vérifiez les propositions de composition avant validation.");
+      void useImportedPattern(p);
     }} />}
     {pdfFile && (
       <ErrorBoundary label="La préparation du PDF" onReset={() => setPdfFile(null)}>
         <PdfPrep
           file={pdfFile}
+          integrated
           onClose={() => setPdfFile(null)}
-          onImport={(p) => {
-            setPdfFile(null);
-            setWorkspace("create");
-            setView("pattern");
-            void loadPattern(p);
-            notify("Patron PDF ouvert directement dans la grille. La composition reste facultative.");
-          }}
+          onImport={p => { void useImportedPattern(p); }}
         />
       </ErrorBoundary>
     )}
-    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={(p) => {
-      setPromptOpen(false); setWorkspace("create"); setView("pattern");
-      setCompositionInput(p);
-      notify("Image générée. Choisissez le niveau de composition avant d'utiliser le motif.");
-    }} />}
+    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={p => { void useImportedPattern(p); }} embedded /> }
     {compositionInput && (
       <ErrorBoundary label="Le moteur de composition" onReset={() => setCompositionInput(null)}>
         <CompositionStudio
           pattern={compositionInput}
+          embedded
           onCancel={() => setCompositionInput(null)}
           onUse={p => {
             setCompositionInput(null);

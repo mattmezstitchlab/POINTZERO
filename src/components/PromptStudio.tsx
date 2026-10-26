@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Dices, Sparkles, Wand2, WandSparkles, X } from "lucide-react";
 import { FLOSS } from "../lib/dmc";
 import { imageToDmc } from "../lib/dither";
@@ -9,7 +9,6 @@ import {
   STYLES,
   buildPrompt,
   gridHeightFor,
-  parseComposition,
   pollinationsUrl,
   type DetailId,
   type FormatId,
@@ -30,18 +29,18 @@ const EXAMPLES = [
  * Génération d'un motif de point de croix à partir d'une description.
  * Image générée (Pollinations / Flux) → conversion réaliste par dithering vers la palette DMC.
  */
-export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: { onClose: () => void; onImport: (p: Pattern) => void; initialPrompt?: string }) {
+export default function PromptStudio({ onClose, onImport, initialPrompt = "", embedded = false }: { onClose: () => void; onImport: (p: Pattern) => void; initialPrompt?: string; embedded?: boolean }) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [main, setMain] = useState("");
   const [second, setSecond] = useState("");
   const [relation, setRelation] = useState("");
-  const [style, setStyle] = useState<StyleId>("reeliste");
+  const [style, setStyle] = useState<StyleId>("description");
   const [detail, setDetail] = useState<DetailId>("tres");
   const [format, setFormat] = useState<FormatId>("carre");
   const [mode, setMode] = useState<"dither" | "flat">("dither");
   const [size, setSize] = useState(240);
   const [colors, setColors] = useState(DETAILS_DEFAULTS.tres);
-  const [dropWhite, setDropWhite] = useState(true);
+  const [dropWhite, setDropWhite] = useState(false);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000000));
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -50,10 +49,12 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
   const [pattern, setPattern] = useState<Pattern | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  const inferred = parseComposition(prompt);
-  const effectiveMain = main.trim() || inferred.main;
-  const effectiveSecond = second.trim() || inferred.extra;
-  const effectiveRelation = relation.trim() || inferred.relation;
+
+  useEffect(() => {
+    // Never validate an image produced for an earlier description.
+    imgRef.current = null; setImgUrl(""); setPattern(null); setPreview("");
+  }, [prompt, main, second, relation, style, detail, format]);
+  useEffect(() => { setPattern(null); setPreview(""); }, [size, colors, mode, dropWhite]);
 
   const chooseDetail = (d: DetailId) => {
     setDetail(d);
@@ -61,7 +62,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
   };
 
   const fullPrompt = () =>
-    buildPrompt({ subject: prompt, main: effectiveMain, second: effectiveSecond, relation: effectiveRelation, style, detail, format });
+    buildPrompt({ subject: prompt, main, second, relation, style, detail, format });
 
   const genUrl = (seedValue: number) => {
     const f = FORMATS.find((f) => f.id === format) ?? FORMATS[0];
@@ -81,6 +82,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
       const img = await loadRemoteImage(genUrl(seedValue));
       imgRef.current = img;
       setImgUrl(img.src);
+      await convert(img);
     } catch {
       setError("Génération impossible pour le moment — réessayez avec une nouvelle graine.");
     } finally {
@@ -94,8 +96,8 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
     void generate(next);
   };
 
-  const convert = async () => {
-    const img = imgRef.current;
+  const convert = async (source?: HTMLImageElement) => {
+    const img = source ?? imgRef.current;
     if (!img) return;
     setBusy("Conversion réaliste en grille DMC…");
     setError("");
@@ -123,21 +125,21 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
   };
 
   return (
-    <div className="glass-strong fixed inset-0 z-[75] flex flex-col bg-[#0e0e11]">
+    <div className={`glass-strong fixed ${embedded ? "inset-x-0 bottom-0 top-[58px] z-[35]" : "inset-0 z-[75]"} flex flex-col bg-[#0e0e11]`} role="dialog" aria-modal="true" aria-label="Générer dans le studio">
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3">
         <button type="button" className="btn-icon" onClick={onClose} disabled={!!busy} aria-label="Fermer">
           <X size={18} />
         </button>
         <div className="min-w-0">
-          <h2 className="truncate text-[16px] leading-tight font-semibold">Générer un motif par description</h2>
-          <p className="truncate text-[12px] text-label-3">Description → image → motif de point de croix détaillé (dithering réaliste)</p>
+          <h2 className="truncate text-[16px] leading-tight font-semibold">Générer dans mon ouvrage</h2>
+          <p className="truncate text-[12px] text-label-3">Description → image et grille DMC en une seule génération</p>
         </div>
       </header>
 
       <main className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
         <section className="mx-auto flex max-w-[1160px] flex-col gap-4 lg:flex-row">
           {/* Colonne de contrôle */}
-          <div className="min-w-0 flex-1 space-y-4">
+          <fieldset disabled={!!busy} className="min-w-0 flex-1 space-y-4">
             <div>
               <label className="text-[13px] font-semibold" htmlFor="pz-prompt">
                 Décrivez le motif
@@ -159,24 +161,26 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
               </div>
             </div>
 
+            <details className="space-y-4 rounded-[12px] border border-white/10 p-3">
+              <summary className="cursor-pointer text-sm">Réglages facultatifs · style, taille et fils</summary>
             <details className="rounded-[12px] bg-white/[.04] px-3 py-2">
               <summary className="cursor-pointer py-1 text-[12px] font-medium text-label-2">Plusieurs sujets ou leur position</summary>
               <p className="mt-2 text-[11px] leading-relaxed text-label-3">
-                Décomposition : « papillon sur un éléphant » → sujet principal « éléphant », second « papillon ». Corrigez si besoin.
+                Facultatif : précisez les sujets et leur position sans remplacer votre description complète.
               </p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <label className="text-[11px] text-label-3">
                   Sujet principal
-                  <input className="field mt-1 text-[13px]" value={main || inferred.main} onChange={(e) => setMain(e.target.value)} placeholder="éléphant" />
+                  <input className="field mt-1 text-[13px]" value={main} onChange={(e) => setMain(e.target.value)} placeholder="éléphant" />
                 </label>
                 <label className="text-[11px] text-label-3">
                   Sujet à inclure
-                  <input className="field mt-1 text-[13px]" value={second || inferred.extra} onChange={(e) => setSecond(e.target.value)} placeholder="papillon" />
+                  <input className="field mt-1 text-[13px]" value={second} onChange={(e) => setSecond(e.target.value)} placeholder="papillon" />
                 </label>
               </div>
               <label className="mt-2 block text-[11px] text-label-3">
                 Position / relation
-                <input className="field mt-1 text-[13px]" value={relation || inferred.relation} onChange={(e) => setRelation(e.target.value)} placeholder="papillon posé sur la tête de l’éléphant" />
+                <input className="field mt-1 text-[13px]" value={relation} onChange={(e) => setRelation(e.target.value)} placeholder="papillon posé sur la tête de l’éléphant" />
               </label>
             </details>
 
@@ -252,24 +256,25 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
               </label>
             </div>
 
+            </details>
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn-tinted flex-1" onClick={() => void generate()} disabled={!!busy}>
-                <Wand2 size={15} /> {busy ? "En cours…" : "Générer l'image"}
+                <Wand2 size={15} /> {busy ? "En cours…" : "Générer mon motif"}
               </button>
               <button type="button" className="btn-quiet" onClick={variant} disabled={!imgUrl || !!busy} title="Autre interprétation">
                 <Sparkles size={15} /> Variante
               </button>
               <button type="button" className="btn-primary flex-1" onClick={() => void convert()} disabled={!!busy || !imgUrl}>
-                <WandSparkles size={15} /> Convertir en motif
+                <WandSparkles size={15} /> Actualiser la grille
               </button>
             </div>
 
             {error && <p role="alert" className="rounded-[12px] bg-white/5 px-4 py-3 text-[13px] text-label-2">{error}</p>}
             <p className="text-[11px] leading-relaxed text-label-3">
               « Dégradés (réaliste) » applique un dithering Floyd–Steinberg vers la palette DMC : c'est ce qui donne les dégradés lisses et le
-              rendu détaillé d'un vrai patron. « Aplats » donne des aplats de couleur nets. Réessayez avec « Variante » si un sujet manque.
+              rendu détaillé d'un vrai patron. « Aplats » donne des aplats de couleur nets. La fidélité dépend du générateur externe : vérifiez les deux aperçus avant validation. Votre description est envoyée à ce service.
             </p>
-          </div>
+          </fieldset>
 
           {/* Aperçus */}
           <aside className="w-full shrink-0 space-y-3 lg:w-[400px]">
@@ -294,7 +299,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "" }: 
               disabled={!pattern || !!busy}
               onClick={() => pattern && onImport(pattern)}
             >
-              <Check size={15} /> Importer dans l'atelier
+              <Check size={15} /> Utiliser dans ma grille
             </button>
           </aside>
         </section>
