@@ -485,7 +485,7 @@ export default function App() {
     onLibrary: () => { setShowWelcome(false); setPanel("library"); },
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
-    rightSection === "properties" ? "edit" : rightSection;
+    rightSection === "properties" || rightSection === "motifs" ? "edit" : rightSection;
   const enterStitchStudio = (entry: StitchEntry) => {
     switchStudio("embroidery");
     if (entry === "library") { setShowWelcome(false); setPanel("library"); }
