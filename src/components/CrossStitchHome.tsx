@@ -20,7 +20,6 @@ export default function CrossStitchHome({ projectName, onOpen, onImport, onShare
         {onShop && <button onClick={onShop}>Patrons & collections</button>}
         <button onClick={() => onOpen("library")}><FolderOpen size={16} aria-hidden="true"/> Mes ouvrages</button>
         {onShare && <button onClick={onShare}><UserPlus size={16} aria-hidden="true"/> Inviter</button>}
-        <button onClick={() => onOpen("stitch")}>Ouvrir le studio <ArrowRight size={16} aria-hidden="true"/></button>
       </nav>
     </header>
     <main id="csh-main">
@@ -51,7 +50,7 @@ export default function CrossStitchHome({ projectName, onOpen, onImport, onShare
           <p className="csh-eyebrow">LE GESTE CRÉATIF, EN GRAND</p>
           <h2 id="csh-immersive-title">Moins de fenêtres.<br/><em>Plus de création.</em></h2>
           <p>Une toile pour dessiner. Des fils à portée de main. Les bons outils, au bon endroit.</p>
-          <div className="csh-actions"><button className="csh-primary" onClick={()=>onOpen("create")}>Entrer dans le studio <ArrowRight size={18} aria-hidden="true"/></button><button className="csh-secondary" onClick={()=>onOpen("library")}>Reprendre mon ouvrage</button></div>
+          <p className="csh-intro">Le studio rassemble vos outils autour de la grille. Commencez depuis l’accueil, puis retrouvez chaque étape au même endroit.</p>
         </div>
         <figure className="csh-studio-scene">
           <div className="csh-scene-top"><span>× POINT ZÉRO / STUDIO</span><span>Créer · Préparer · Broder</span></div>
@@ -61,7 +60,7 @@ export default function CrossStitchHome({ projectName, onOpen, onImport, onShare
         </figure>
         <div className="csh-proof-row"><article><span>01 / IMAGE</span><h3>Votre idée prend forme.</h3><p>Importez une image ou décrivez votre motif. La génération dépend du service configuré.</p></article><article><span>02 / GRILLE</span><h3>La couleur devient fil.</h3><p>Vérifiez les détails, ajustez la palette DMC et composez votre patron.</p></article><article><span>03 / OUVRAGE</span><h3>À vous de broder.</h3><p>Préparez la toile, exportez ou suivez chaque croix dans le même projet.</p></article></div>
       </section>
-      <section className="csh-pdf-feature" aria-labelledby="csh-pdf-title"><div><p className="csh-eyebrow">LE PUZZLE PDF</p><h2 id="csh-pdf-title">Les pages se séparent.<br/>Votre patron se retrouve.</h2><p>Importez votre PDF, recomposez les cartes sur le plateau magnétique et retrouvez le patron assemblé dans votre grille. Contrôlez les raccords et les symboles avant de broder.</p><a className="csh-secondary" href="#csh-import">Importer mon patron PDF <ArrowRight size={16} aria-hidden="true"/></a></div><div className="csh-puzzle-visual" aria-hidden="true">{[1,2,3,4].map(n=><div key={n}><span>PAGE {n}</span><b>× × ×<br/>× × ×<br/>× × ×</b></div>)}</div></section>
+      <section className="csh-pdf-feature" aria-labelledby="csh-pdf-title"><div><p className="csh-eyebrow">LE PUZZLE PDF</p><h2 id="csh-pdf-title">Les pages se séparent.<br/>Votre patron se retrouve.</h2><p>Importez votre PDF, recomposez les cartes sur le plateau magnétique et retrouvez le patron assemblé dans votre grille. Contrôlez les raccords et les symboles avant de broder.</p><span className="csh-note">La sélection du PDF s’effectue depuis la section Importer, plus bas sur cette page.</span></div><div className="csh-puzzle-visual" aria-hidden="true">{[1,2,3,4].map(n=><div key={n}><span>PAGE {n}</span><b>× × ×<br/>× × ×<br/>× × ×</b></div>)}</div></section>
       <section className="csh-resume" aria-label="Reprendre un ouvrage">
         <div><p className="csh-eyebrow">PROJET ACTIF SUR CET APPAREIL</p><h2>{projectName}</h2><p>Ouvrez le projet actif, ou retrouvez les ouvrages enregistrés dans votre bibliothèque locale.</p></div>
         <button className="csh-secondary" onClick={() => onOpen("stitch")}>Continuer à broder <ArrowRight size={17} aria-hidden="true"/></button>
