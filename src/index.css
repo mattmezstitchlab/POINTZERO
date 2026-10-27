@@ -2237,3 +2237,20 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
     max-height:40px;padding-right:12px
   }
 }
+
+
+/* Final placement: tools hover ABOVE the DMC strip; no overlap with floss controls. */
+.pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{
+  top:auto!important;
+  bottom:calc(106px + env(safe-area-inset-bottom))!important;
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  z-index:38;
+}
+.pz-embroidery-studio .pz-embroidery-dmc > div:nth-child(2){padding-right:12px}
+@media(max-width:720px){
+ .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{
+   bottom:calc(106px + env(safe-area-inset-bottom))!important;
+ }
+}
