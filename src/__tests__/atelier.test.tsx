@@ -441,10 +441,13 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const red = flossIndex("321"); p.cross[5] = red; p.done[5] = 1; ensurePalette(p, red);
     expect(saveStored(p)).toBe(true);
     await mount();
-    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
-    expect(select).toBeTruthy();
+    const levelBar = container!.querySelector<HTMLElement>(".pz-level-bar")!;
+    expect(levelBar.getAttribute("role")).toBe("group");
+    const labels: Record<string,string> = { beginner: "Débutant", expert: "Expert", intermediate: "Intermédiaire" };
     for (const level of ["beginner", "expert", "intermediate"]) {
-      await act(async () => { select.value = level; select.dispatchEvent(new Event("change", {bubbles:true})); });
+      const levelButton = [...levelBar.querySelectorAll("button")].find(b => b.textContent === labels[level])!;
+      await click(levelButton);
+      expect(levelButton.getAttribute("aria-pressed")).toBe("true");
       expect(localStorage.getItem("pointzero:interface-level")).toBe(level);
       expect(container!.textContent).toContain("Patron protégé");
       await act(async () => window.dispatchEvent(new Event("pagehide")));
@@ -459,8 +462,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const buttons = () => [...container!.querySelectorAll("button")];
     await click(buttons().find(b => b.textContent?.includes("Afficher tous les outils")));
     await click(buttons().find(b => b.textContent === "Quart"));
-    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
-    await act(async () => {select.value="beginner";select.dispatchEvent(new Event("change",{bubbles:true}));});
+    await click([...container!.querySelectorAll(".pz-level-bar button")].find(b => b.textContent === "Débutant"));
     expect(buttons().find(b => b.textContent === "Quart")?.getAttribute("aria-pressed")).toBe("true");
     expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
   });
