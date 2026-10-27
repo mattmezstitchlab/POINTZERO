@@ -7,15 +7,17 @@ interface Props {
   onOpen: (entry: StitchEntry) => void;
   onImport: (file: File) => void;
   onShare?: () => void;
+  onShop?: () => void;
 }
 
 /** A welcome screen only: opening it never creates a pattern or rewrites a project. */
-export default function CrossStitchHome({ projectName, onOpen, onImport, onShare }: Props) {
+export default function CrossStitchHome({ projectName, onOpen, onImport, onShare, onShop }: Props) {
   return <div className="cross-stitch-home">
     <a className="csh-skip" href="#csh-main">Aller au contenu</a>
     <header className="csh-header">
       <a className="csh-brand" href="/" aria-label="Point Zéro, accueil"><span aria-hidden="true">×</span> POINT ZÉRO<span className="csh-brand-detail">STUDIO POINT DE CROIX</span></a>
       <nav aria-label="Navigation point de croix">
+        {onShop && <button onClick={onShop}>Patrons & collections</button>}
         <button onClick={() => onOpen("library")}><FolderOpen size={16} aria-hidden="true"/> Mes ouvrages</button>
         {onShare && <button onClick={onShare}><UserPlus size={16} aria-hidden="true"/> Inviter</button>}
         <button onClick={() => onOpen("stitch")}>Ouvrir le studio <ArrowRight size={16} aria-hidden="true"/></button>
