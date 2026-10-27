@@ -570,7 +570,7 @@ export default function PdfPrep({
   return (
     <div
       className={`glass-strong flex flex-col overflow-hidden bg-[#0e0e11] ${
-        embedded ? (studioEmbedded ? "h-[min(85dvh,980px)] min-h-[600px] w-full rounded-[6px] border border-white/15" : "h-[860px] w-full rounded-[26px] ring-1 ring-white/10") : integrated ? "fixed inset-x-0 bottom-0 top-[110px] z-[35]" : "fixed inset-0 z-[75]"
+        embedded ? (studioEmbedded ? "h-[min(85dvh,980px)] min-h-[600px] w-full rounded-[6px] border border-white/15" : "h-[860px] w-full rounded-[26px] ring-1 ring-white/10") : integrated ? "fixed inset-x-0 bottom-0 top-[58px] z-[35]" : "fixed inset-0 z-[75]"
       }`}
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3">
