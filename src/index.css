@@ -2110,3 +2110,64 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
  .pz-action-bar button {padding:5px;gap:3px;font-size:10px;flex-direction:column;min-width:44px;}
  .pz-action-divider {margin-inline:0;}
 }
+
+
+/* POINTZERO · chrome partagé — les barres conservent leurs positions actuelles. */
+:root{
+ --pz-chrome-bg:rgba(24,24,27,.94);
+ --pz-chrome-raise:rgba(255,255,255,.065);
+ --pz-chrome-border:rgba(255,255,255,.13);
+ --pz-chrome-text:#f1f1f3;
+ --pz-chrome-radius:14px;
+ --pz-chrome-shadow:0 10px 28px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05);
+}
+.pz-chrome-toolbar{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border);color:var(--pz-chrome-text);box-shadow:var(--pz-chrome-shadow);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.pz-chrome-icon-button{width:40px;height:40px;min-width:40px;border-radius:var(--pz-chrome-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s}
+.pz-chrome-icon-button:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
+.pz-chrome-icon-button:focus-visible{outline:2px solid #d5d4eb;outline-offset:2px}
+.pz-action-bar.pz-chrome-toolbar{border:1px solid var(--pz-chrome-border);border-radius:18px}
+.pz-action-bar.pz-chrome-toolbar button{min-height:40px;border-radius:var(--pz-chrome-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s;color:var(--pz-chrome-text)}
+.pz-action-bar.pz-chrome-toolbar button:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
+@media(prefers-reduced-motion:reduce){.pz-chrome-icon-button,.pz-action-bar.pz-chrome-toolbar button{transition:none}}
+
+
+/* Left rail and shared panels: same material and control geometry as top/bottom bars. */
+.pz-toolbox-chrome{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border)}
+.pz-toolbox-chrome .pz-tool-rail{gap:6px}
+.pz-toolbox-chrome .pz-tool-control{border-radius:var(--pz-chrome-radius);min-width:0;line-height:1.2}
+.pz-toolbox-chrome .pz-tool-control[aria-pressed="true"]{background:#f1efe9;color:#111114;border-color:#f1efe9}
+.pz-toolbox-chrome .pz-tool-control[aria-pressed="false"]:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
+.pz-toolbox-chrome .pz-tool-control:focus-visible{outline:2px solid #d5d4eb;outline-offset:2px}
+.pz-embroidery-dmc{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border)}
+.pz-embroidery-dmc button{border-radius:var(--pz-chrome-radius)}
+@media(prefers-reduced-motion:reduce){.pz-toolbox-chrome .pz-tool-control{transition:none}}
+
+
+/* Finishing pass: float actions above the canvas instead of drawing a full-width charcoal footer. */
+.pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{
+  inset:auto auto max(18px,env(safe-area-inset-bottom)) 50%;
+  transform:translateX(-50%);
+  width:max-content;max-width:calc(100vw - 24px);
+  height:54px;min-height:54px;padding:5px 8px;gap:4px;
+  border:1px solid var(--pz-chrome-border);border-radius:19px;
+  background:rgba(27,27,30,.95);
+  box-shadow:0 16px 44px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.07)
+}
+.pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button{
+  width:40px;min-width:40px;height:40px;min-height:40px;padding:0;
+  border-radius:13px
+}
+.pz-embroidery-studio .pz-action-bar .pz-action-divider{height:20px;margin-inline:4px}
+.pz-embroidery-studio .pz-embroidery-dmc{bottom:82px}
+.pz-embroidery-studio .pz-embroidery-left{border-right-color:rgba(255,255,255,.09)}
+.pz-embroidery-studio .pz-toolbox-chrome{
+  margin:8px;border:1px solid var(--pz-chrome-border);
+  border-radius:18px;padding:10px;background:var(--pz-chrome-bg)
+}
+.pz-toolbox-chrome .pz-tool-rail{grid-template-columns:repeat(3,minmax(0,1fr))}
+.pz-toolbox-chrome .pz-tool-control{min-height:42px;border-radius:12px}
+.pz-toolbox-chrome .pz-tool-rail .pz-tool-control{min-height:44px;padding:6px}
+@media(max-width:639px){
+ .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{bottom:max(10px,env(safe-area-inset-bottom));gap:2px;padding:4px}
+ .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button{width:38px;min-width:38px;height:40px}
+}

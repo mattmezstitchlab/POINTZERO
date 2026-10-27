@@ -1,4 +1,4 @@
-import { ArrowRight, FileUp, FolderOpen, Grid2X2, Palette, Scissors } from "lucide-react";
+import { ArrowRight, FileUp, FolderOpen, Grid2X2, Palette, Scissors, UserPlus, Image as ImageIcon } from "lucide-react";
 import "./CrossStitchHome.css";
 
 export type StitchEntry = "create" | "library" | "prepare" | "stitch";
@@ -6,16 +6,20 @@ interface Props {
   projectName: string;
   onOpen: (entry: StitchEntry) => void;
   onImport: (file: File) => void;
+  onShare?: () => void;
+  onShop?: () => void;
 }
 
 /** A welcome screen only: opening it never creates a pattern or rewrites a project. */
-export default function CrossStitchHome({ projectName, onOpen, onImport }: Props) {
+export default function CrossStitchHome({ projectName, onOpen, onImport, onShare, onShop }: Props) {
   return <div className="cross-stitch-home">
     <a className="csh-skip" href="#csh-main">Aller au contenu</a>
     <header className="csh-header">
       <a className="csh-brand" href="/" aria-label="Point Zéro, accueil"><span aria-hidden="true">×</span> POINT ZÉRO<span className="csh-brand-detail">STUDIO POINT DE CROIX</span></a>
       <nav aria-label="Navigation point de croix">
+        {onShop && <button onClick={onShop}>Patrons & collections</button>}
         <button onClick={() => onOpen("library")}><FolderOpen size={16} aria-hidden="true"/> Mes ouvrages</button>
+        {onShare && <button onClick={onShare}><UserPlus size={16} aria-hidden="true"/> Inviter</button>}
         <button onClick={() => onOpen("stitch")}>Ouvrir le studio <ArrowRight size={16} aria-hidden="true"/></button>
       </nav>
     </header>
@@ -36,6 +40,11 @@ export default function CrossStitchHome({ projectName, onOpen, onImport }: Props
           <img src="/images/grille-roses.png" alt="Motif de roses, exemple pour préparer une grille de point de croix" width="480" height="480"/>
           <figcaption>Une image de départ. Une palette DMC. Votre prochain ouvrage.</figcaption>
         </figure>
+      </section>
+      <section className="csh-real-workflows" aria-label="Découvrir les vrais parcours">
+        <article><span className="csh-eyebrow">01 — DE LA PHOTO AU PATRON</span><ImageIcon size={26} aria-hidden="true"/><h2>Une image. Des couleurs. Des croix.</h2><p>Importez votre photo pour lancer le vrai parcours de conversion de Point Zéro, puis ajustez les fils DMC avant de broder.</p><label className="csh-secondary csh-workflow-import">Essayer avec une photo<input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Importer une photo pour la convertir en patron" onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)onImport(file)}}/></label></article>
+        <article><span className="csh-eyebrow">02 — PUZZLE PDF</span><Grid2X2 size={26} aria-hidden="true"/><h2>Reconstituez votre patron.</h2><p>Les pages d'un patron multipage peuvent être recalées dans l'atelier PDF existant. Vérifiez les raccords avant de poursuivre.</p><label className="csh-secondary csh-workflow-import">Essayer avec un PDF<input type="file" accept=".pdf,application/pdf" aria-label="Importer un patron PDF multipage" onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)onImport(file)}}/></label></article>
+        <article><span className="csh-eyebrow">03 — À PLUSIEURS</span><UserPlus size={26} aria-hidden="true"/><h2>Invitez quelqu'un à regarder.</h2><p>Partagez la lecture de votre ouvrage à distance avec la fonction existante de Point Zéro. L'auteur reste maître de son projet.</p>{onShare && <button className="csh-secondary" onClick={onShare}>Ouvrir le partage <ArrowRight size={16}/></button>}</article>
       </section>
       <section className="csh-immersive" aria-labelledby="csh-immersive-title">
         <div className="csh-immersive-copy">

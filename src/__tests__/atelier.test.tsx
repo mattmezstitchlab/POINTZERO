@@ -468,11 +468,11 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   it("centralise la navigation et protège le redimensionnement", async () => {
     await mount();
     const sections=container!.querySelector(".pz-embroidery-right nav");
-    expect([...sections!.querySelectorAll("button")].map(b=>b.textContent)).toEqual(["Objet","Réglages"]);
+    expect([...sections!.querySelectorAll("button")].map(b=>b.textContent)).toEqual(["Calques","Motifs","Réglages"]);
     await click(category("Fils"));
     expect(container!.textContent).not.toContain("Nouvelle grille ou redimensionnement");
-    await click(category("Dessiner"));
-    expect(container!.textContent).toContain("Dimensions de la grille");
+    await click(category("Outils"));
+    expect(container!.textContent).toContain("Redimensionner la grille");
     const confirm=vi.spyOn(window,"confirm").mockReturnValue(false);
     await click([...container!.querySelectorAll("button")].find(b=>b.textContent==="Redimensionner"));
     expect(confirm).toHaveBeenCalled();
@@ -482,18 +482,18 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await mount();
     const bar=container!.querySelector('nav[aria-label="Actions rapides du studio"]')!;
     const send=vi.spyOn(window,"dispatchEvent");
-    const action=(text:string)=>[...bar.querySelectorAll("button")].find(b=>b.textContent===text);
-    await click(action("Loupe"));
+    const action=(text:string)=>[...bar.querySelectorAll("button")].find(b=>b.getAttribute("aria-label")===text||b.getAttribute("title")===text||b.textContent===text);
+    await click(action("Activer la loupe"));
     expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"magnify"}}));
     await click(bar.querySelector('[aria-label="Zoomer la grille"]'));
     expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomIn"}}));
     await click(bar.querySelector('[aria-label="Dézoomer la grille"]'));
     expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomOut"}}));
-    await click(action("Recentrer"));
+    await click(action("Recentrer la grille"));
     const picker=container!.querySelector<HTMLInputElement>('input[aria-label="Importer depuis la barre d’actions"]')!;
-    const choose=vi.spyOn(picker,"click");await click(action("Importer"));expect(choose).toHaveBeenCalled();
+    const choose=vi.spyOn(picker,"click");await click(action("Importer un fichier"));expect(choose).toHaveBeenCalled();
     expect(picker.accept).toContain(".pdf");
-    await click(action("Exporter"));
+    await click(action("Exporter et partager"));
     expect(container!.textContent).toContain("PDF");
     expect(container!.querySelectorAll('[aria-label="Exporter et partager"]')).toHaveLength(1);
   });
@@ -510,6 +510,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   it("ouvre directement la grille et la bibliothèque de motifs, sans écran d'accueil", async () => {
     const view = await mount();
     expect(view.querySelector('canvas[role="application"]')).toBeTruthy();
+    await click([...view.querySelectorAll('.pz-embroidery-right nav button')].find(b=>b.textContent==="Motifs"));
     expect(view.querySelector('[aria-label="Bibliothèque de motifs"]')).toBeTruthy();
     expect(view.querySelector('button[aria-label="Ajouter Fleur rose"]')).toBeTruthy();
     expect(nav()?.querySelectorAll("button")).toHaveLength(4);
@@ -524,12 +525,13 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   });
   it("Dessiner conserve la grille centrale sans ouvrir le grand panneau de réglages", async () => {
     await mount();
-    await click(category("Dessiner"));
+    await click(category("Outils"));
     expect(dialog("Composer")?.classList.contains("is-open")).toBeFalsy();
     expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
   });
   it("ajoute un motif DMC par clic et ouvre ses propriétés minimales", async () => {
     await mount();
+    await click([...container!.querySelectorAll('.pz-embroidery-right nav button')].find(b=>b.textContent==="Motifs"));
     await click(container?.querySelector('button[aria-label="Ajouter Fleur rose"]'));
     expect(container?.querySelector('[aria-label="Propriétés du motif"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Taille du motif"]')).toBeTruthy();
@@ -542,7 +544,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
     expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
     expect(right?.textContent).toContain("Mon profil brodeuse");
-    expect(right?.textContent).toContain("Tissu, comptage et dimensions");
+    expect(right?.textContent).toContain("Modifier la toile");
     expect(dialog("Fils & toile")?.classList.contains("is-open")).toBeFalsy();
   });
   it("donne accès au suivi Broder sans changer de page", async () => {
@@ -597,7 +599,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const advanced=[...(container?.querySelectorAll("button")??[])].find(b=>b.textContent?.includes("Options de composition"));
     await click(advanced);
     expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
-    expect(right?.textContent).toContain("Lettrage compté");
+    expect(right?.textContent).toContain("Texte (lettres en croix)");
     expect(right?.textContent).toContain("Symétrie du dessin");
     expect(dialog("Composer")?.classList.contains("is-open")).toBeFalsy();
   });

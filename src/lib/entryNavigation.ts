@@ -6,7 +6,7 @@ export const STUDIO_ROUTES=[
  "mini-site","pdf","generation","music","art-world","aime-landing",
  "music-production","accessibility","academy","one-space","causal",
  "legal","metamorphose","ripplecircle","game","manifest","manifest-admin",
- "stitch-home","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier"
+ "stitch-home","pattern-boutique","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier"
 ] as const;
 export type StudioRoute=(typeof STUDIO_ROUTES)[number];
 export function isStudioRoute(value:string|null):value is StudioRoute{
@@ -24,6 +24,7 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
   return isStudioRoute(legacy)&&legacy!=="manifest-admin"?legacy:"stitch-home";
  }
  if(path==="/aime")return "aime-home";
+ if(path==="/boutique")return "pattern-boutique";
  if(path==="/pointzero")return "manifest";
  if(path==="/le-monde-aime")return "aime-landing";
  if(path==="/vision")return "vision";
@@ -40,6 +41,7 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
 }
 export function publicPathFor(mode:StudioRoute){
  if(mode==="stitch-home")return "/";
+ if(mode==="pattern-boutique")return "/boutique";
  if(mode==="aime-home")return "/aime";
  if(mode==="manifest")return "/pointzero";
  if(mode==="aime-landing")return "/le-monde-aime";

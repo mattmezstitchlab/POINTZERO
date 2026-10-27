@@ -132,6 +132,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
       p.notes = `Description : « ${prompt.trim()} ». ${size} × ${gridH}, ${palette.length} fils, ${mode === "dither" ? "dégradés dithering (réaliste)" : "aplats"}.`;
       setPattern(p);
       setPreview(renderPreview(p));
+      if (embedded) onImport(p);
     } catch {
       setError("Conversion impossible sur cet appareil.");
     } finally {
@@ -140,19 +141,19 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
   };
 
   return (
-    <div className={`glass-strong fixed ${embedded ? "inset-x-0 bottom-0 top-[110px] z-[35]" : "inset-0 z-[75]"} flex flex-col bg-[#0e0e11]`} role="dialog" aria-modal="true" aria-label="Générer dans le studio">
-      <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3">
+    <div className={`glass-strong fixed ${embedded ? "left-0 top-[110px] bottom-[84px] z-[35] w-[min(354px,calc(100vw-20px))] border-r border-white/15 rounded-r-2xl" : "inset-0 z-[75]"} flex flex-col bg-[#141517]`} role="dialog" aria-modal="true" aria-label="Générer dans le studio">
+      <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-3 py-3">
         <button type="button" className="btn-icon" onClick={onClose} disabled={!!busy} aria-label="Fermer">
           <X size={18} />
         </button>
         <div className="min-w-0">
           <h2 className="truncate text-[16px] leading-tight font-semibold">Générer dans mon ouvrage</h2>
-          <p className="truncate text-[12px] text-label-3">Description → image et grille DMC en une seule génération</p>
+          {!embedded && <p className="truncate text-[12px] text-label-3">Description → image et grille DMC en une seule génération</p>}
         </div>
       </header>
 
-      <main className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
-        <section className="mx-auto flex max-w-[1160px] flex-col gap-4 lg:flex-row">
+      <main className={`thin-scroll min-h-0 flex-1 overflow-y-auto ${embedded ? "p-3" : "p-4 md:p-6"}`}>
+        <section className={`mx-auto flex flex-col gap-4 ${embedded ? "w-full" : "max-w-[1160px] lg:flex-row"}`}>
           {/* Colonne de contrôle */}
           <fieldset disabled={!!busy} className="min-w-0 flex-1 space-y-4">
             <div>
@@ -283,20 +284,20 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
               <button type="button" className="btn-quiet" onClick={variant} disabled={!imgUrl || !!busy} title="Autre interprétation">
                 <Sparkles size={15} /> Variante
               </button>
-              <button type="button" className="btn-primary flex-1" onClick={() => void convert()} disabled={!!busy || !imgUrl}>
+              {!embedded && <button type="button" className="btn-primary flex-1" onClick={() => void convert()} disabled={!!busy || !imgUrl}>
                 <WandSparkles size={15} /> Actualiser la grille
-              </button>
+              </button>}
             </div>
 
             {error && <p role="alert" className="rounded-[12px] bg-white/5 px-4 py-3 text-[13px] text-label-2">{error}</p>}
-            <p className="text-[11px] leading-relaxed text-label-3">
+            {!embedded && <p className="text-[11px] leading-relaxed text-label-3">
               « Dégradés (réaliste) » applique un dithering Floyd–Steinberg vers la palette DMC : c'est ce qui donne les dégradés lisses et le
               rendu détaillé d'un vrai patron. « Aplats » donne des aplats de couleur nets. La fidélité dépend du générateur externe : vérifiez les deux aperçus avant validation. Votre description est envoyée à ce service.
-            </p>
+            </p>}
           </fieldset>
 
           {/* Aperçus */}
-          <aside className="w-full shrink-0 space-y-3 lg:w-[400px]">
+          {!embedded && <aside className="w-full shrink-0 space-y-3 lg:w-[400px]">
             <div className="grid min-h-[180px] place-items-center overflow-hidden rounded-[14px] bg-white p-2">
               {imgUrl ? (
                 <img src={imgUrl} alt="Image générée" className="max-h-[280px] w-full object-contain" />
@@ -320,7 +321,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
             >
               <Check size={15} /> Utiliser dans ma grille
             </button>
-          </aside>
+          </aside>}
         </section>
 
         {busy && (

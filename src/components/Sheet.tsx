@@ -88,7 +88,7 @@ export default function Sheet({ open, onClose, title, subtitle, children, toolba
           <button
             type="button"
             onClick={onClose}
-            className="grid size-8 shrink-0 place-items-center rounded-[5px] bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
+            className="pz-chrome-icon-button grid size-10 shrink-0 place-items-center text-white/80 hover:text-white"
             aria-label="Fermer"
           ><X size={17} strokeWidth={2} /></button>
         </header>

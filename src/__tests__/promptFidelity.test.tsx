@@ -31,7 +31,7 @@ describe("Description fidèle et génération unifiée", () => {
     expect(prompt).toContain(input.subject);
     expect(prompt).toContain("chat roux"); expect(prompt).toContain("chat noir"); expect(prompt).toContain("côte à côte");
   });
-  it("un clic produit l’image et la grille, puis une validation explicite transmet le patron", async () => {
+  it("un clic génère le patron et le place automatiquement dans la grille intégrée", async () => {
     (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ok:true,blob:async()=>new Blob(["image"])}));
     vi.stubGlobal("URL", Object.assign(URL, {createObjectURL:vi.fn(()=>"blob:test"), revokeObjectURL:vi.fn()}));
@@ -46,10 +46,8 @@ describe("Description fidèle et génération unifiée", () => {
     await act(async () => find("Générer mon motif").click());
     expect(loadRemoteImage).toHaveBeenCalledTimes(1);
     expect(imageToDmc).toHaveBeenCalledTimes(1);
-    expect(onImport).not.toHaveBeenCalled();
-    expect(find("Utiliser dans ma grille").disabled).toBe(false);
-    await act(async () => find("Utiliser dans ma grille").click());
     expect(onImport).toHaveBeenCalledTimes(1);
+    expect(find("Utiliser dans ma grille")).toBeUndefined();
     expect(onImport.mock.calls[0][0].notes).toContain(input.subject);
     expect(vi.mocked(imageToDmc).mock.calls[0][3].dropWhite).toBe(false);
     expect(vi.mocked(imageToDmc).mock.calls[0][3].maxColors).toBe(30);
@@ -58,6 +56,6 @@ describe("Description fidèle et génération unifiée", () => {
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(textarea, "Une nouvelle scène");
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    expect(find("Utiliser dans ma grille").disabled).toBe(true);
+    expect(onImport).toHaveBeenCalledTimes(1);
   });
 });

@@ -25,7 +25,7 @@ describe("Atelier unique", () => {
     const onChoose = vi.fn();
     const view = render(<CategoryBar active="create" onChoose={onChoose} />);
     const buttons = Array.from(view.querySelectorAll("nav button"));
-    expect(buttons.map((b) => b.textContent)).toEqual(["Créer","Dessiner","Fils","Broder"]);
+    expect(buttons.map((b) => b.textContent)).toEqual(["Créer","Outils","Fils","Broder"]);
     expect(buttons.filter((b) => b.getAttribute("aria-pressed") === "true")).toHaveLength(1);
     act(() => buttons[2].dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(onChoose).toHaveBeenCalledWith("threads");

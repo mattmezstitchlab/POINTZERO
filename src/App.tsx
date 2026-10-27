@@ -2,6 +2,7 @@ import StudioActionBar from "./components/StudioActionBar";
 import InterfaceLevelBar from "./components/InterfaceLevelBar";
 import { readInterfaceLevel, INTERFACE_LEVEL_KEY, type InterfaceLevel } from "./lib/interfaceLevel";
 import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
+import PatternBoutique from "./components/PatternBoutique";
 import {writeStoredJSON} from "./lib/storageSafety";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
@@ -66,7 +67,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import PeerShare from "./components/PeerShare";
 
 type Panel = "palette" | "library" | "share" | "export" | null;
-type RightSection = "properties" | "edit" | "prepare" | "follow" | "settings";
+type RightSection = "properties" | "motifs" | "edit" | "prepare" | "follow" | "settings";
 type Workspace = "create" | "stitch";
 const STITCH_TOOLS = new Set<Tool>(["hand", "pick", "mark", "details", "block", "row", "park", "unpick", "note"]);
 /**
@@ -99,7 +100,8 @@ export default function App() {
     catch { return "stitch-home"; }
   });
   useEffect(()=>{
-    if(studioMode==="stitch-home")document.title="Point Zéro — Studio de point de croix";
+    if(studioMode==="pattern-boutique")document.title="Point Zéro — Éditions de patrons";
+    else if(studioMode==="stitch-home")document.title="Point Zéro — Studio de point de croix";
     else if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
@@ -131,7 +133,7 @@ export default function App() {
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
   const switchStudio = (mode: StudioRoute) => {
-    if(mode==="stitch-home"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+    if(mode==="stitch-home"||mode==="pattern-boutique"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
@@ -467,12 +469,12 @@ export default function App() {
     if (next === "compose") setTool("hand");
     openRightPanel(next === "stitch" ? "follow" : next === "threads" ? "prepare" : "edit");
   };
-  const useImportedPattern = async (p: Pattern) => {
+  const useImportedPattern = async (p: Pattern, keepGenerator = false) => {
     try {
       if (!await loadPattern(p)) return false;
       setWorkspace("create"); setView("flat"); setTool("hand");
       setActiveCategory("compose"); setRightSection("properties");
-      setAutoImage(null); setPromptOpen(false); setPdfFile(null);
+      setAutoImage(null); if (!keepGenerator) setPromptOpen(false); setPdfFile(null);
       notify("Motif ouvert dans la grille. Composer / décomposer reste disponible dans Dessiner.");
       return true;
     } catch { return false; }
@@ -485,14 +487,18 @@ export default function App() {
     onLibrary: () => { setShowWelcome(false); setPanel("library"); },
   };
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
-    rightSection === "properties" ? "edit" : rightSection;
+    rightSection === "properties" || rightSection === "motifs" ? "edit" : rightSection;
   const enterStitchStudio = (entry: StitchEntry) => {
     switchStudio("embroidery");
     if (entry === "library") { setShowWelcome(false); setPanel("library"); }
     else openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
   };
-  return studioMode === "stitch-home"
+  return studioMode === "pattern-boutique"
+    ? <PatternBoutique onBack={() => switchStudio("stitch-home")} onCreate={() => { switchStudio("embroidery"); setShowWelcome(true); }} onGenerate={() => { switchStudio("embroidery"); setShowWelcome(false); setPromptOpen(true); }} />
+    : studioMode === "stitch-home"
     ? <CrossStitchHome projectName={P.name} onOpen={enterStitchStudio}
+        onShop={() => switchStudio("pattern-boutique")}
+        onShare={() => { switchStudio("embroidery"); setPanel("share"); }}
         onImport={chosen => { switchStudio("embroidery"); importAnyFile(chosen); }}/>
     : studioMode === "universal-dossier"
     ? <UniversalDossierStudio onBack={()=>navigatePage("/")} onOpenAcademy={id=>navigatePage("/atelier?studio=academy&dossier="+encodeURIComponent(id))} onOpenMiniSite={site=>{setMiniSiteHandoff(site);switchStudio("mini-site")}}/>
@@ -664,31 +670,34 @@ export default function App() {
       ) : <>
         <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
           level={interfaceLevel} expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
-        {activeCategory === "compose" ? (
-          <MotifLibrary docked readOnly={!!remote}
-            onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileLibraryOpen(false); }}
-            onAddSaved={sprite => {addStitchedPattern(sprite);setMobileLibraryOpen(false);}}
-            onOpenProject={p => { void loadPattern(p); setTool("hand");setMobileLibraryOpen(false); }}
-            onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose");setMobileLibraryOpen(false); }}
-            onOpenLibrary={() => { setMobileLibraryOpen(false);setPanel("library"); }} />
-        ) : <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 text-[12px] leading-relaxed text-white/60">
-          {activeCategory === "threads"
-            ? "Le rail DMC en bas permet de choisir un fil. Ses caractéristiques, la toile et le stock sont dans l'inspecteur à droite."
-            : "Choisissez ici le geste à effectuer sur la grille. Les informations de suivi et le journal sont à droite."}
-        </div>}
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3 text-[12px] text-white/70">
+          {activeCategory === "compose" ? (
+            <button type="button" className="pz-chrome-icon-button flex w-full items-center justify-center gap-2 px-3 text-xs"
+              onClick={() => { openRightPanel("motifs"); setMobileLibraryOpen(false); setMobileInspectorOpen(true); }}>
+              Ouvrir les motifs à droite
+            </button>
+          ) : null}
+        </div>
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
       className={'pz-embroidery-right thin-scroll fixed bottom-[158px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
-      <nav className="sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
+      <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
         {([
-          ["properties","Objet"],["settings","Réglages"],
+          ["properties","Calques"],["motifs","Motifs"],["settings","Réglages"],
         ] as [RightSection,string][]).map(([id,label]) =>
           <button key={id} type="button" aria-pressed={rightSection===id}
             onClick={() => openRightPanel(id)}
-            className={rightSection===id ? "min-h-9 rounded-[5px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
+            className={rightSection===id ? "min-h-9 rounded-[13px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
       </nav>
-      {rightSection === "properties" ? (
+      {rightSection === "motifs" ? (
+        <MotifLibrary docked readOnly={!!remote}
+          onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileInspectorOpen(false); }}
+          onAddSaved={sprite => { addStitchedPattern(sprite); setMobileInspectorOpen(false); }}
+          onOpenProject={p => { void loadPattern(p); setTool("hand"); setMobileInspectorOpen(false); }}
+          onBlank={() => { panelActions.new(80,80); setTool("hand"); setMobileInspectorOpen(false); }}
+          onOpenLibrary={() => { setMobileInspectorOpen(false); setPanel("library"); }} />
+      ) : rightSection === "properties" ? (
         <EmbroideryInspector pattern={P} activeColor={color}
           onSettings={() => openRightPanel("settings")}
           onBrowse={() => { setMobileInspectorOpen(false); setPanel("palette"); }} workspace={workspace}
@@ -732,7 +741,7 @@ export default function App() {
         />
       </ErrorBoundary>
     )}
-    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={p => { void useImportedPattern(p); }} embedded /> }
+    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={p => { void useImportedPattern(p, true); }} embedded /> }
     {compositionInput && (
       <ErrorBoundary label="Le moteur de composition" onReset={() => setCompositionInput(null)}>
         <CompositionStudio

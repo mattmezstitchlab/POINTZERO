@@ -62,7 +62,7 @@ describe("Point Zéro spécialisé", () => {
   });
   it("transmet le fichier choisi une seule fois et accepte de le sélectionner à nouveau", () => {
     const { view, onImport } = mount();
-    const input = view.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input = [...view.querySelectorAll<HTMLInputElement>('input[type="file"]')].find(el=>el.accept.includes('.oxs'))!;
     expect(input.accept).toContain(".oxs");
     expect(input.accept).toContain(".pdf");
     const file = new File(["image"], "souvenir.png", { type: "image/png" });
