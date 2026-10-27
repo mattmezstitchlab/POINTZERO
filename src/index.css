@@ -2129,3 +2129,15 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 .pz-action-bar.pz-chrome-toolbar button{min-height:40px;border-radius:var(--pz-chrome-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s;color:var(--pz-chrome-text)}
 .pz-action-bar.pz-chrome-toolbar button:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
 @media(prefers-reduced-motion:reduce){.pz-chrome-icon-button,.pz-action-bar.pz-chrome-toolbar button{transition:none}}
+
+
+/* Left rail and shared panels: same material and control geometry as top/bottom bars. */
+.pz-toolbox-chrome{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border)}
+.pz-toolbox-chrome .pz-tool-rail{gap:6px}
+.pz-toolbox-chrome .pz-tool-control{border-radius:var(--pz-chrome-radius);min-width:0;line-height:1.2}
+.pz-toolbox-chrome .pz-tool-control[aria-pressed="true"]{background:#f1efe9;color:#111114;border-color:#f1efe9}
+.pz-toolbox-chrome .pz-tool-control[aria-pressed="false"]:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
+.pz-toolbox-chrome .pz-tool-control:focus-visible{outline:2px solid #d5d4eb;outline-offset:2px}
+.pz-embroidery-dmc{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border)}
+.pz-embroidery-dmc button{border-radius:var(--pz-chrome-radius)}
+@media(prefers-reduced-motion:reduce){.pz-toolbox-chrome .pz-tool-control{transition:none}}
