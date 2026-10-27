@@ -469,12 +469,12 @@ export default function App() {
     if (next === "compose") setTool("hand");
     openRightPanel(next === "stitch" ? "follow" : next === "threads" ? "prepare" : "edit");
   };
-  const useImportedPattern = async (p: Pattern) => {
+  const useImportedPattern = async (p: Pattern, keepGenerator = false) => {
     try {
       if (!await loadPattern(p)) return false;
       setWorkspace("create"); setView("flat"); setTool("hand");
       setActiveCategory("compose"); setRightSection("properties");
-      setAutoImage(null); setPromptOpen(false); setPdfFile(null);
+      setAutoImage(null); if (!keepGenerator) setPromptOpen(false); setPdfFile(null);
       notify("Motif ouvert dans la grille. Composer / décomposer reste disponible dans Dessiner.");
       return true;
     } catch { return false; }
@@ -741,7 +741,7 @@ export default function App() {
         />
       </ErrorBoundary>
     )}
-    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={p => { void useImportedPattern(p); }} embedded /> }
+    {promptOpen && <PromptStudio initialPrompt={promptText} onClose={() => setPromptOpen(false)} onImport={p => { void useImportedPattern(p, true); }} embedded /> }
     {compositionInput && (
       <ErrorBoundary label="Le moteur de composition" onReset={() => setCompositionInput(null)}>
         <CompositionStudio
