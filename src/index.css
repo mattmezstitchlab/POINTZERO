@@ -2192,3 +2192,62 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 @media(prefers-reduced-motion:reduce){
   .pz-chrome-icon-button,.pz-action-bar.pz-chrome-toolbar button,.pz-toolbox-chrome .pz-tool-control{transition:none}
 }
+
+/* ===== Deux docks du studio (charte UniO · Le Monde AIME) =====
+   En haut, blanc : faire. En bas, sombre : se repérer. Des mots, pas de pictos. */
+.pzs-head { position: fixed; top: 14px; left: 0; right: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 12px; pointer-events: none; }
+.pzs-top { pointer-events: auto; position: relative; display: flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box; padding: 7px; border-radius: 18px; background: #fff; color: #0b0b0c; border: 1px solid #e2e2de; box-shadow: 0 14px 36px rgba(11,11,12,.14); }
+.pzs-row { display: flex; align-items: center; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.pzs-row::-webkit-scrollbar { display: none; }
+.pzs-tool { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid transparent; background: #fff; color: #0b0b0c; font: inherit; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.pzs-tool:hover:not(:disabled) { background: #f1f1ee; }
+.pzs-tool:disabled { opacity: .35; cursor: default; }
+.pzs-tool[data-on="1"] { border: 2px solid #0b0b0c; font-weight: 700; }
+.pzs-tool:focus-visible, .pzs-menu button:focus-visible { outline: 2px solid #0b0b0c; outline-offset: 2px; }
+.pzs-count { font-size: 12px; color: #55555a; }
+.pzs-icon { width: 46px; padding: 0; justify-content: center; }
+.pzs-up { width: 46px; padding: 0; justify-content: center; border-color: #e2e2de; }
+.pzs-parent { flex: none; display: inline-flex; align-items: center; height: 46px; padding: 0 14px; border-radius: 12px; background: #0b0b0c; color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.pzs-sep { flex: none; width: 1px; height: 30px; margin: 0 2px; background: #e2e2de; }
+.pzs-brandwrap { position: relative; flex: none; }
+.pzs-brand { font-weight: 700; }
+.pzs-x { color: #c4416b; font-weight: 800; }
+.pzs-veil { position: fixed; inset: 0; z-index: 1; }
+.pzs-menu { position: absolute; z-index: 2; top: calc(100% + 12px); left: -7px; width: min(300px, calc(100vw - 24px)); padding: 10px; border-radius: 18px; background: #fff; border: 1px solid #e2e2de; box-shadow: 0 24px 60px rgba(11,11,12,.2); }
+.pzs-menu ul { list-style: none; margin: 0; padding: 0; }
+.pzs-menu li button { display: flex; width: 100%; align-items: center; min-height: 46px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: #0b0b0c; font: inherit; font-size: 16px; text-align: left; cursor: pointer; }
+.pzs-menu li button:hover { background: #f1f1ee; }
+.pzs-levels { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; padding: 12px 12px 4px; border-top: 1px solid #ececE8; }
+.pzs-levels span { width: 100%; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #55555a; }
+.pzs-levels button { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid #cfcfcb; background: #fff; color: #0b0b0c; font: inherit; font-size: 14px; cursor: pointer; }
+.pzs-levels button[aria-pressed="true"] { border: 2px solid #0b0b0c; font-weight: 700; }
+.pzs-chip { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.pzs-swatch { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); flex: none; }
+.pzs-crumbs { pointer-events: auto; margin: 0; padding: 2px 10px; border-radius: 999px; background: rgba(250,249,247,.9); font-size: 13px; color: #55555a; max-width: calc(100vw - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pzs-crumbs strong { color: #0b0b0c; font-weight: 700; }
+.pzs-bottom { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 6px; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 7px; border-radius: 16px; background: #1b1b1a; border: 1px solid #3a3a38; box-shadow: 0 12px 32px rgba(0,0,0,.3); color: #fff; overflow-x: auto; scrollbar-width: none; }
+.pzs-bottom::-webkit-scrollbar { display: none; }
+.pzs-seg { display: flex; gap: 4px; flex: none; }
+.pzs-seg button, .pzs-btm { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 14px; border-radius: 11px; border: 1px solid #3a3a38; background: transparent; color: #fff; font: inherit; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.pzs-seg button:hover, .pzs-btm:hover { background: rgba(255,255,255,.12); }
+.pzs-seg button[aria-pressed="true"], .pzs-btm[aria-pressed="true"] { background: #fff; color: #0b0b0c; border: 2px solid #fff; font-weight: 700; }
+.pzs-sq { width: 46px; padding: 0; font-size: 19px; }
+.pzs-light { background: #f2f2f0; color: #0b0b0c; border-color: #f2f2f0; font-weight: 700; }
+.pzs-light:hover { background: #e4e4e2 !important; }
+.pzs-bottom .pzs-sep { background: #3a3a38; }
+.pzs-bottom button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.pzs-panel[hidden] { display: none; }
+.pzs-panel-close { position: absolute; top: 8px; right: 8px; z-index: 11; width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
+.pzs-panel-close:hover { background: rgba(255,255,255,.12); }
+.pzs-panel-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* La bande des fils DMC se déploie au-dessus du dock du bas quand on choisit « Fils ». */
+.pz-embroidery-studio .pz-embroidery-dmc { bottom: 92px !important; left: 50% !important; right: auto !important; transform: translateX(-50%); width: min(1000px, calc(100vw - 24px)); border: 1px solid rgba(255,255,255,.15) !important; border-radius: 16px; overflow: hidden; }
+@media (max-width: 720px) {
+  .pzs-top { width: 100%; gap: 4px; padding: 5px; }
+  .pzs-row { flex: 1; }
+  .pzs-tool { height: 44px; padding: 0 11px; font-size: 14px; }
+  .pzs-brand { padding: 0 8px; }
+  .pzs-brandtxt, .pzs-redo, .pzs-top > .pzs-sep:last-of-type { display: none; }
+  .pzs-crumbs { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .pzs-head *, .pzs-bottom * { transition: none !important; } }

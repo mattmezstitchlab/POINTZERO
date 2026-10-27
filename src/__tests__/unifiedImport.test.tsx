@@ -63,10 +63,10 @@ it("ne lance pas deux ouvertures pendant l’archivage du projet actif", async (
 it("une nouvelle grille ne remplace pas l’ouvrage si son archivage échoue",async()=>{
   await mountAndImport("patron.pdf","application/pdf");
   await act(async()=>[...host!.querySelectorAll("button")].find(b=>b.textContent==="Valider puzzle test")!.click());
-  const create=[...host!.querySelectorAll<HTMLButtonElement>('nav[aria-label="Catégories de l\'atelier"] button')].find(b=>b.textContent==="Créer")!;
-  await act(async()=>create.click());
+  const dock=()=>[...host!.querySelectorAll<HTMLButtonElement>('nav[aria-label="Dock des outils du studio de broderie"] button')];
+  await act(async()=>dock().find(b=>b.textContent?.replace(/\d+$/,"")==="Créer")!.click());
   vi.mocked(saveLibrary).mockRejectedValueOnce(new Error("quota"));
-  await act(async()=>[...host!.querySelectorAll("button")].find(b=>b.textContent?.includes("Grille vierge"))!.click());
+  await act(async()=>dock().find(b=>b.textContent==="Nouveau")!.click());
   expect(host!.textContent).toContain("PDF assemblé");
   expect(host!.textContent).toContain("Ouverture bloquée");
 });

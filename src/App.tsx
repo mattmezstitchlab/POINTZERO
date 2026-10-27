@@ -1,5 +1,4 @@
-import StudioActionBar from "./components/StudioActionBar";
-import InterfaceLevelBar from "./components/InterfaceLevelBar";
+import StudioDocks, { type DockPath } from "./components/StudioDocks";
 import { readInterfaceLevel, INTERFACE_LEVEL_KEY, type InterfaceLevel } from "./lib/interfaceLevel";
 import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
 import PatternBoutique from "./components/PatternBoutique";
@@ -16,8 +15,6 @@ import { useMedia } from "./lib/useMedia";
 import type { Tool } from "./lib/stitch";
 import { runChecks } from "./lib/checks";
 import Canvas, { type Insets, type ViewMode } from "./components/Canvas";
-import EmbroideryToolbox from "./components/EmbroideryToolbox";
-import TopBar from "./components/TopBar";
 import DesignStudio from "./components/DesignStudio";
 import ManifestLanding from "./components/ManifestLanding";
 import AimeEcosystem from "./components/AimeEcosystem";
@@ -47,7 +44,7 @@ import AimeLanding from "./components/AimeLanding";
 import type { MiniSite } from "./lib/miniSiteCore";
 import { loadProjectOptions } from "./lib/budgetCore";
 import AtelierCreate from "./components/AtelierCreate";
-import CategoryBar, { type AtelierCategory } from "./components/CategoryBar";
+import { type AtelierCategory } from "./components/CategoryBar";
 import MotifLibrary from "./components/MotifLibrary";
 import EmbroideryInspector from "./components/EmbroideryInspector";
 import { getMotifPreset } from "./lib/motifPresets";
@@ -154,8 +151,9 @@ export default function App() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const subjectMove = useRef<{ scene: SubjectScene; base: Pattern; id: string; x: number; y: number } | null>(null);
   const [interfaceLevel, setInterfaceLevel] = useState(readInterfaceLevel);
-  const [showDrawingTools, setShowDrawingTools] = useState(() => readInterfaceLevel() === "expert");
-  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
+  const [, setShowDrawingTools] = useState(() => readInterfaceLevel() === "expert");
+  const [, setMobileLibraryOpen] = useState(false);
+  const [dockPath, setDockPath] = useState<DockPath>(null);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [rightSection, setRightSection] = useState<RightSection>("properties");
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
@@ -164,7 +162,7 @@ export default function App() {
   const [tool, setTool] = useState<Tool>("cross"), [color, setColor] = useState(Math.max(0, flossIndex("3801"))), [view, setView] = useState<ViewMode>("real"), [workspace, setWorkspace] = useState<Workspace>("create");
   const [symbols, setSymbols] = useState(false), [panel, setPanel] = useState<Panel>(null), [file, setFile] = useState<File | null>(null), [pdfFile, setPdfFile] = useState<File | null>(null), [promptOpen, setPromptOpen] = useState(false), [selection, setSelection] = useState<Selection | null>(null), [clipboard, setClipboard] = useState<Pattern | null>(null);
   const [prefs, setPrefs] = useState(initialPreferences), [inventory, setInventory] = useState(readInventory), [saving, setSaving] = useState("Sauvegarde locale"), [toast, setToast] = useState("");
-  const [fitKey, setFitKey] = useState(0), desktop = useMedia("(min-width: 1024px)"), wide = useMedia("(min-width: 1280px)");
+  const [fitKey, setFitKey] = useState(0), wide = useMedia("(min-width: 1280px)");
   const ready = useRef(true), prevTool = useRef<Tool>("cross"), lastViews = useRef<{ create: ViewMode; stitch: ViewMode }>({ create: "real", stitch: "pattern" });
   const snapshot = useRef({ P, remote, prefs, workspace, store }); snapshot.current = { P, remote, prefs, workspace, store };
   const checked = useRef(false);
@@ -173,7 +171,8 @@ export default function App() {
   // Les outils sont de véritables panneaux, comme dans Photo.
   // Canvas conserve son moteur plein écran mais centre/ajuste le patron
   // dans la surface libre, entre les panneaux et la bande DMC.
-  const insets: Insets = { top: 110, right: wide ? 260 : 0, bottom: 158, left: desktop ? 252 : 0 };
+  // Deux docks flottants : la grille occupe toute la page, entre le dock du haut et celui du bas.
+  const insets: Insets = { top: 112, right: mobileInspectorOpen && wide ? 316 : 0, bottom: dockPath === "fils" ? 212 : 104, left: 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -451,7 +450,7 @@ export default function App() {
     setRightSection(section);
     setPanel(null);
     setMobileLibraryOpen(false);
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) setMobileInspectorOpen(true);
+    setMobileInspectorOpen(true);
   };
   const openCategory = (next: AtelierCategory) => {
     setActiveCategory(next);
@@ -625,11 +624,7 @@ export default function App() {
         if (chosen) void openProjectFromFile(chosen);
       }}
     />
-    <input ref={actionImportRef} type="file" className="sr-only" aria-label="Importer depuis la barre d’actions" accept="image/png,image/jpeg,image/webp,.pdf,.json,.oxs" onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)importAnyFile(selected);}}/>
-    {!pdfFile && !promptOpen && !compositionInput && !file && !autoImage && <StudioActionBar onImport={()=>actionImportRef.current?.click()} onExport={()=>setPanel("export")}
-      onZoom={direction=>window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:direction==="in"?"zoomIn":"zoomOut"}}))}
-      onMagnify={()=>window.dispatchEvent(new CustomEvent("pointzero:canvas",{detail:{action:"magnify"}}))}
-      onFit={()=>setFitKey(k=>k+1)}/> }
+    <input ref={actionImportRef} type="file" className="sr-only" aria-label="Importer une image, un PDF ou un projet" accept="image/png,image/jpeg,image/webp,.pdf,.json,.oxs" onChange={e=>{const selected=e.target.files?.[0];e.target.value="";if(selected)importAnyFile(selected);}}/>
     <Canvas pattern={P} tool={remote ? "hand" : tool} color={color} view={view} symbols={symbols} highlightActive={workspace === "stitch"} insets={insets} fitKey={fitKey} onlyActive={prefs.onlyActive} highContrast={prefs.highContrast} pencilOnly={prefs.pencilOnly} symmetry={prefs.symmetry} annotation={prefs.annotation} readOnly={!!remote} selection={selection} halfDirection={prefs.halfDirection}
       onSelection={setSelection} onBegin={() => { if (!remote) dispatch({ type: "begin" }); }}
       onLive={(p) => { if (!remote) dispatch({ type: "live", pattern: p }); }}
@@ -637,52 +632,52 @@ export default function App() {
       onPick={(idx) => { setColor(idx); if (tool === "pick") setTool(prevTool.current); }}
       onSubjectStart={subjectStart} onSubjectMove={subjectMoveTo} onSubjectEnd={subjectEnd}
       onMotifDrop={(id,x,y) => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset,{x,y}); }} />
-    <InterfaceLevelBar value={interfaceLevel} onChange={(value: InterfaceLevel) => {
-      setInterfaceLevel(value);
-      setShowDrawingTools(value === "expert");
-      try { localStorage.setItem(INTERFACE_LEVEL_KEY, value); } catch { notify("Affichage changé pour cette session uniquement."); }
-    }}/>
-    <TopBar pattern={P} onDesign={() => switchStudio("stitch-home")}
-      onToggleLeft={() => { setMobileLibraryOpen(v=>!v); setMobileInspectorOpen(false); }}
-      onToggleRight={() => { setMobileInspectorOpen(v=>!v); setMobileLibraryOpen(false); }}
-      onCreate={() => openCategory("create")}
+    {!pdfFile && !promptOpen && !compositionInput && !file && !autoImage && <StudioDocks
+      patternName={P.name} saving={saving} workspace={workspace}
+      onWorkspace={mode => { chooseWorkspace(mode); setActiveCategory(mode === "stitch" ? "stitch" : "compose"); setShowWelcome(false); }}
+      tool={remote ? "hand" : tool} onTool={chooseTool}
+      level={interfaceLevel} onLevel={(value: InterfaceLevel) => {
+        setInterfaceLevel(value);
+        setShowDrawingTools(value === "expert");
+        try { localStorage.setItem(INTERFACE_LEVEL_KEY, value); } catch { notify("Affichage changé pour cette session uniquement."); }
+      }}
+      view={view} onView={setView} symbols={symbols} onSymbols={() => setSymbols(v => !v)}
       canUndo={!remote && store.past.length > 0 && !store.pending}
       canRedo={!remote && store.future.length > 0 && !store.pending}
       onUndo={() => dispatch({ type: "undo" })} onRedo={() => dispatch({ type: "redo" })}
-      symbols={symbols} onSymbols={() => setSymbols((v) => !v)}
-      view={view} onView={setView} onFit={() => setFitKey((k) => k + 1)}
-      onLibrary={() => { setPanel("library"); }}
-      onExport={() => { setPanel("export"); }}
-      onSettings={() => openRightPanel("settings")}
-      onShare={() => { setPanel("share"); }}
-      saving={saving} drawing={showDrawingTools}
-      onAdvanced={() => openCategory("compose")} />
-    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[58px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
-      aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
-    <aside aria-label="Bibliothèque et outils de broderie"
-      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[58px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
-      <CategoryBar docked active={activeCategory} onChoose={openCategory} />
-      {activeCategory === "create" ? (
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="Créer un nouveau motif">
-          <h2 className="mb-3 text-[13px] font-semibold">Nouveau motif</h2>
-          <AtelierCreate {...createActions} compact />
-        </div>
-      ) : <>
-        <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
-          level={interfaceLevel} expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3 text-[12px] text-white/70">
-          {activeCategory === "compose" ? (
-            <button type="button" className="flex min-h-10 w-full items-center justify-center gap-2 rounded-[var(--pz-radius)] border border-[var(--pz-border-strong)] bg-[var(--pz-raise)] px-3 text-xs font-semibold text-[var(--pz-text)] transition-colors hover:bg-white/10"
-              onClick={() => { openRightPanel("motifs"); setMobileLibraryOpen(false); setMobileInspectorOpen(true); }}>
-              Ouvrir les motifs à droite
-            </button>
-          ) : null}
-        </div>
-      </>}
-    </aside>
+      colorHex={FLOSS[color]?.hex ?? "#000000"} colorLabel={FLOSS[color] ? "DMC " + FLOSS[color].code : "Aucun fil"}
+      path={dockPath} onPath={next => { setDockPath(next); if (next) setShowWelcome(false); }}
+      inspectorOpen={mobileInspectorOpen} readOnly={!!remote}
+      actions={{
+        home: () => switchStudio("stitch-home"),
+        shop: () => switchStudio("pattern-boutique"),
+        library: () => { setShowWelcome(false); setPanel("library"); },
+        settings: () => openRightPanel("settings"),
+        share: () => setPanel("share"),
+        newPattern: () => { panelActions.new(80, 80); setShowWelcome(false); setActiveCategory("compose"); setDockPath("dessiner"); },
+        importFile: () => actionImportRef.current?.click(),
+        prompt: () => { closePanel(); setPromptOpen(true); },
+        motifs: () => openRightPanel("motifs"),
+        compose: openComposition,
+        exportPanel: () => setPanel("export"),
+        save: panelActions.save,
+        palette: () => setPanel("palette"),
+        threadsSettings: () => openRightPanel("prepare"),
+        follow: () => openRightPanel("follow"),
+        drawSettings: () => { setActiveCategory("compose"); openRightPanel("edit"); },
+        layers: () => { if (mobileInspectorOpen && rightSection === "properties") setMobileInspectorOpen(false); else openRightPanel("properties"); },
+      }}
+      zoom={{
+        zoomIn: () => window.dispatchEvent(new CustomEvent("pointzero:canvas", { detail: { action: "zoomIn" } })),
+        zoomOut: () => window.dispatchEvent(new CustomEvent("pointzero:canvas", { detail: { action: "zoomOut" } })),
+        magnify: () => window.dispatchEvent(new CustomEvent("pointzero:canvas", { detail: { action: "magnify" } })),
+        fit: () => setFitKey(k => k + 1),
+      }} />}
     <aside aria-label="Inspecteur de broderie"
-      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
-      <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
+      hidden={!mobileInspectorOpen}
+      className="pz-embroidery-right pzs-panel thin-scroll fixed bottom-[96px] right-3 top-[112px] z-30 w-[min(300px,calc(100vw-24px))] overflow-y-auto rounded-[18px] border border-white/15 bg-[#09090b] text-white shadow-2xl">
+      <button type="button" className="pzs-panel-close" aria-label="Fermer le panneau" onClick={() => setMobileInspectorOpen(false)}>×</button>
+      <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2 pr-11" aria-label="Sections de l'inspecteur">
         {([
           ["properties","Calques"],["motifs","Motifs"],["settings","Réglages"],
         ] as [RightSection,string][]).map(([id,label]) =>
@@ -722,7 +717,7 @@ export default function App() {
     </aside>
     {showWelcome && !remote && <div className="pointer-events-none fixed inset-0 z-[28] flex items-center justify-center px-3 pb-12 pt-12"><div className="pointer-events-auto"><AtelierCreate {...createActions} /></div></div>}
     {!showWelcome && selection && workspace === "create" && !remote && <SelectionBar selection={selection} hasClipboard={!!clipboard} onAction={selectionAction} />}
-    <FlossRail fullWidth pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={showWelcome || !!file} />
+    <FlossRail fullWidth pattern={P} active={color} onActive={pickColor} onPattern={(p) => setPattern(p)} onSupply={updateSupply} onBrowse={() => setPanel("palette")} stitching={workspace === "stitch"} hidden={showWelcome || !!file || dockPath !== "fils"} />
     <PaletteSheet open={panel === "palette"} onClose={closePanel} pattern={P} color={color} onPick={pickColor} />
     <LibrarySheet open={panel === "library"} onClose={closePanel} onLoad={(p) => void loadPattern(p)} onNew={() => panelActions.new(80, 80)} inventory={inventory} />
     {autoImage && <AutomaticImageImport file={autoImage}
@@ -759,8 +754,8 @@ export default function App() {
     )}
     {panel === "export" && <ExportStudio pattern={P} onClose={closePanel} />}
     <PeerShare open={panel === "share"} onClose={closePanel} pattern={store.present} onView={onRemote} />
-    {remote && <button onClick={() => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); }} className="glass fixed left-1/2 top-[78px] z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12px] text-accent-2">Lecture partagée · revenir à mon projet</button>}
-    {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: 102 }}>{toast}</div>}
+    {remote && <button onClick={() => { window.dispatchEvent(new Event("pointzero:disconnect")); setRemote(null); }} className="glass fixed left-1/2 top-[124px] z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12px] text-accent-2">Lecture partagée · revenir à mon projet</button>}
+    {toast && <div role="status" aria-live="polite" className="toast-in glass pointer-events-none fixed left-1/2 z-[80] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium" style={{ bottom: dockPath === "fils" ? 210 : 104 }}>{toast}</div>}
     <span className="sr-only">Direction B. {BASE_FLOSS.length} références DMC documentées. {FLOSS[color]?.name}.</span>
   </div>;
 }
