@@ -35,6 +35,7 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
 }) {
   const importRef = useRef<HTMLInputElement>(null), manualRef = useRef<HTMLInputElement>(null), pdfRef = useRef<HTMLInputElement>(null), fileRef = useRef<HTMLInputElement>(null);
   const [w, setW] = useState(p.w), [h, setH] = useState(p.h), [text, setText] = useState("BONJOUR"), [scale, setScale] = useState(1), [to, setTo] = useState(""), [mixA, setMixA] = useState("321"), [mixB, setMixB] = useState("Blanc"), [aStrands, setAStrands] = useState(1), [bStrands, setBStrands] = useState(1), [tests, setTests] = useState<CheckResult[] | null>(null);
+  const [confettiReview, setConfettiReview] = useState<{ source: Int16Array; changes: number; samples: {x:number;y:number;before:number;after:number}[] } | null>(null);
   const [brodeuseProfile, setBrodeuseProfile] = useState(loadBrodeuseProfile);
   useEffect(() => {
     const refresh = () => setBrodeuseProfile(loadBrodeuseProfile());
@@ -113,7 +114,33 @@ export default function WorkspacePanel({ open, onClose, pattern: p, onSet, actio
         </Block>
         <Block title="Fils mélangés"><div className="grid grid-cols-2 gap-3"><Label title="DMC A"><input className="field" list="all-floss" value={mixA} onChange={(e) => setMixA(e.target.value)} /></Label><Label title="DMC B"><input className="field" list="all-floss" value={mixB} onChange={(e) => setMixB(e.target.value)} /></Label><NumberField title="Brins A" value={aStrands} min={1} max={5} onChange={setAStrands} /><NumberField title="Brins B" value={bStrands} min={1} max={5} onChange={setBStrands} /></div><button className="btn-tinted mt-3 w-full" onClick={() => { const c = registerBlend(mixA, mixB, aStrands, bStrands); if (c < 0) actions.notify("Deux codes valides, de 2 à 6 brins au total, sont nécessaires."); else { const next = clonePattern(p); ensurePalette(next, c); onSet(next); onColor(c); actions.notify("Recette de mélange sélectionnée"); } }}>Créer ce mélange</button><p className="mt-2 text-[11px] text-label-3">La couleur affichée est indicative, pas une mesure du fil mélangé. La liste d’achat répartit les besoins entre les deux références.</p></Block>
         <Block title="Calques"><button className="mb-3 flex items-center gap-2 text-[13px] text-accent-2" onClick={() => onSet(addLayer(p))}><Plus size={15} />Ajouter un calque</button>{(p.layers ?? []).map((l) => <div key={l.id} className="mb-2 flex items-center gap-2"><button className="btn-icon" aria-label={l.visible ? "Masquer le calque" : "Afficher le calque"} onClick={() => onSet({ ...p, layers: p.layers?.map((v) => v.id === l.id ? { ...v, visible: !v.visible } : v) })}><Layers size={15} className={l.visible ? "text-accent-2" : "text-label-3"} /></button><button className={`flex-1 text-left text-[13px] ${p.activeLayer === l.id ? "text-accent-2" : ""}`} onClick={() => onSet(switchLayer(p, l.id))}>{l.name}</button><button className="btn-icon" aria-label={l.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onSet({ ...p, layers: p.layers?.map((v) => v.id === l.id ? { ...v, locked: !v.locked } : v) })}>{l.locked ? <Lock size={15} /> : <Unlock size={15} />}</button></div>)}<p className="text-[11px] text-label-3">Les exports compositent les calques visibles. Les modifications sont effectuées sur le calque actif.</p></Block>
-        <Block title="Nettoyage contrôlé"><button className="btn-quiet w-full" onClick={() => { const next = clonePattern(p), n = removeConfetti(next.cross, next.w, next.h); if (n) onSet(next); actions.notify(`${n} petites modifications, annulables`); }}>Fusionner les croix isolées</button><p className="mt-2 text-[11px] text-label-3">Une croix isolée peut être un détail intentionnel. Inspectez le résultat avant d’exporter.</p></Block>
+        <Block title="Anti-confettis contrôlé">
+          <div className="space-y-3">
+            <p className="text-[11px] text-label-3">Analyse sans modification de l’ouvrage. Chaque croix isolée peut être un détail voulu : comparez avant d’appliquer.</p>
+            <button className="btn-quiet w-full" onClick={() => {
+              const next=clonePattern(p), changes=removeConfetti(next.cross,next.w,next.h);
+              const samples: {x:number;y:number;before:number;after:number}[]=[];
+              for(let i=0;i<p.cross.length;i++)if(p.cross[i]!==next.cross[i]&&samples.length<8)samples.push({x:i%p.w+1,y:Math.floor(i/p.w)+1,before:p.cross[i],after:next.cross[i]});
+              setConfettiReview({source:p.cross,changes,samples});
+            }}>Analyser les croix isolées</button>
+            {confettiReview?.source===p.cross && <div className="rounded-[13px] border border-white/15 bg-white/[.04] p-3">
+              <p role="status" className="text-[12px] font-semibold">{confettiReview.changes} modification{confettiReview.changes!==1?"s":""} proposée{confettiReview.changes!==1?"s":""}</p>
+              {confettiReview.samples.length>0&&<ul className="mt-2 space-y-1 text-[11px] text-label-3">{confettiReview.samples.map((sample,i)=><li key={i}>Croix {sample.x} × {sample.y} : {sample.before>=0?FLOSS[sample.before]?.code:"vide"} → {sample.after>=0?FLOSS[sample.after]?.code:"toile non brodée"}</li>)}</ul>}
+              {confettiReview.changes>confettiReview.samples.length&&<p className="mt-2 text-[11px] text-label-3">Extrait des {confettiReview.samples.length} premières modifications. Inspectez le motif après validation.</p>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="btn-tinted" disabled={confettiReview.changes===0} onClick={()=>{
+                  if(confettiReview.source!==p.cross)return;
+                  const next=clonePattern(p);
+                  const changed=removeConfetti(next.cross,next.w,next.h);
+                  if(changed)onSet(next);
+                  setConfettiReview(null);
+                  actions.notify(changed?changed+" changements appliqués. Annulation disponible.":"Aucun changement.");
+                }}>Appliquer au patron</button>
+                <button className="btn-quiet" onClick={()=>setConfettiReview(null)}>Ignorer</button>
+              </div>
+            </div>}
+          </div>
+        </Block>
         </fieldset>
       </>}
 
