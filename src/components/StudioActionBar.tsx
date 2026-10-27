@@ -1,6 +1,6 @@
 import { Download, Upload, ZoomIn, ZoomOut, Scan, Search } from "lucide-react";
 export default function StudioActionBar({onImport,onExport,onZoom,onFit,onMagnify}:{onImport:()=>void;onExport:()=>void;onZoom:(direction:"in"|"out")=>void;onFit:()=>void;onMagnify:()=>void}){
- return <nav className="pz-action-bar" aria-label="Actions rapides du studio">
+ return <nav className="pz-action-bar pz-chrome-toolbar" aria-label="Actions rapides du studio">
   <button type="button" onClick={onImport}><Upload size={19} aria-hidden="true"/><span>Importer</span></button>
   <button type="button" onClick={onExport} aria-label="Exporter et partager"><Download size={19} aria-hidden="true"/><span>Exporter</span></button>
   <span className="pz-action-divider" aria-hidden="true"/>
