@@ -2,7 +2,7 @@ import { Flower2, Palette, PencilRuler, Scissors } from "lucide-react";
 export type AtelierCategory = "create" | "compose" | "threads" | "stitch";
 const categories = [
   { id: "create", label: "Créer", Icon: Flower2 },
-  { id: "compose", label: "Dessiner", Icon: PencilRuler },
+  { id: "compose", label: "Outils", Icon: PencilRuler },
   { id: "threads", label: "Fils", Icon: Palette },
   { id: "stitch", label: "Broder", Icon: Scissors },
 ] as const;
