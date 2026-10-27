@@ -3,20 +3,22 @@ import { ArrowLeft, ChevronDown, Redo2, Search, Undo2 } from "lucide-react";
 import type { Tool } from "../lib/stitch";
 import type { ViewMode } from "./Canvas";
 import { LEVEL_LABELS, type InterfaceLevel } from "../lib/interfaceLevel";
+import { VISIBILITY, VISIBILITY_ORDER, type Visibility } from "../lib/visibility";
+import VisibilityOrb from "./VisibilityOrb";
 
 /**
  * Les deux docks du studio (charte UniO du Monde AIME).
- * En haut, blanc : faire. Des mots, pas de pictos ; un outil se déploie en fonctions
- * dans le dock lui-même, le chemin reste affiché dessous.
- * En bas, sombre : se repérer. Mode, affichage, zoom et fil actif.
+ * En haut, blanc : des verbes. Dessiner, Broder, Fils, Partager ; chacun se déploie
+ * dans le dock lui-même, le contexte d'abord (le fil actif), la profondeur ensuite.
+ * En bas, sombre : des lieux. Le BurO, l'ouvrage, l'affichage et le zoom.
+ * Créer, ouvrir et importer vivent au BurO : on entre dans le studio avec un projet.
  */
-export type DockPath = null | "creer" | "dessiner" | "dessiner-plus" | "fils" | "broder" | "exporter";
+export type DockPath = null | "dessiner" | "dessiner-plus" | "fils" | "broder" | "partager" | "visibilite";
 
 export interface DockActions {
-  home: () => void; shop: () => void; library: () => void; settings: () => void; share: () => void;
-  newPattern: () => void; importFile: () => void; prompt: () => void; motifs: () => void; compose: () => void;
-  exportPanel: () => void; save: () => void; palette: () => void; threadsSettings: () => void; follow: () => void;
-  layers: () => void; drawSettings: () => void;
+  buro: () => void; home: () => void; shop: () => void; settings: () => void; share: () => void;
+  motifs: () => void; exportPanel: () => void; save: () => void; palette: () => void;
+  threadsSettings: () => void; follow: () => void; layers: () => void; drawSettings: () => void;
 }
 
 interface Props {
@@ -36,6 +38,7 @@ interface Props {
   colorHex: string; colorLabel: string;
   path: DockPath; onPath: (path: DockPath) => void;
   inspectorOpen: boolean;
+  visibility: Visibility; onVisibility: (value: Visibility) => void;
   actions: DockActions;
   zoom: { zoomIn: () => void; zoomOut: () => void; fit: () => void; magnify: () => void };
   readOnly?: boolean;
@@ -46,12 +49,14 @@ const DRAW_MORE: [Tool, string][] = [["half", "Demi-point"], ["quarter", "Quart"
 const STITCH: [Tool, string][] = [["hand", "Main"], ["mark", "Marquer"], ["block", "Bloc 10 × 10"], ["row", "Ligne"], ["pick", "Pipette"], ["details", "Détails"], ["park", "Parking"], ["unpick", "À défaire"], ["note", "Note"]];
 const BEGINNER = new Set<Tool>(["hand", "cross", "erase", "pick", "mark"]);
 const VIEWS: [ViewMode, string][] = [["real", "Réaliste"], ["flat", "À plat"], ["pattern", "Patron"]];
-const LABELS: Record<Exclude<DockPath, null>, string> = { creer: "Créer", dessiner: "Dessiner", "dessiner-plus": "Plus d’outils", fils: "Fils", broder: "Broder", exporter: "Exporter" };
+const LABELS: Record<Exclude<DockPath, null>, string> = { dessiner: "Dessiner", "dessiner-plus": "Plus d’outils", fils: "Fils", broder: "Broder", partager: "Partager", visibilite: "Visibilité" };
+const PARENT: Partial<Record<Exclude<DockPath, null>, DockPath>> = { "dessiner-plus": "dessiner", visibilite: "partager" };
 
-function Tool_({ children, pressed, onClick, disabled, haspopup, count, id }: { children: ReactNode; pressed?: boolean; onClick: () => void; disabled?: boolean; haspopup?: boolean; count?: number; id?: string }) {
-  return <button id={id} type="button" className="pzs-tool" aria-pressed={pressed === undefined ? undefined : pressed} aria-haspopup={haspopup ? "true" : undefined}
+function Tool_({ children, pressed, onClick, disabled, haspopup, count, soon }: { children: ReactNode; pressed?: boolean; onClick?: () => void; disabled?: boolean; haspopup?: boolean; count?: number; soon?: boolean }) {
+  return <button type="button" className="pzs-tool" aria-pressed={pressed === undefined ? undefined : pressed} aria-haspopup={haspopup ? "true" : undefined}
     disabled={disabled} onClick={onClick} data-on={pressed ? "1" : undefined}>
     {children}{count !== undefined && <span className="pzs-count" aria-hidden="true">{count}</span>}
+    {soon && <span className="buro-soon">Bientôt</span>}
   </button>;
 }
 
@@ -61,37 +66,33 @@ export default function StudioDocks(p: Props) {
   const upRef = useRef<HTMLButtonElement>(null);
   const wasPath = useRef<DockPath>(p.path);
   useEffect(() => {
-    if (p.path && !wasPath.current) upRef.current?.focus();
+    if (p.path && p.path !== wasPath.current) upRef.current?.focus();
     wasPath.current = p.path;
   }, [p.path]);
   useEffect(() => { if (menu) menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus(); }, [menu]);
 
-  const parent = (path: DockPath): DockPath => path === "dessiner-plus" ? "dessiner" : null;
-  const up = () => p.onPath(parent(p.path));
+  const up = () => p.onPath(p.path ? PARENT[p.path] ?? null : null);
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== "Escape") return;
     if (menu) { e.preventDefault(); setMenu(false); document.getElementById("pzs-brand")?.focus(); return; }
     if (p.path) { e.preventDefault(); up(); }
   };
-  const goTool = (t: Tool) => p.onTool(t);
   const level = (list: [Tool, string][]) => p.level === "beginner" ? list.filter(([id]) => BEGINNER.has(id) || id === p.tool) : list;
+  const thread = <button type="button" className="pzs-tool pzs-threadtool" onClick={() => p.onPath("fils")} aria-label={`Fil actif ${p.colorLabel}, changer de fil`}>
+    <span className="pzs-swatch" style={{ background: p.colorHex }} aria-hidden="true" />{p.colorLabel}
+  </button>;
 
-  let items: ReactNode = null;
-  if (p.path === "creer") items = <>
-    <Tool_ onClick={p.actions.newPattern} disabled={p.readOnly}>Nouveau</Tool_>
-    <Tool_ onClick={p.actions.library}>Ouvrir</Tool_>
-    <Tool_ onClick={p.actions.importFile} disabled={p.readOnly}>Importer</Tool_>
-    <Tool_ onClick={p.actions.prompt} disabled={p.readOnly}>Générer</Tool_>
-    <Tool_ onClick={p.actions.motifs} disabled={p.readOnly}>Motifs</Tool_>
-    <Tool_ onClick={p.actions.compose} disabled={p.readOnly}>Composer</Tool_>
-  </>;
-  else if (p.path === "dessiner") items = <>
-    {level(DRAW).map(([id, name]) => <Tool_ key={id} pressed={p.tool === id} disabled={p.readOnly && id !== "hand"} onClick={() => goTool(id)}>{name}</Tool_>)}
+  let items: ReactNode;
+  if (p.path === "dessiner") items = <>
+    {thread}<span className="pzs-sep" aria-hidden="true" />
+    {level(DRAW).map(([id, name]) => <Tool_ key={id} pressed={p.tool === id} disabled={p.readOnly && id !== "hand"} onClick={() => p.onTool(id)}>{name}</Tool_>)}
     <Tool_ haspopup count={DRAW_MORE.length} onClick={() => p.onPath("dessiner-plus")} disabled={p.readOnly}>Plus d’outils</Tool_>
+    <Tool_ onClick={p.actions.motifs} disabled={p.readOnly}>Motifs</Tool_>
+    <Tool_ pressed={p.inspectorOpen} onClick={p.actions.layers}>Calques</Tool_>
     <Tool_ onClick={p.actions.drawSettings}>Réglages du dessin</Tool_>
   </>;
   else if (p.path === "dessiner-plus") items = <>
-    {DRAW_MORE.map(([id, name]) => <Tool_ key={id} pressed={p.tool === id} disabled={p.readOnly} onClick={() => goTool(id)}>{name}</Tool_>)}
+    {DRAW_MORE.map(([id, name]) => <Tool_ key={id} pressed={p.tool === id} disabled={p.readOnly} onClick={() => p.onTool(id)}>{name}</Tool_>)}
   </>;
   else if (p.path === "fils") items = <>
     <span className="pzs-chip"><span className="pzs-swatch" style={{ background: p.colorHex }} aria-hidden="true" />Fil actif · {p.colorLabel}</span>
@@ -99,26 +100,31 @@ export default function StudioDocks(p: Props) {
     <Tool_ onClick={p.actions.threadsSettings}>Fils et toile</Tool_>
   </>;
   else if (p.path === "broder") items = <>
-    {level(STITCH).map(([id, name]) => <Tool_ key={id} pressed={p.tool === id} disabled={p.readOnly && id !== "hand"} onClick={() => goTool(id)}>{name}</Tool_>)}
+    {thread}<span className="pzs-sep" aria-hidden="true" />
+    {level(STITCH).map(([id, name]) => <Tool_ key={id} pressed={p.tool === id} disabled={p.readOnly && id !== "hand"} onClick={() => p.onTool(id)}>{name}</Tool_>)}
     <Tool_ onClick={p.actions.follow}>Suivi</Tool_>
   </>;
-  else if (p.path === "exporter") items = <>
-    <Tool_ onClick={p.actions.exportPanel}>PDF, SVG, OXS</Tool_>
-    <Tool_ onClick={p.actions.save}>Enregistrer le projet</Tool_>
-    <Tool_ onClick={p.actions.share}>Inviter à voir</Tool_>
+  else if (p.path === "partager") items = <>
+    <Tool_ onClick={p.actions.share}>Inviter à regarder</Tool_>
+    <Tool_ haspopup count={4} onClick={() => p.onPath("visibilite")}><VisibilityOrb value={p.visibility} size={20} />Visibilité · {VISIBILITY[p.visibility].label}</Tool_>
+    <Tool_ onClick={p.actions.exportPanel}>Exporter</Tool_>
+    <Tool_ onClick={p.actions.save}>Enregistrer</Tool_>
+    <Tool_ disabled soon>Lancer un SAL</Tool_>
+    <Tool_ disabled soon>Publier en Boutique</Tool_>
+  </>;
+  else if (p.path === "visibilite") items = <>
+    {VISIBILITY_ORDER.map(v => <Tool_ key={v} pressed={p.visibility === v} onClick={() => p.onVisibility(v)}><VisibilityOrb value={v} size={20} />{VISIBILITY[v].label}</Tool_>)}
   </>;
   else items = <>
-    <Tool_ haspopup count={6} onClick={() => p.onPath("creer")}>Créer</Tool_>
-    <Tool_ haspopup count={DRAW.length + 2} onClick={() => { p.onWorkspace("create"); p.onPath("dessiner"); }}>Dessiner</Tool_>
-    <Tool_ haspopup count={3} onClick={() => p.onPath("fils")}>Fils</Tool_>
-    <Tool_ haspopup count={STITCH.length + 1} onClick={() => { p.onWorkspace("stitch"); p.onPath("broder"); }}>Broder</Tool_>
-    <Tool_ pressed={p.inspectorOpen} onClick={p.actions.layers}>Calques</Tool_>
-    <Tool_ haspopup count={3} onClick={() => p.onPath("exporter")}>Exporter</Tool_>
+    <Tool_ haspopup count={DRAW.length + 4} pressed={p.workspace === "create"} onClick={() => { p.onWorkspace("create"); p.onPath("dessiner"); }}>Dessiner</Tool_>
+    <Tool_ haspopup count={STITCH.length + 1} pressed={p.workspace === "stitch"} onClick={() => { p.onWorkspace("stitch"); p.onPath("broder"); }}>Broder</Tool_>
+    <Tool_ haspopup count={2} onClick={() => p.onPath("fils")}>Fils</Tool_>
+    <Tool_ haspopup count={6} onClick={() => p.onPath("partager")}>Partager</Tool_>
   </>;
 
   const toolName = [...DRAW, ...DRAW_MORE, ...STITCH].find(([id]) => id === p.tool)?.[1];
   const crumbs = ["Point Zéro", p.patternName];
-  if (p.path === "dessiner-plus") crumbs.push("Dessiner", "Plus d’outils"); else if (p.path) crumbs.push(LABELS[p.path]);
+  if (p.path) { const parent = PARENT[p.path]; if (parent) crumbs.push(LABELS[parent]); crumbs.push(LABELS[p.path]); }
   if ((p.path === "dessiner" || p.path === "dessiner-plus" || p.path === "broder") && toolName) crumbs.push(toolName);
 
   return <>
@@ -132,8 +138,8 @@ export default function StudioDocks(p: Props) {
             <div className="pzs-veil" aria-hidden="true" onClick={() => setMenu(false)} />
             <div id="pzs-menu" ref={menuRef} className="pzs-menu">
               <ul>
+                <li><button type="button" onClick={() => { setMenu(false); p.actions.buro(); }}>BurO</button></li>
                 <li><button type="button" onClick={() => { setMenu(false); p.actions.home(); }}>Accueil Point Zéro</button></li>
-                <li><button type="button" onClick={() => { setMenu(false); p.actions.library(); }}>Bibliothèque</button></li>
                 <li><button type="button" onClick={() => { setMenu(false); p.actions.shop(); }}>Boutique de patrons</button></li>
                 <li><button type="button" onClick={() => { setMenu(false); p.actions.settings(); }}>Réglages et aide</button></li>
               </ul>
@@ -163,10 +169,10 @@ export default function StudioDocks(p: Props) {
     </header>
 
     <nav className="pzs-bottom" aria-label="Se repérer dans le studio">
-      <div className="pzs-seg" role="group" aria-label="Mode">
-        <button type="button" aria-pressed={p.workspace === "create"} onClick={() => { p.onWorkspace("create"); if (p.path === "broder") p.onPath("dessiner"); }}>Créer</button>
-        <button type="button" aria-pressed={p.workspace === "stitch"} onClick={() => { p.onWorkspace("stitch"); if (p.path === "dessiner" || p.path === "dessiner-plus") p.onPath("broder"); }}>Broder</button>
-      </div>
+      <button type="button" className="pzs-btm pzs-buro" onClick={p.actions.buro} aria-label="Revenir au BurO">
+        <span className="pzs-orb" aria-hidden="true" />BurO
+      </button>
+      <span className="pzs-place" title={p.patternName}><VisibilityOrb value={p.visibility} size={18} dark /><span className="sr-only">{VISIBILITY[p.visibility].label} · </span>{p.patternName}</span>
       <span className="pzs-sep" aria-hidden="true" />
       <div className="pzs-seg" role="group" aria-label="Affichage de la grille">
         {VIEWS.map(([id, name]) => <button key={id} type="button" aria-pressed={p.view === id} onClick={() => p.onView(id)}>{name}</button>)}
@@ -177,10 +183,6 @@ export default function StudioDocks(p: Props) {
       <button type="button" className="pzs-btm pzs-sq" aria-label="Dézoomer" onClick={p.zoom.zoomOut}>−</button>
       <button type="button" className="pzs-btm pzs-sq" aria-label="Zoomer" onClick={p.zoom.zoomIn}>+</button>
       <button type="button" className="pzs-btm pzs-light" onClick={p.zoom.fit}>Tout voir</button>
-      <span className="pzs-sep" aria-hidden="true" />
-      <button type="button" className="pzs-btm pzs-thread" aria-pressed={p.path === "fils"} aria-label={`Fil actif ${p.colorLabel}, ouvrir les fils`} onClick={() => p.onPath(p.path === "fils" ? null : "fils")}>
-        <span className="pzs-swatch" style={{ background: p.colorHex }} aria-hidden="true" />{p.colorLabel}
-      </button>
     </nav>
   </>;
 }

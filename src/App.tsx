@@ -1,4 +1,6 @@
 import StudioDocks, { type DockPath } from "./components/StudioDocks";
+import Buro from "./components/Buro";
+import { VISIBILITY, visibilityOf, writeVisibility } from "./lib/visibility";
 import { readInterfaceLevel, INTERFACE_LEVEL_KEY, type InterfaceLevel } from "./lib/interfaceLevel";
 import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
 import PatternBoutique from "./components/PatternBoutique";
@@ -99,12 +101,13 @@ export default function App() {
   useEffect(()=>{
     if(studioMode==="pattern-boutique")document.title="Point Zéro — Éditions de patrons";
     else if(studioMode==="stitch-home")document.title="Point Zéro — Studio de point de croix";
+    else if(studioMode==="buro")document.title="BurO — Point Zéro";
     else if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
     else if(studioMode==="aime-landing")document.title="LE MONDE AIME — Association";
     else if(studioMode==="design")document.title="Atelier — POINTZERO";
-    else if(!["stitch-home","aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
+    else if(!["buro","stitch-home","aime-home","vision","universe-index","universe-detail","studio-detail","reference-dossier","universal-dossier"].includes(studioMode)){
       document.title="Studios — POINTZERO";
     }
   },[studioMode]);
@@ -130,7 +133,7 @@ export default function App() {
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
   const switchStudio = (mode: StudioRoute) => {
-    if(mode==="stitch-home"||mode==="pattern-boutique"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+    if(mode==="buro"||mode==="stitch-home"||mode==="pattern-boutique"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
@@ -139,7 +142,7 @@ export default function App() {
       if(mode==="budget"||mode==="programme"||mode==="admin"||mode==="music-production")setLinkedProject(loadProjectOptions()[0]??null);
       navigatePage(publicPathFor(mode));
     }
-    if(!["stitch-home","aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
+    if(!["buro","stitch-home","aime-home","manifest","aime-landing","vision","universe-index","studio-detail","universe-detail","reference-dossier","universal-dossier","manifest-admin"].includes(mode)){
       try { localStorage.setItem("pointzero:workspace", mode); } catch { /* keep existing data */ }
     }
   };
@@ -154,6 +157,7 @@ export default function App() {
   const [, setShowDrawingTools] = useState(() => readInterfaceLevel() === "expert");
   const [, setMobileLibraryOpen] = useState(false);
   const [dockPath, setDockPath] = useState<DockPath>(null);
+  const [, setVisibilityTick] = useState(0);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [rightSection, setRightSection] = useState<RightSection>("properties");
   const [compositionInput, setCompositionInput] = useState<Pattern | null>(null);
@@ -492,7 +496,18 @@ export default function App() {
     if (entry === "library") { setShowWelcome(false); setPanel("library"); }
     else openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
   };
-  return studioMode === "pattern-boutique"
+  return studioMode === "buro"
+    ? <Buro currentName={P.name}
+        onOpen={p => { void loadPattern(p).then(ok => { if (ok) { setShowWelcome(false); setTool("hand"); setDockPath(null); switchStudio("embroidery"); } }); }}
+        onContinue={() => { setShowWelcome(false); switchStudio("embroidery"); }}
+        onNew={() => { panelActions.new(80, 80); setShowWelcome(false); setActiveCategory("compose"); setDockPath("dessiner"); switchStudio("embroidery"); }}
+        onImport={f => { importAnyFile(f); switchStudio("embroidery"); }}
+        onGenerate={() => { setShowWelcome(false); switchStudio("embroidery"); setPromptOpen(true); }}
+        onModels={() => switchStudio("pattern-boutique")}
+        onWatch={() => { setShowWelcome(false); switchStudio("embroidery"); setPanel("share"); }}
+        onInvite={p => { void loadPattern(p).then(ok => { if (ok) { setShowWelcome(false); switchStudio("embroidery"); setPanel("share"); } }); }}
+        onHome={() => switchStudio("stitch-home")} />
+    : studioMode === "pattern-boutique"
     ? <PatternBoutique onBack={() => switchStudio("stitch-home")} onCreate={() => { switchStudio("embroidery"); setShowWelcome(true); }} onGenerate={() => { switchStudio("embroidery"); setShowWelcome(false); setPromptOpen(true); }} onOpenPattern={p => { void loadPattern(p).then(ok => { if (ok) { switchStudio("embroidery"); setTool("hand"); } }); }} />
     : studioMode === "stitch-home"
     ? <CrossStitchHome projectName={P.name} onOpen={enterStitchStudio}
@@ -648,17 +663,19 @@ export default function App() {
       colorHex={FLOSS[color]?.hex ?? "#000000"} colorLabel={FLOSS[color] ? "DMC " + FLOSS[color].code : "Aucun fil"}
       path={dockPath} onPath={next => { setDockPath(next); if (next) setShowWelcome(false); }}
       inspectorOpen={mobileInspectorOpen} readOnly={!!remote}
+      visibility={visibilityOf(P.id)}
+      onVisibility={value => {
+        if (!P.id) { notify("Enregistrez d’abord ce projet pour choisir sa visibilité."); return; }
+        if (writeVisibility(P.id, value)) { setVisibilityTick(t => t + 1); notify("Visibilité : " + VISIBILITY[value].label.toLowerCase() + ". Le partage en ligne arrive avec les comptes."); }
+        else notify("Cet appareil refuse d’enregistrer ce réglage.");
+      }}
       actions={{
+        buro: () => switchStudio("buro"),
         home: () => switchStudio("stitch-home"),
         shop: () => switchStudio("pattern-boutique"),
-        library: () => { setShowWelcome(false); setPanel("library"); },
         settings: () => openRightPanel("settings"),
         share: () => setPanel("share"),
-        newPattern: () => { panelActions.new(80, 80); setShowWelcome(false); setActiveCategory("compose"); setDockPath("dessiner"); },
-        importFile: () => actionImportRef.current?.click(),
-        prompt: () => { closePanel(); setPromptOpen(true); },
         motifs: () => openRightPanel("motifs"),
-        compose: openComposition,
         exportPanel: () => setPanel("export"),
         save: panelActions.save,
         palette: () => setPanel("palette"),
