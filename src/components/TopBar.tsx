@@ -28,11 +28,11 @@ interface Props {
   onToggleRight?: () => void;
 }
 const views: ViewMode[] = ["real", "flat", "pattern"];
-const iconButton = "grid size-9 shrink-0 place-items-center rounded-[5px] text-white/80 hover:bg-white/10 hover:text-white disabled:opacity-25";
+const iconButton = "pz-chrome-icon-button grid size-10 shrink-0 place-items-center text-white/80 hover:text-white disabled:opacity-25";
 export default function TopBar(p: Props) {
   const [more, setMore] = useState(false);
   const cycle = () => p.onView(views[(views.indexOf(p.view) + 1) % views.length]);
-  return <header className="pz-embroidery-header fixed inset-x-0 top-0 z-40 flex h-[58px] items-center justify-between gap-2 border-b border-white/15 bg-[#09090b] px-3 text-white" aria-label="En-tête de l'atelier">
+  return <header className="pz-embroidery-header pz-chrome-toolbar fixed inset-x-0 top-0 z-40 flex h-[58px] items-center justify-between gap-2 px-3 text-white" aria-label="En-tête de l'atelier">
     <div className="flex min-w-0 shrink-0 items-center gap-2">
       {p.onDesign && <button type="button" onClick={p.onDesign} aria-label="Accueil Point Zéro" title="Accueil point de croix"
         className={iconButton + " border border-white/20"}><ArrowLeft size={17}/></button>}
