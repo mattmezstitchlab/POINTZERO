@@ -155,7 +155,7 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
     "Marquer sans modifier le patron",
     "Confort et accessibilité",
   ].includes(title);
-  return <details key={`${level}:${title}`} className="group rounded-[6px] border border-white/15 bg-white/[.035] px-3 py-2" open={openByDefault}>
+  return <details key={`${level}:${title}`} className="pz-chrome-section group rounded-[14px] border border-white/15 bg-white/[.035] px-3 py-2" open={openByDefault}>
     <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 text-left text-[12px] font-semibold text-white/90 [&::-webkit-details-marker]:hidden">
       <span>{title}</span><span aria-hidden="true" className="text-white/55 transition-transform group-open:rotate-180">⌄</span>
     </summary>
