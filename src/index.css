@@ -2110,3 +2110,22 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
  .pz-action-bar button {padding:5px;gap:3px;font-size:10px;flex-direction:column;min-width:44px;}
  .pz-action-divider {margin-inline:0;}
 }
+
+
+/* POINTZERO · chrome partagé — les barres conservent leurs positions actuelles. */
+:root{
+ --pz-chrome-bg:rgba(24,24,27,.94);
+ --pz-chrome-raise:rgba(255,255,255,.065);
+ --pz-chrome-border:rgba(255,255,255,.13);
+ --pz-chrome-text:#f1f1f3;
+ --pz-chrome-radius:14px;
+ --pz-chrome-shadow:0 10px 28px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05);
+}
+.pz-chrome-toolbar{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border);color:var(--pz-chrome-text);box-shadow:var(--pz-chrome-shadow);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.pz-chrome-icon-button{width:40px;height:40px;min-width:40px;border-radius:var(--pz-chrome-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s}
+.pz-chrome-icon-button:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
+.pz-chrome-icon-button:focus-visible{outline:2px solid #d5d4eb;outline-offset:2px}
+.pz-action-bar.pz-chrome-toolbar{border:1px solid var(--pz-chrome-border);border-radius:18px}
+.pz-action-bar.pz-chrome-toolbar button{min-height:40px;border-radius:var(--pz-chrome-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s;color:var(--pz-chrome-text)}
+.pz-action-bar.pz-chrome-toolbar button:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
+@media(prefers-reduced-motion:reduce){.pz-chrome-icon-button,.pz-action-bar.pz-chrome-toolbar button{transition:none}}
