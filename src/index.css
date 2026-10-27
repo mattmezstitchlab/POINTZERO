@@ -2141,3 +2141,33 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 .pz-embroidery-dmc{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border)}
 .pz-embroidery-dmc button{border-radius:var(--pz-chrome-radius)}
 @media(prefers-reduced-motion:reduce){.pz-toolbox-chrome .pz-tool-control{transition:none}}
+
+
+/* Finishing pass: float actions above the canvas instead of drawing a full-width charcoal footer. */
+.pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{
+  inset:auto auto max(18px,env(safe-area-inset-bottom)) 50%;
+  transform:translateX(-50%);
+  width:max-content;max-width:calc(100vw - 24px);
+  height:54px;min-height:54px;padding:5px 8px;gap:4px;
+  border:1px solid var(--pz-chrome-border);border-radius:19px;
+  background:rgba(27,27,30,.95);
+  box-shadow:0 16px 44px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.07)
+}
+.pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button{
+  width:40px;min-width:40px;height:40px;min-height:40px;padding:0;
+  border-radius:13px
+}
+.pz-embroidery-studio .pz-action-bar .pz-action-divider{height:20px;margin-inline:4px}
+.pz-embroidery-studio .pz-embroidery-dmc{bottom:82px}
+.pz-embroidery-studio .pz-embroidery-left{border-right-color:rgba(255,255,255,.09)}
+.pz-embroidery-studio .pz-toolbox-chrome{
+  margin:8px;border:1px solid var(--pz-chrome-border);
+  border-radius:18px;padding:10px;background:var(--pz-chrome-bg)
+}
+.pz-toolbox-chrome .pz-tool-rail{grid-template-columns:repeat(3,minmax(0,1fr))}
+.pz-toolbox-chrome .pz-tool-control{min-height:42px;border-radius:12px}
+.pz-toolbox-chrome .pz-tool-rail .pz-tool-control{min-height:44px;padding:6px}
+@media(max-width:639px){
+ .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{bottom:max(10px,env(safe-area-inset-bottom));gap:2px;padding:4px}
+ .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button{width:38px;min-width:38px;height:40px}
+}
