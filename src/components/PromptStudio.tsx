@@ -141,7 +141,7 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
   };
 
   return (
-    <div className={`glass-strong fixed ${embedded ? "left-0 top-[110px] bottom-[84px] z-[35] w-[min(354px,calc(100vw-20px))] border-r border-white/15 rounded-r-2xl" : "inset-0 z-[75]"} flex flex-col bg-[#141517]`} role="dialog" aria-modal="true" aria-label="Générer dans le studio">
+    <div className={`glass-strong fixed ${embedded ? "left-0 top-[58px] bottom-[94px] z-[35] w-[min(354px,calc(100vw-20px))] border-r border-white/15 rounded-r-2xl" : "inset-0 z-[75]"} flex flex-col bg-[#141517]`} role={embedded ? "region" : "dialog"} aria-modal={embedded ? undefined : "true"} aria-label="Générer dans le studio">
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-3 py-3">
         <button type="button" className="btn-icon" onClick={onClose} disabled={!!busy} aria-label="Fermer">
           <X size={18} />
@@ -284,8 +284,8 @@ export default function PromptStudio({ onClose, onImport, initialPrompt = "", em
               <button type="button" className="btn-quiet" onClick={variant} disabled={!imgUrl || !!busy} title="Autre interprétation">
                 <Sparkles size={15} /> Variante
               </button>
-              {!embedded && <button type="button" className="btn-primary flex-1" onClick={() => void convert()} disabled={!!busy || !imgUrl}>
-                <WandSparkles size={15} /> Actualiser la grille
+              {<button type="button" className="btn-primary flex-1" onClick={() => void convert()} disabled={!!busy || !imgRef.current}>
+                <WandSparkles size={15} /> Appliquer les réglages à la grille (sans IA)
               </button>}
             </div>
 

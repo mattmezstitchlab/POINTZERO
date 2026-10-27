@@ -441,10 +441,10 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const red = flossIndex("321"); p.cross[5] = red; p.done[5] = 1; ensurePalette(p, red);
     expect(saveStored(p)).toBe(true);
     await mount();
-    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
-    expect(select).toBeTruthy();
+    const levels = container!.querySelector('[aria-label="Niveau de l’interface"]')!;
+    expect(levels).toBeTruthy();
     for (const level of ["beginner", "expert", "intermediate"]) {
-      await act(async () => { select.value = level; select.dispatchEvent(new Event("change", {bubbles:true})); });
+      await click(levels.querySelector(`button[data-level="${level}"]`));
       expect(localStorage.getItem("pointzero:interface-level")).toBe(level);
       expect(container!.textContent).toContain("Patron protégé");
       await act(async () => window.dispatchEvent(new Event("pagehide")));
@@ -459,8 +459,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const buttons = () => [...container!.querySelectorAll("button")];
     await click(buttons().find(b => b.textContent?.includes("Afficher tous les outils")));
     await click(buttons().find(b => b.textContent === "Quart"));
-    const select = container!.querySelector<HTMLSelectElement>("#pz-interface-level")!;
-    await act(async () => {select.value="beginner";select.dispatchEvent(new Event("change",{bubbles:true}));});
+    await click(container!.querySelector('[aria-label="Niveau de l’interface"] button[data-level="beginner"]'));
     expect(buttons().find(b => b.textContent === "Quart")?.getAttribute("aria-pressed")).toBe("true");
     expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
   });

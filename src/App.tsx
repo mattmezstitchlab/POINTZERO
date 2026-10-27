@@ -173,7 +173,7 @@ export default function App() {
   // Les outils sont de véritables panneaux, comme dans Photo.
   // Canvas conserve son moteur plein écran mais centre/ajuste le patron
   // dans la surface libre, entre les panneaux et la bande DMC.
-  const insets: Insets = { top: 110, right: wide ? 260 : 0, bottom: 158, left: desktop ? 252 : 0 };
+  const insets: Insets = { top: 58, right: wide ? 260 : 0, bottom: 94, left: desktop ? (promptOpen ? 354 : 252) : 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
@@ -657,10 +657,10 @@ export default function App() {
       onShare={() => { setPanel("share"); }}
       saving={saving} drawing={showDrawingTools}
       onAdvanced={() => openCategory("compose")} />
-    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[110px] bottom-[158px] z-20 bg-black/35 lg:bottom-[158px] xl:hidden"
+    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[58px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
       aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
     <aside aria-label="Bibliothèque et outils de broderie"
-      className={`pz-embroidery-left fixed bottom-[158px] left-0 top-[110px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[58px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
       <CategoryBar docked active={activeCategory} onChoose={openCategory} />
       {activeCategory === "create" ? (
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="Créer un nouveau motif">
@@ -670,18 +670,10 @@ export default function App() {
       ) : <>
         <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
           level={interfaceLevel} expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3 text-[12px] text-white/70">
-          {activeCategory === "compose" ? (
-            <button type="button" className="pz-chrome-icon-button flex w-full items-center justify-center gap-2 px-3 text-xs"
-              onClick={() => { openRightPanel("motifs"); setMobileLibraryOpen(false); setMobileInspectorOpen(true); }}>
-              Ouvrir les motifs à droite
-            </button>
-          ) : null}
-        </div>
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
-      className={'pz-embroidery-right thin-scroll fixed bottom-[158px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
+      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
       <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
         {([
           ["properties","Calques"],["motifs","Motifs"],["settings","Réglages"],
