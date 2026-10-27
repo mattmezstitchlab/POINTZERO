@@ -41,13 +41,13 @@ export default function EmbroideryToolbox({ tool,onTool,workspace,level="interme
   return <section aria-label="Outils de broderie" className="pz-toolbox-chrome shrink-0 border-b border-white/10 px-3 pb-3 pt-3 text-white">
     <div className="mb-2 flex items-center justify-between">
       <h2 className="text-[11px] font-semibold uppercase tracking-[.08em] text-white/65">{workspace==="stitch"?"Outils de suivi":"Outils de dessin"}</h2>
-      <span className="text-[10px] text-white/45">À GAUCHE</span>
+      
     </div>
     <div className="pz-tool-rail grid grid-cols-2 gap-1.5">
       {basics.map(([id,name,Icon])=><button key={id} type="button" aria-pressed={tool===id}
         disabled={readOnly&&id!=="hand"} title={name} onClick={()=>onTool(id)}
-        className={`pz-tool-control flex min-h-[54px] flex-col items-center justify-center gap-1 border p-1 text-[11px] transition-colors disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 bg-white/[.04] text-white/80 hover:bg-white/10"}`}>
-        <Icon size={18} aria-hidden="true"/><span>{name}</span>
+        className={`pz-tool-control flex min-h-[44px] flex-col items-center justify-center gap-1 border p-1 text-[11px] transition-colors disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 bg-white/[.04] text-white/80 hover:bg-white/10"}`}>
+        <Icon size={18} aria-hidden="true"/><span className="sr-only">{name}</span>
       </button>)}
     </div>
     <button type="button" aria-expanded={visibleMore} onClick={onToggleExpanded}
@@ -62,8 +62,6 @@ export default function EmbroideryToolbox({ tool,onTool,workspace,level="interme
         disabled={readOnly} onClick={()=>onTool(id as Tool)}
         className={`pz-tool-control min-h-10 border px-2 py-1 text-left text-[11px] disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 text-white/75 hover:bg-white/10"}`}>{name}</button>)}
     </div>}
-    <p className="mt-2 text-[10px] leading-relaxed text-white/45">{workspace==="stitch"
-      ?"Le suivi ne modifie pas le dessin. Le rail DMC conserve les fils."
-      :"Tous les gestes agissent directement dans la toile centrale."}</p>
+    
   </section>;
 }
