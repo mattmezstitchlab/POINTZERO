@@ -470,3 +470,16 @@
  .csh-header nav{justify-content:flex-start}
 }
 @media(prefers-reduced-motion:reduce){.cross-stitch-home .csh-primary{transition:none}.cross-stitch-home .csh-primary:hover{transform:none}}
+
+
+/* Real product workflows: direct access to existing import and sharing mechanisms, not mock screenshots. */
+.csh-real-workflows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:8px 0 62px}
+.csh-real-workflows article{min-width:0;display:flex;flex-direction:column;align-items:flex-start;padding:28px;border:1px solid #ffffff21;border-radius:20px;background:#17191b}
+.csh-real-workflows article>svg{color:#d6e2bb;margin:8px 0 18px}
+.csh-real-workflows h2{font-family:"Cal Sans","Inter Variable",Inter,sans-serif;font-size:clamp(20px,2.3vw,30px);letter-spacing:-.045em;line-height:1.12;margin:0 0 12px}
+.csh-real-workflows p:not(.csh-eyebrow){color:#bdbfb9;font-size:13px;line-height:1.65;margin:0 0 23px}
+.csh-real-workflows .csh-secondary{margin-top:auto}
+.csh-workflow-import{position:relative;cursor:pointer}
+.csh-workflow-import input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.csh-workflow-import:focus-within{outline:3px solid #c0afff;outline-offset:3px}
+@media(max-width:900px){.csh-real-workflows{grid-template-columns:1fr}.csh-real-workflows article{padding:24px}}
