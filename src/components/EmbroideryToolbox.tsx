@@ -38,29 +38,29 @@ export default function EmbroideryToolbox({ tool,onTool,workspace,level="interme
   const basics = level === "beginner" ? allBasics.filter(([id]) => ["hand","cross","erase","pick","mark"].includes(id) || id === tool) : allBasics;
   const more = useMemo(()=>workspace==="stitch" ? stitchMore : createMore,[workspace]);
   const visibleMore = expanded || more.some(([id]) => id === tool);
-  return <section aria-label="Outils de broderie" className="shrink-0 border-b border-white/10 px-3 pb-3 pt-3 text-white">
+  return <section aria-label="Outils de broderie" className="pz-toolbox-chrome shrink-0 border-b border-white/10 px-3 pb-3 pt-3 text-white">
     <div className="mb-2 flex items-center justify-between">
       <h2 className="text-[11px] font-semibold uppercase tracking-[.08em] text-white/65">{workspace==="stitch"?"Outils de suivi":"Outils de dessin"}</h2>
       <span className="text-[10px] text-white/45">À GAUCHE</span>
     </div>
-    <div className="pz-tool-rail grid grid-cols-2 gap-2">
+    <div className="pz-tool-rail grid grid-cols-2 gap-1.5">
       {basics.map(([id,name,Icon])=><button key={id} type="button" aria-pressed={tool===id}
         disabled={readOnly&&id!=="hand"} title={name} onClick={()=>onTool(id)}
-        className={`flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-[5px] border p-1 text-[12px] transition-colors disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 bg-white/[.04] text-white/80 hover:bg-white/10"}`}>
-        <Icon size={22} aria-hidden="true"/><span>{name}</span>
+        className={`pz-tool-control flex min-h-[54px] flex-col items-center justify-center gap-1 border p-1 text-[11px] transition-colors disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 bg-white/[.04] text-white/80 hover:bg-white/10"}`}>
+        <Icon size={18} aria-hidden="true"/><span>{name}</span>
       </button>)}
     </div>
     <button type="button" aria-expanded={visibleMore} onClick={onToggleExpanded}
-      className="mt-2 flex min-h-9 w-full items-center justify-between rounded-[5px] border border-white/15 px-2 text-left text-[11px] text-white/75 hover:bg-white/10">
+      className="pz-tool-control mt-2 flex min-h-10 w-full items-center justify-between border border-white/15 px-2 text-left text-[11px] text-white/75 hover:bg-white/10">
       <span>{visibleMore?"Masquer les outils avancés":"Afficher tous les outils"}</span>{visibleMore?<Minus size={14}/>:<Plus size={14}/>}
     </button>
     {level === "beginner" && <div className="mt-2 flex flex-wrap gap-1" aria-label="Autres outils courants">
-      {expanded && allBasics.filter(([id]) => !basics.some(([shown]) => shown === id)).map(([id,name]) => <button type="button" key={id} disabled={readOnly} onClick={() => onTool(id)} className="min-h-11 rounded border border-white/20 px-2 text-xs">{name}</button>)}
+      {expanded && allBasics.filter(([id]) => !basics.some(([shown]) => shown === id)).map(([id,name]) => <button type="button" key={id} disabled={readOnly} onClick={() => onTool(id)} className="pz-tool-control min-h-10 border border-white/20 px-2 text-xs">{name}</button>)}
     </div>}
     {visibleMore&&<div className="mt-2 grid grid-cols-2 gap-1" aria-label="Outils avancés">
       {more.map(([id,name])=><button key={id} type="button" aria-pressed={tool===id}
         disabled={readOnly} onClick={()=>onTool(id as Tool)}
-        className={`min-h-9 rounded-[5px] border px-2 py-1 text-left text-[11px] disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 text-white/75 hover:bg-white/10"}`}>{name}</button>)}
+        className={`pz-tool-control min-h-10 border px-2 py-1 text-left text-[11px] disabled:opacity-40 ${tool===id?"border-white bg-white text-black":"border-white/15 text-white/75 hover:bg-white/10"}`}>{name}</button>)}
     </div>}
     <p className="mt-2 text-[10px] leading-relaxed text-white/45">{workspace==="stitch"
       ?"Le suivi ne modifie pas le dessin. Le rail DMC conserve les fils."
