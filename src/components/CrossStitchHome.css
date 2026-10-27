@@ -407,3 +407,66 @@
 .csh-puzzle-visual span {display:block;font-size:9px;letter-spacing:.12em;color:#62675f;}
 .csh-puzzle-visual b {display:block;color:#6a815e;font-size:clamp(16px,2.5vw,30px);line-height:1.25;letter-spacing:.14em;text-align:center;margin-top:14px;}
 @media(max-width:760px){.csh-immersive{margin:0 0 40px;padding:30px 18px;border-radius:16px}.csh-scene-body{grid-template-columns:62px 1fr;min-height:280px}.csh-scene-tools{padding:10px 6px;gap:8px}.csh-scene-tools>span{min-height:50px}.csh-scene-top{padding:14px 10px;font-size:8px}.csh-scene-top span:last-child{display:none}.csh-scene-tag{font-size:12px;right:10px;bottom:10px;padding:8px}.csh-scene-floss{gap:7px;padding:14px 10px}.csh-scene-floss span{width:24px;height:24px}.csh-proof-row,.csh-pdf-feature{grid-template-columns:1fr}.csh-pdf-feature{gap:24px}.csh-puzzle-visual{transform:none;padding:18px}.csh-puzzle-visual>div{padding:14px}.csh-studio-scene{margin-top:28px}}
+
+
+/* POINTZERO · design pass — entrée centrée sur la croix, sans toucher aux flux métiers.
+   Un même langage : noir de l'atelier, ivoire de la toile, accent fil sauge. */
+.cross-stitch-home{
+  --csh-ink:#f7f4ec;
+  --csh-muted:#b9bab5;
+  --csh-green:#d6e2bb;
+  background:#0b0b0d;
+  color:var(--csh-ink);
+  font-family:"Inter Variable",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+.csh-header{max-width:none;padding:18px clamp(20px,4vw,64px);border-bottom:1px solid #ffffff24;background:#0b0b0d}
+.csh-brand{font-size:15px;letter-spacing:.09em}
+.csh-brand>span:first-child{color:#e3e6cf;font-size:30px;line-height:1}
+.csh-brand-detail{color:#b9baae}
+.csh-header nav button{color:#e5e3dd;transition:color .2s}
+.csh-header nav button:hover{color:white}
+.cross-stitch-home main{max-width:1320px;padding-inline:clamp(20px,5vw,76px)}
+.csh-hero{grid-template-columns:minmax(0,1fr);gap:26px;text-align:center;padding:clamp(46px,7vh,110px) 0 64px;justify-items:center}
+.csh-hero>div{max-width:800px;display:flex;align-items:center;flex-direction:column}
+.csh-hero .csh-eyebrow{color:#d3d6c4}
+.csh-hero h1{font-family:"Cal Sans","Inter Variable",Inter,sans-serif;font-size:clamp(46px,7.2vw,108px);line-height:1.01;letter-spacing:-.06em;margin-bottom:23px;max-width:920px}
+.csh-hero h1 em{font-style:normal;color:#d0d9b7}
+.csh-intro{color:#c5c5c0;font-size:clamp(15px,1.45vw,19px);max-width:620px}
+.csh-actions{justify-content:center;gap:12px}
+.cross-stitch-home .csh-primary{border-radius:12px;background:#dde5c8;color:#111712;font-weight:650;padding:14px 24px;transition:transform .2s,background .2s}
+.cross-stitch-home .csh-primary:hover{background:#f0f4e7;transform:translateY(-1px)}
+.cross-stitch-home .csh-secondary{border-color:#777b78;color:#f5f5ee;background:#ffffff06;border-radius:12px;padding:13px 19px;transition:background .2s}
+.cross-stitch-home .csh-secondary:hover{background:#ffffff16}
+.csh-local{max-width:550px;color:#aeb0ad}
+.csh-preview{width:min(100%,780px);transform:none;justify-self:center;background:#17191b;border:1px solid #ffffff25;border-radius:20px;padding:16px 18px 12px;box-shadow:0 30px 110px #0008}
+.csh-preview-heading{color:#b1bfb4}
+.csh-preview img{max-height:540px;margin:12px auto;mix-blend-mode:normal;object-fit:contain}
+.csh-preview figcaption{color:#bbbfb8}
+.csh-immersive{background:#141718;border:1px solid #ffffff1b;margin:20px 0 70px;padding:52px clamp(20px,4vw,55px);border-radius:22px}
+.csh-immersive h2,.csh-journey h2,.csh-import h2,.csh-pdf-feature h2{font-family:"Cal Sans","Inter Variable",Inter,sans-serif;letter-spacing:-.045em}
+.csh-immersive h2 em{font-style:normal}
+.csh-pdf-feature,.csh-import{border-color:#ffffff25}
+.csh-pdf-feature p:not(.csh-eyebrow),.csh-import p:not(.csh-eyebrow),.csh-cards p,.csh-safety p{color:#bcbfbc}
+.csh-resume{background:#191d1b;border:1px solid #4d574e;border-radius:15px}
+.csh-resume p:not(.csh-eyebrow){color:#c3c8c0}
+.csh-cards article{border-color:#ffffff3a}
+.csh-cards svg{color:#d6e2bb}
+.csh-cards h3{color:#f2f3ec}
+.csh-journey h2{font-size:clamp(30px,3.5vw,52px)}
+.csh-upload{background:#171b19;border-color:#697968;border-radius:16px}
+.csh-upload span{color:#ccd1c9}
+.csh-safety,.csh-footer{border-color:#ffffff25}
+.csh-footer{max-width:none;padding-inline:clamp(20px,4vw,64px)}
+.csh-puzzle-visual{transform:none;background:#171b19;border:1px solid #ffffff20}
+.csh-puzzle-visual>div{background:#ebede5}
+.csh-pdf-feature .csh-secondary{margin-top:14px}
+.cross-stitch-home button:focus-visible,.cross-stitch-home a:focus-visible,.csh-upload:focus-within{outline:3px solid #bca4ff;outline-offset:3px}
+@media(max-width:760px){
+ .csh-header{padding:18px 20px}
+ .csh-hero{padding:45px 0 40px;gap:20px}
+ .csh-preview{border-radius:13px}
+ .csh-immersive{padding:28px 18px}
+ .csh-pdf-feature{padding:20px 0 46px}
+ .csh-header nav{justify-content:flex-start}
+}
+@media(prefers-reduced-motion:reduce){.cross-stitch-home .csh-primary{transition:none}.cross-stitch-home .csh-primary:hover{transform:none}}
