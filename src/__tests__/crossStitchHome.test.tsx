@@ -14,12 +14,12 @@ afterEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
 });
-function mount() {
+function mount(extra: { onBuro?: () => void; onShop?: () => void; onShare?: () => void } = {}) {
   const onOpen = vi.fn(), onImport = vi.fn();
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  act(() => root!.render(<CrossStitchHome projectName="Roses de famille" onOpen={onOpen} onImport={onImport}/>));
+  act(() => root!.render(<CrossStitchHome projectName="Roses de famille" onOpen={onOpen} onImport={onImport} {...extra}/>));
   return { view: host, onOpen, onImport };
 }
 describe("Point Zéro spécialisé", () => {
@@ -40,6 +40,7 @@ describe("Point Zéro spécialisé", () => {
     expect(view.textContent).toContain("son effacement supprime les projets locaux");
     expect(view.querySelector("iframe")).toBeNull();
     expect(view.textContent).toContain("Le puzzle PDF");
+    expect(view.querySelector("h1")?.textContent).toBe("Point Zéro");
     expect(view.textContent).toContain("pas une capture d’écran");
     expect(view.querySelectorAll("h1")).toHaveLength(1);
     expect(write).not.toHaveBeenCalled();
@@ -74,5 +75,37 @@ describe("Point Zéro spécialisé", () => {
     Object.defineProperty(input, "files", { configurable: true, value: [] });
     act(() => input.dispatchEvent(new Event("change", { bubbles: true })));
     expect(onImport).toHaveBeenCalledTimes(1);
+  });
+  it("suit la charte AIME : dock du haut, « + Entrer » vers le BurO, dock du bas des sections", () => {
+    const onBuro = vi.fn(), onShop = vi.fn(), onShare = vi.fn();
+    const { view, onOpen } = mount({ onBuro, onShop, onShare });
+    const top = view.querySelector('nav[aria-label="Navigation point de croix"]')!;
+    expect(top).toBeTruthy();
+    expect(view.querySelectorAll("svg")).toHaveLength(view.querySelectorAll(".pzd svg").length);
+    const enter = view.querySelector<HTMLButtonElement>('button[aria-label="Entrer dans Point Zéro"]')!;
+    expect(enter.textContent).toContain("Entrer");
+    act(() => enter.click());
+    expect(onBuro).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
+    const bottom = view.querySelector('nav[aria-label="Sections de la page"]')!;
+    expect([...bottom.querySelectorAll("a")].map(a => a.textContent)).toEqual(["Le studio", "Les éditions", "Ensemble", "Commencer"]);
+    expect([...bottom.querySelectorAll("a")].map(a => a.getAttribute("href"))).toEqual(["#studio", "#editions", "#ensemble", "#commencer"]);
+    for (const id of ["studio", "editions", "ensemble", "commencer"]) expect(view.querySelector("#" + id)).toBeTruthy();
+    const brand = view.querySelector<HTMLButtonElement>("#pzh-brand")!;
+    act(() => brand.click());
+    expect(brand.getAttribute("aria-expanded")).toBe("true");
+    const shop = [...view.querySelectorAll<HTMLButtonElement>("#pzh-menu button")].find(b => b.textContent === "Boutique de patrons")!;
+    act(() => shop.click());
+    expect(onShop).toHaveBeenCalledTimes(1);
+    expect(view.querySelector("#pzh-menu")).toBeNull();
+    const invite = [...view.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent?.includes("Inviter à regarder"))!;
+    act(() => invite.click());
+    expect(onShare).toHaveBeenCalled();
+    expect(view.textContent).toContain("Bientôt");
+  });
+  it("sans BurO, « + Entrer » ouvre mes ouvrages", () => {
+    const { view, onOpen } = mount();
+    act(() => view.querySelector<HTMLButtonElement>('button[aria-label="Entrer dans Point Zéro"]')!.click());
+    expect(onOpen).toHaveBeenCalledWith("library");
   });
 });

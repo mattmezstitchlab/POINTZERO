@@ -432,7 +432,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await mount();
     const before = container?.querySelector('canvas[role="application"]')?.getAttribute("aria-label");
     await brandMenu("Accueil Point Zéro");
-    expect(container?.querySelector("h1")?.textContent).toContain("dernière croix");
+    expect(container?.querySelector("h1")?.textContent).toBe("Point Zéro");
     expect(window.location.pathname).toBe("/");
     const resume = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Continuer à broder"));
     await click(resume);
