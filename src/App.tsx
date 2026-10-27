@@ -670,14 +670,6 @@ export default function App() {
       ) : <>
         <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
           level={interfaceLevel} expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3 text-[12px] text-white/70">
-          {activeCategory === "compose" ? (
-            <button type="button" className="pz-chrome-icon-button flex w-full items-center justify-center gap-2 px-3 text-xs"
-              onClick={() => { openRightPanel("motifs"); setMobileLibraryOpen(false); setMobileInspectorOpen(true); }}>
-              Ouvrir les motifs à droite
-            </button>
-          ) : null}
-        </div>
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
