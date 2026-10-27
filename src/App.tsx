@@ -2,6 +2,7 @@ import StudioActionBar from "./components/StudioActionBar";
 import InterfaceLevelBar from "./components/InterfaceLevelBar";
 import { readInterfaceLevel, INTERFACE_LEVEL_KEY, type InterfaceLevel } from "./lib/interfaceLevel";
 import CrossStitchHome, { type StitchEntry } from "./components/CrossStitchHome";
+import PatternBoutique from "./components/PatternBoutique";
 import {writeStoredJSON} from "./lib/storageSafety";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_FLOSS, FLOSS, flossIndex } from "./lib/dmc";
@@ -99,7 +100,8 @@ export default function App() {
     catch { return "stitch-home"; }
   });
   useEffect(()=>{
-    if(studioMode==="stitch-home")document.title="Point Zéro — Studio de point de croix";
+    if(studioMode==="pattern-boutique")document.title="Point Zéro — Éditions de patrons";
+    else if(studioMode==="stitch-home")document.title="Point Zéro — Studio de point de croix";
     else if(studioMode==="manifest")document.title="POINTZERO .0 — Le temps retrouvé.";
     else if(studioMode==="universal-dossier")document.title="Dossier Universel · AIME®";
     else if(studioMode==="reference-dossier")document.title="Dossier de référence · AIME®";
@@ -131,7 +133,7 @@ export default function App() {
     return()=>window.removeEventListener("popstate",restoreRoute);
   },[]);
   const switchStudio = (mode: StudioRoute) => {
-    if(mode==="stitch-home"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
+    if(mode==="stitch-home"||mode==="pattern-boutique"||mode==="aime-home"||mode==="manifest"||mode==="aime-landing"||mode==="vision"||
       mode==="universe-index"||mode==="reference-dossier"||mode==="universal-dossier"||mode==="design"){
       navigatePage(publicPathFor(mode));
     }else if(mode==="manifest-admin") {
@@ -491,8 +493,11 @@ export default function App() {
     if (entry === "library") { setShowWelcome(false); setPanel("library"); }
     else openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
   };
-  return studioMode === "stitch-home"
+  return studioMode === "pattern-boutique"
+    ? <PatternBoutique onBack={() => switchStudio("stitch-home")} onCreate={() => { switchStudio("embroidery"); setShowWelcome(true); }} onGenerate={() => { switchStudio("embroidery"); setShowWelcome(false); setPromptOpen(true); }} />
+    : studioMode === "stitch-home"
     ? <CrossStitchHome projectName={P.name} onOpen={enterStitchStudio}
+        onShop={() => switchStudio("pattern-boutique")}
         onShare={() => { switchStudio("embroidery"); setPanel("share"); }}
         onImport={chosen => { switchStudio("embroidery"); importAnyFile(chosen); }}/>
     : studioMode === "universal-dossier"
