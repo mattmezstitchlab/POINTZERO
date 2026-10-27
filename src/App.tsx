@@ -657,10 +657,10 @@ export default function App() {
       onShare={() => { setPanel("share"); }}
       saving={saving} drawing={showDrawingTools}
       onAdvanced={() => openCategory("compose")} />
-    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[110px] bottom-[158px] z-20 bg-black/35 lg:bottom-[158px] xl:hidden"
+    {(mobileLibraryOpen || mobileInspectorOpen) && <button type="button" className="fixed inset-x-0 top-[58px] bottom-[94px] z-20 bg-black/35 lg:bottom-[94px] xl:hidden"
       aria-label="Fermer les panneaux de broderie" onClick={() => {setMobileLibraryOpen(false);setMobileInspectorOpen(false);}} />}
     <aside aria-label="Bibliothèque et outils de broderie"
-      className={`pz-embroidery-left fixed bottom-[158px] left-0 top-[110px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      className={`pz-embroidery-left fixed bottom-[94px] left-0 top-[58px] z-30 flex w-[252px] flex-col overflow-hidden border-r border-white/15 bg-[#09090b] text-white transition-transform lg:translate-x-0 ${mobileLibraryOpen ? "translate-x-0" : "-translate-x-full"}`}>
       <CategoryBar docked active={activeCategory} onChoose={openCategory} />
       {activeCategory === "create" ? (
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="Créer un nouveau motif">
@@ -681,7 +681,7 @@ export default function App() {
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
-      className={'pz-embroidery-right thin-scroll fixed bottom-[158px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
+      className={'pz-embroidery-right thin-scroll fixed bottom-[94px] right-0 top-[58px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
       <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
         {([
           ["properties","Calques"],["motifs","Motifs"],["settings","Réglages"],
