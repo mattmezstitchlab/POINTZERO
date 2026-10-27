@@ -79,8 +79,8 @@ export default function MotifLibrary({ onAdd, onAddSaved, onOpenProject, onBlank
         <button type="button" className={docked ? "grid size-8 place-items-center rounded-[5px] text-white/75 hover:bg-white/10" : "hidden size-8 place-items-center rounded-[5px] text-white/75 hover:bg-white/10 lg:grid"} aria-label="Bibliothèque de projets avancée" onClick={onOpenLibrary}><FolderOpen size={17}/></button>
       </div>
       <div className="grid grid-cols-2 gap-1 border-b border-white/10 p-2">
-        <button type="button" onClick={() => setTab("motifs")} aria-pressed={tab === "motifs"} className={`min-h-9 rounded-[5px] text-xs font-semibold ${tab === "motifs" ? "bg-white text-black" : "text-white/75 hover:bg-white/10"}`}>Motifs</button>
-        <button type="button" onClick={() => setTab("projets")} aria-pressed={tab === "projets"} className={`min-h-9 rounded-[5px] text-xs font-semibold ${tab === "projets" ? "bg-white text-black" : "text-white/75 hover:bg-white/10"}`}>Projets</button>
+        <button type="button" onClick={() => setTab("motifs")} aria-pressed={tab === "motifs"} className={`min-h-9 rounded-[var(--pz-radius-sm)] text-xs font-semibold ${tab === "motifs" ? "bg-[var(--pz-brand)] text-[var(--pz-brand-ink)]" : "text-white/75 hover:bg-white/10"}`}>Motifs</button>
+        <button type="button" onClick={() => setTab("projets")} aria-pressed={tab === "projets"} className={`min-h-9 rounded-[var(--pz-radius-sm)] text-xs font-semibold ${tab === "projets" ? "bg-[var(--pz-brand)] text-[var(--pz-brand-ink)]" : "text-white/75 hover:bg-white/10"}`}>Projets</button>
       </div>
       {tab === "motifs" ? <>
         <div className="border-b border-white/10 p-3">
@@ -89,7 +89,7 @@ export default function MotifLibrary({ onAdd, onAddSaved, onOpenProject, onBlank
             <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Rechercher…" className="w-full rounded-[5px] border border-white/20 bg-white/10 py-2 pl-8 pr-2 text-xs text-white placeholder:text-white/60"/>
           </label>
           <div className="mt-2 flex gap-1 overflow-x-auto pb-1 no-scrollbar" aria-label="Catégories de motifs">
-            {(["Tout", ...PRESET_CATEGORIES] as const).map(item=><button key={item} aria-pressed={category===item} onClick={() => setCategory(item)} className={`shrink-0 rounded-[4px] px-2 py-1.5 text-[10px] font-medium ${category===item ? "bg-white text-black" : "bg-white/10 text-white/75"}`}>{item}</button>)}
+            {(["Tout", ...PRESET_CATEGORIES] as const).map(item=><button key={item} aria-pressed={category===item} onClick={() => setCategory(item)} className={`shrink-0 rounded-[var(--pz-pill)] px-2.5 py-1.5 text-[10px] font-medium ${category===item ? "bg-[var(--pz-brand)] text-[var(--pz-brand-ink)]" : "bg-white/10 text-white/75"}`}>{item}</button>)}
           </div>
         </div>
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-2">

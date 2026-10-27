@@ -28,7 +28,7 @@ it("ouvre une image directement dans la grille sans composition obligatoire", as
   await mountAndImport("photo.png", "image/png");
   await act(async () => [...host!.querySelectorAll("button")].find(b => b.textContent === "Terminer image test")!.click());
   expect(host!.querySelector('canvas[role="application"]')).not.toBeNull();
-  expect(host!.querySelector('[aria-label="Composition intelligente POINTZERO"]')).toBeNull();
+  expect(host!.querySelector('[aria-label="Composition intelligente Point Zéro"]')).toBeNull();
   expect(host!.textContent).toContain("Image importée");
   expect(saveLibrary).toHaveBeenCalledWith(expect.anything(), true);
 });
@@ -38,7 +38,7 @@ it("conserve le puzzle dans l’import PDF puis ouvre son résultat dans la mêm
   await act(async () => [...host!.querySelectorAll("button")].find(b => b.textContent === "Valider puzzle test")!.click());
   expect(host!.textContent).toContain("PDF assemblé");
   expect(host!.textContent).not.toContain("Puzzle PDF conservé");
-  expect(host!.querySelector('[aria-label="Composition intelligente POINTZERO"]')).toBeNull();
+  expect(host!.querySelector('[aria-label="Composition intelligente Point Zéro"]')).toBeNull();
 });
 it("bloque le transfert PDF si le précédent ouvrage ne peut pas être archivé", async () => {
   await mountAndImport("patron.pdf", "application/pdf");

@@ -35,7 +35,7 @@ export function entryStudio(search:string,hash:string,pathname="/"):StudioRoute{
  if(/^\/studios\/[a-z0-9-]+$/.test(path))return "studio-detail";
  if(path==="/atelier"){
   const chosen=params.get("studio");
-  return isStudioRoute(chosen)&&!["manifest-admin","stitch-home","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier","manifest","aime-landing"].includes(chosen)?chosen:"design";
+  return isStudioRoute(chosen)&&!["manifest-admin","stitch-home","aime-home","universe-index","universe-detail","studio-detail","vision","reference-dossier","universal-dossier","manifest","aime-landing"].includes(chosen)?chosen:"embroidery";
  }
  return "stitch-home";
 }
@@ -49,7 +49,9 @@ export function publicPathFor(mode:StudioRoute){
  if(mode==="reference-dossier")return "/dossier";
  if(mode==="universal-dossier")return "/espace";
  if(mode==="universe-index")return "/univers";
- if(mode==="design")return "/atelier";
+ // /atelier est le studio point de croix ; le studio de composition garde une adresse explicite.
+ if(mode==="embroidery")return "/atelier";
+ if(mode==="design")return "/atelier?studio=design";
  if(mode==="manifest-admin")return "/pointzero"; // admin remains a stateful protected overlay, not an unguarded link
  return "/atelier?studio="+encodeURIComponent(mode);
 }

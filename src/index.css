@@ -2112,62 +2112,92 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 }
 
 
-/* POINTZERO · chrome partagé — les barres conservent leurs positions actuelles. */
-:root{
- --pz-chrome-bg:rgba(24,24,27,.94);
- --pz-chrome-raise:rgba(255,255,255,.065);
- --pz-chrome-border:rgba(255,255,255,.13);
- --pz-chrome-text:#f1f1f3;
- --pz-chrome-radius:14px;
- --pz-chrome-shadow:0 10px 28px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05);
-}
-.pz-chrome-toolbar{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border);color:var(--pz-chrome-text);box-shadow:var(--pz-chrome-shadow);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
-.pz-chrome-icon-button{width:40px;height:40px;min-width:40px;border-radius:var(--pz-chrome-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s}
-.pz-chrome-icon-button:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
-.pz-chrome-icon-button:focus-visible{outline:2px solid #d5d4eb;outline-offset:2px}
-.pz-action-bar.pz-chrome-toolbar{border:1px solid var(--pz-chrome-border);border-radius:18px}
-.pz-action-bar.pz-chrome-toolbar button{min-height:40px;border-radius:var(--pz-chrome-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s;color:var(--pz-chrome-text)}
-.pz-action-bar.pz-chrome-toolbar button:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
-@media(prefers-reduced-motion:reduce){.pz-chrome-icon-button,.pz-action-bar.pz-chrome-toolbar button{transition:none}}
+/* ────────────────────────────────────────────────────────────────────────
+ * Point Zéro · chrome du studio — bloc unique.
+ * Remplace les passes successives (« finishing pass », « final placement »…)
+ * qui se contredisaient à coups de !important. Toutes les valeurs viennent
+ * de src/design/pointzero.css, partagé avec l'accueil et la boutique.
+ *
+ * Disposition validée :
+ *  - en-tête 58px en haut, capsule de niveau centrée dedans ;
+ *  - rail d'outils à gauche, inspecteur à droite ;
+ *  - bande des fils DMC bord à bord en bas (94px) ;
+ *  - capsule d'actions flottante, centrée, juste au-dessus de la bande DMC.
+ * ──────────────────────────────────────────────────────────────────────── */
+.pz-embroidery-studio .pz-embroidery-header,
+.pz-embroidery-studio .pz-embroidery-left,
+.pz-embroidery-studio .pz-embroidery-right,
+.pz-embroidery-studio .pz-embroidery-dmc,
+.pz-embroidery-studio .pz-properties-docked{background:var(--pz-bg);color:var(--pz-text)}
 
+/* Matériau commun des barres */
+.pz-chrome-toolbar{background:var(--pz-panel);border-color:var(--pz-border);color:var(--pz-text);box-shadow:var(--pz-shadow);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.pz-embroidery-header.pz-chrome-toolbar{box-shadow:none;border-bottom:1px solid var(--pz-border)}
+.pz-chrome-icon-button{width:40px;height:40px;min-width:40px;border-radius:var(--pz-radius);border:1px solid transparent;background:transparent;transition:background .16s,border-color .16s}
+.pz-chrome-icon-button:hover{background:var(--pz-raise);border-color:var(--pz-border)}
 
-/* Left rail and shared panels: same material and control geometry as top/bottom bars. */
-.pz-toolbox-chrome{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border)}
-.pz-toolbox-chrome .pz-tool-rail{gap:6px}
-.pz-toolbox-chrome .pz-tool-control{border-radius:var(--pz-chrome-radius);min-width:0;line-height:1.2}
-.pz-toolbox-chrome .pz-tool-control[aria-pressed="true"]{background:#f1efe9;color:#111114;border-color:#f1efe9}
-.pz-toolbox-chrome .pz-tool-control[aria-pressed="false"]:hover{background:var(--pz-chrome-raise);border-color:var(--pz-chrome-border)}
-.pz-toolbox-chrome .pz-tool-control:focus-visible{outline:2px solid #d5d4eb;outline-offset:2px}
-.pz-embroidery-dmc{background:var(--pz-chrome-bg);border-color:var(--pz-chrome-border)}
-.pz-embroidery-dmc button{border-radius:var(--pz-chrome-radius)}
-@media(prefers-reduced-motion:reduce){.pz-toolbox-chrome .pz-tool-control{transition:none}}
+/* Un seul anneau de focus dans tout le studio */
+.pz-embroidery-studio :is(button,select,input,textarea,a):focus-visible,
+.pz-chrome-icon-button:focus-visible,
+.pz-level-bar button:focus-visible,
+.pz-action-bar button:focus-visible{outline:2px solid var(--pz-focus);outline-offset:2px}
 
+/* Filet de sécurité : tout contrôle actif « blanc » du studio prend l'accent unique */
+.pz-embroidery-studio :is([aria-pressed="true"],[aria-selected="true"]).bg-white{background:var(--pz-brand);color:var(--pz-brand-ink);border-color:var(--pz-brand)}
 
-/* Finishing pass: float actions above the canvas instead of drawing a full-width charcoal footer. */
+/* Rail d'outils gauche */
+.pz-toolbox-chrome{background:var(--pz-panel);border-color:var(--pz-border)}
+.pz-embroidery-studio .pz-embroidery-left{border-right-color:rgba(255,255,255,.09)}
+.pz-embroidery-studio .pz-toolbox-chrome{margin:8px;border:1px solid var(--pz-border);border-radius:var(--pz-radius-lg);padding:10px}
+.pz-toolbox-chrome .pz-tool-rail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pz-toolbox-chrome .pz-tool-control{min-width:0;min-height:42px;line-height:1.2;border-radius:var(--pz-radius-sm)}
+.pz-toolbox-chrome .pz-tool-rail .pz-tool-control{min-height:44px;padding:6px}
+.pz-toolbox-chrome .pz-tool-control[aria-pressed="true"]{background:var(--pz-brand);color:var(--pz-brand-ink);border-color:var(--pz-brand)}
+.pz-toolbox-chrome .pz-tool-control[aria-pressed="false"]:hover{background:var(--pz-raise);border-color:var(--pz-border)}
+
+/* Bande des fils DMC : bord à bord, en bas */
+.pz-embroidery-studio .pz-embroidery-dmc{bottom:0;height:94px;padding-bottom:env(safe-area-inset-bottom);border-color:var(--pz-border)}
+.pz-embroidery-studio .pz-embroidery-dmc > div:nth-child(2){padding-right:12px}
+.pz-embroidery-dmc button{border-radius:var(--pz-radius)}
+
+/* Capsule d'actions : flottante, centrée, au-dessus de la bande DMC */
 .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{
-  inset:auto auto max(18px,env(safe-area-inset-bottom)) 50%;
+  inset:auto auto calc(106px + env(safe-area-inset-bottom)) 50%;
   transform:translateX(-50%);
-  width:max-content;max-width:calc(100vw - 24px);
-  height:54px;min-height:54px;padding:5px 8px;gap:4px;
-  border:1px solid var(--pz-chrome-border);border-radius:19px;
-  background:rgba(27,27,30,.95);
-  box-shadow:0 16px 44px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.07)
+  z-index:38;
+  width:max-content;max-width:min(390px,calc(100vw - 24px));
+  height:48px;min-height:48px;padding:3px 5px;gap:2px;
+  border:1px solid var(--pz-border);border-radius:var(--pz-radius-lg);
+  background:var(--pz-panel);box-shadow:var(--pz-shadow-float)
 }
 .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button{
-  width:40px;min-width:40px;height:40px;min-height:40px;padding:0;
-  border-radius:13px
+  width:39px;min-width:39px;height:39px;min-height:39px;padding:0;
+  border:1px solid transparent;border-radius:var(--pz-radius-sm);
+  background:transparent;color:var(--pz-text);transition:background .16s,border-color .16s
 }
+.pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button:hover{background:var(--pz-raise);border-color:var(--pz-border)}
 .pz-embroidery-studio .pz-action-bar .pz-action-divider{height:20px;margin-inline:4px}
-.pz-embroidery-studio .pz-embroidery-dmc{bottom:82px}
-.pz-embroidery-studio .pz-embroidery-left{border-right-color:rgba(255,255,255,.09)}
-.pz-embroidery-studio .pz-toolbox-chrome{
-  margin:8px;border:1px solid var(--pz-chrome-border);
-  border-radius:18px;padding:10px;background:var(--pz-chrome-bg)
+
+/* Capsule de niveau : centrée dans l'en-tête */
+.pz-level-bar{
+  position:fixed;inset:8px auto auto 50%;transform:translateX(-50%);
+  width:max-content;max-width:min(440px,calc(100vw - 310px));height:42px;
+  z-index:45;display:flex;align-items:center;gap:2px;padding:4px;
+  border:1px solid var(--pz-border-strong);border-radius:var(--pz-pill);
+  background:var(--pz-panel);color:var(--pz-text);font-size:12px;
+  box-shadow:0 10px 25px rgba(0,0,0,.3);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)
 }
-.pz-toolbox-chrome .pz-tool-rail{grid-template-columns:repeat(3,minmax(0,1fr))}
-.pz-toolbox-chrome .pz-tool-control{min-height:42px;border-radius:12px}
-.pz-toolbox-chrome .pz-tool-rail .pz-tool-control{min-height:44px;padding:6px}
+.pz-level-bar button{appearance:none;border:0;background:transparent;color:var(--pz-text-2);padding:0 14px;height:33px;min-width:0;border-radius:var(--pz-pill);font-size:12px;white-space:nowrap;cursor:pointer}
+.pz-level-bar button[aria-pressed="true"]{color:var(--pz-brand-ink);background:var(--pz-brand);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+
+@media(max-width:800px){
+  .pz-level-bar{top:62px;max-width:calc(100vw - 20px);height:40px;z-index:46}
+  .pz-level-bar button{padding:0 11px}
+}
 @media(max-width:639px){
- .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{bottom:max(10px,env(safe-area-inset-bottom));gap:2px;padding:4px}
- .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button{width:38px;min-width:38px;height:40px}
+  .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{gap:2px;padding:4px}
+  .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar button{width:38px;min-width:38px;height:40px}
+}
+@media(prefers-reduced-motion:reduce){
+  .pz-chrome-icon-button,.pz-action-bar.pz-chrome-toolbar button,.pz-toolbox-chrome .pz-tool-control{transition:none}
 }
