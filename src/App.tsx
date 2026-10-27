@@ -66,7 +66,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import PeerShare from "./components/PeerShare";
 
 type Panel = "palette" | "library" | "share" | "export" | null;
-type RightSection = "properties" | "edit" | "prepare" | "follow" | "settings";
+type RightSection = "properties" | "motifs" | "edit" | "prepare" | "follow" | "settings";
 type Workspace = "create" | "stitch";
 const STITCH_TOOLS = new Set<Tool>(["hand", "pick", "mark", "details", "block", "row", "park", "unpick", "note"]);
 /**
@@ -665,31 +665,34 @@ export default function App() {
       ) : <>
         <EmbroideryToolbox tool={remote ? "hand" : tool} onTool={chooseTool} workspace={workspace}
           level={interfaceLevel} expanded={showDrawingTools} onToggleExpanded={() => setShowDrawingTools(v => !v)} readOnly={!!remote} />
-        {activeCategory === "compose" ? (
-          <MotifLibrary docked readOnly={!!remote}
-            onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileLibraryOpen(false); }}
-            onAddSaved={sprite => {addStitchedPattern(sprite);setMobileLibraryOpen(false);}}
-            onOpenProject={p => { void loadPattern(p); setTool("hand");setMobileLibraryOpen(false); }}
-            onBlank={() => { panelActions.new(80,80); setTool("hand"); setActiveCategory("compose");setMobileLibraryOpen(false); }}
-            onOpenLibrary={() => { setMobileLibraryOpen(false);setPanel("library"); }} />
-        ) : <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 text-[12px] leading-relaxed text-white/60">
-          {activeCategory === "threads"
-            ? "Le rail DMC en bas permet de choisir un fil. Ses caractéristiques, la toile et le stock sont dans l'inspecteur à droite."
-            : "Choisissez ici le geste à effectuer sur la grille. Les informations de suivi et le journal sont à droite."}
-        </div>}
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3 text-[12px] text-white/70">
+          {activeCategory === "compose" ? (
+            <button type="button" className="pz-chrome-icon-button flex w-full items-center justify-center gap-2 px-3 text-xs"
+              onClick={() => { openRightPanel("motifs"); setMobileLibraryOpen(false); setMobileInspectorOpen(true); }}>
+              Ouvrir les motifs à droite
+            </button>
+          ) : null}
+        </div>
       </>}
     </aside>
     <aside aria-label="Inspecteur de broderie"
       className={'pz-embroidery-right thin-scroll fixed bottom-[158px] right-0 top-[110px] z-30 w-[260px] overflow-y-auto border-l border-white/15 bg-[#09090b] text-white transition-transform xl:translate-x-0 '+(mobileInspectorOpen?'translate-x-0':'translate-x-full')}>
-      <nav className="sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
+      <nav className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-white/10 bg-[#09090b] p-2" aria-label="Sections de l'inspecteur">
         {([
-          ["properties","Objet"],["settings","Réglages"],
+          ["properties","Calques"],["motifs","Motifs"],["settings","Réglages"],
         ] as [RightSection,string][]).map(([id,label]) =>
           <button key={id} type="button" aria-pressed={rightSection===id}
             onClick={() => openRightPanel(id)}
-            className={rightSection===id ? "min-h-9 rounded-[5px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
+            className={rightSection===id ? "min-h-9 rounded-[13px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
       </nav>
-      {rightSection === "properties" ? (
+      {rightSection === "motifs" ? (
+        <MotifLibrary docked readOnly={!!remote}
+          onAdd={id => { const preset = getMotifPreset(id); if (preset) addStitchedPattern(preset); setMobileInspectorOpen(false); }}
+          onAddSaved={sprite => { addStitchedPattern(sprite); setMobileInspectorOpen(false); }}
+          onOpenProject={p => { void loadPattern(p); setTool("hand"); setMobileInspectorOpen(false); }}
+          onBlank={() => { panelActions.new(80,80); setTool("hand"); setMobileInspectorOpen(false); }}
+          onOpenLibrary={() => { setMobileInspectorOpen(false); setPanel("library"); }} />
+      ) : rightSection === "properties" ? (
         <EmbroideryInspector pattern={P} activeColor={color}
           onSettings={() => openRightPanel("settings")}
           onBrowse={() => { setMobileInspectorOpen(false); setPanel("palette"); }} workspace={workspace}
