@@ -173,7 +173,7 @@ export default function App() {
   // Les outils sont de véritables panneaux, comme dans Photo.
   // Canvas conserve son moteur plein écran mais centre/ajuste le patron
   // dans la surface libre, entre les panneaux et la bande DMC.
-  const insets: Insets = { top: 110, right: wide ? 260 : 0, bottom: 158, left: desktop ? 252 : 0 };
+  const insets: Insets = { top: 58, right: wide ? 260 : 0, bottom: 94, left: desktop ? (promptOpen ? 354 : 252) : 0 };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && (window.isSecureContext || window.location.hostname === "localhost")) {
