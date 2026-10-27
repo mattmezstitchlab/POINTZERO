@@ -2228,7 +2228,7 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
   padding-right:clamp(345px,31vw,415px);
 }
 @media(max-width:720px){
-  .pz-embroidery-studio .pz-embroidery-dmc{height:120px}
+  .pz-embroidery-studio .pz-embroidery-dmc{height:94px}
   .pz-embroidery-studio .pz-action-bar.pz-chrome-toolbar{
     left:50%!important;right:auto!important;transform:translateX(-50%)!important;
     bottom:calc(6px + env(safe-area-inset-bottom))!important;
