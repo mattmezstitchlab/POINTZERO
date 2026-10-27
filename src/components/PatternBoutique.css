@@ -64,3 +64,17 @@
 .pb-human-frame{border-radius:var(--pz-radius-lg);border-color:var(--pz-border-strong)}
 .pb-human-placeholder span{font-family:inherit;font-weight:300;color:var(--pz-brand-text)}
 .pb-disclosure{color:var(--pz-text-3)}
+
+/* Aperçus réels : le patron, case par case, sur toile Aïda */
+.pb-motif{background:#f4f0e6;padding:9%}
+.pb-motif:before{display:none}
+.pb-motif canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:auto}
+.pb-featured-card .pb-motif{aspect-ratio:1}
+.pb-detail>.pb-motif{padding:6%}
+.pb-detail-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.pb-detail-actions button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:0 22px;border:1px solid transparent;border-radius:var(--pz-radius);background:var(--pz-brand);color:var(--pz-brand-ink);font-size:15px;font-weight:600}
+.pb-detail-actions .pb-ghost{background:var(--pz-raise);border-color:var(--pz-border-strong);color:var(--pz-text);font-weight:500}
+.pb-motif{display:flex;align-items:center;justify-content:center;min-width:0}
+.pb-motif canvas{width:100%;height:auto;max-height:100%;min-width:0}
+.pb-detail>*{min-width:0}
+.pb-detail>.pb-motif{aspect-ratio:auto;height:auto;min-height:0;align-self:stretch}

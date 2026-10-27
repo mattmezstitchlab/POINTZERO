@@ -494,7 +494,7 @@ export default function App() {
     else openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
   };
   return studioMode === "pattern-boutique"
-    ? <PatternBoutique onBack={() => switchStudio("stitch-home")} onCreate={() => { switchStudio("embroidery"); setShowWelcome(true); }} onGenerate={() => { switchStudio("embroidery"); setShowWelcome(false); setPromptOpen(true); }} />
+    ? <PatternBoutique onBack={() => switchStudio("stitch-home")} onCreate={() => { switchStudio("embroidery"); setShowWelcome(true); }} onGenerate={() => { switchStudio("embroidery"); setShowWelcome(false); setPromptOpen(true); }} onOpenPattern={p => { void loadPattern(p).then(ok => { if (ok) { switchStudio("embroidery"); setTool("hand"); } }); }} />
     : studioMode === "stitch-home"
     ? <CrossStitchHome projectName={P.name} onOpen={enterStitchStudio}
         onShop={() => switchStudio("pattern-boutique")}
