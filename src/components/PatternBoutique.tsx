@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
-import { ArrowLeft, ArrowRight, Search, ShoppingBag, SlidersHorizontal, Sparkles, ShieldCheck, Layers3, Download, X, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ArrowRight, Search, SlidersHorizontal, Sparkles, ShieldCheck, X, LockKeyhole } from "lucide-react";
 import "./PatternBoutique.css";
 
 type Collection = "Félins" | "Oiseaux" | "Céleste" | "Objets & Maison" | "Monogrammes" | "Signature";
