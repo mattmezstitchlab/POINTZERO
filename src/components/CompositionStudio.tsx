@@ -153,10 +153,10 @@ export default function CompositionStudio({ pattern, onCancel, onUse, embedded =
     finally{setWorking(false);}
   };
   return (
-    <div className={`${embedded ? "fixed inset-x-0 bottom-0 top-[110px] z-[35]" : "fixed inset-0 z-[76]"} flex flex-col bg-[#111114] text-white`} role="dialog" aria-modal="true" aria-label="Composition intelligente POINTZERO">
+    <div className={`${embedded ? "fixed inset-x-0 bottom-0 top-[110px] z-[35]" : "fixed inset-0 z-[76]"} flex flex-col bg-[#111114] text-white`} role="dialog" aria-modal="true" aria-label="Composition intelligente Point Zéro">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[.17em] text-[#b7b0d9]">POINTZERO · Atelier</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[.17em] text-[#b7b0d9]">Point Zéro · Atelier</p>
           <h2 className="truncate text-[18px] font-semibold">Composition intelligente <span className="text-[12px] font-normal text-white/50">V1</span></h2>
         </div>
         <div className="flex items-center gap-2">

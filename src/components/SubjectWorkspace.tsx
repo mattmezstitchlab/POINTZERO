@@ -212,7 +212,7 @@ export default function SubjectWorkspace({pattern,onCancel,onUse}:{
   };
   return <div className="pz-decomposition fixed inset-0 z-[79] flex flex-col bg-[#09090b] text-white" role="dialog" aria-modal="true" aria-label="Décomposer et recomposer les sujets">
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/15 bg-[#09090b] px-4 py-3">
-      <div><p className="text-[10px] uppercase tracking-[.16em] text-white/70">POINTZERO · Atelier · Moteur de sujets</p>
+      <div><p className="text-[10px] uppercase tracking-[.16em] text-white/70">Point Zéro · Atelier · Moteur de sujets</p>
         <h2 className="text-lg font-semibold">Décomposer → Composer</h2></div>
       <div className="flex items-center gap-2">
         <button className="rounded-[5px] border border-white/25 px-3 py-2 text-xs text-white hover:bg-white/10" onClick={onCancel}><X size={14} className="mr-1 inline"/> Fermer</button>

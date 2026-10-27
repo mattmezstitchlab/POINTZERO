@@ -688,7 +688,7 @@ export default function App() {
         ] as [RightSection,string][]).map(([id,label]) =>
           <button key={id} type="button" aria-pressed={rightSection===id}
             onClick={() => openRightPanel(id)}
-            className={rightSection===id ? "min-h-9 rounded-[13px] bg-white px-1 text-[11px] text-black" : "min-h-9 rounded-[5px] px-1 text-[11px] text-white/75 hover:bg-white/10"}>{label}</button>)}
+            className={"min-h-9 rounded-[var(--pz-radius-sm)] px-1 text-[11px] font-semibold transition-colors "+(rightSection===id ? "bg-[var(--pz-brand)] text-[var(--pz-brand-ink)]" : "text-white/75 hover:bg-white/10")}>{label}</button>)}
       </nav>
       {rightSection === "motifs" ? (
         <MotifLibrary docked readOnly={!!remote}

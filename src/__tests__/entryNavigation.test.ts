@@ -9,7 +9,8 @@ describe("POINTZERO — navigation publique non destructive",()=>{
   expect(entryStudio("?studio=aime-home","")).toBe("aime-home");
   expect(entryStudio("?page=manifest","")).toBe("manifest");
   expect(entryStudio("","","/pointzero")).toBe("manifest");
-  expect(entryStudio("","","/atelier")).toBe("design");
+  expect(entryStudio("","","/atelier")).toBe("embroidery");
+  expect(entryStudio("?studio=design","","/atelier")).toBe("design");
   expect(entryStudio("","","/le-monde-aime")).toBe("aime-landing");
   expect(entryStudio("","","/univers")).toBe("universe-index");
   expect(entryStudio("","","/univers/mariage")).toBe("universe-detail");

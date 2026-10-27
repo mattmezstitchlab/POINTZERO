@@ -27,7 +27,7 @@ describe("AIME — Dossier stratégique de référence",()=>{
   expect(entryStudio("","","/dossier")).toBe("reference-dossier");
   expect(publicPathFor("reference-dossier")).toBe("/dossier");
   expect(entryStudio("?page=manifest","","/")).toBe("manifest");
-  expect(entryStudio("","","/atelier")).toBe("design");
+  expect(entryStudio("?studio=design","","/atelier")).toBe("design");
  });
  it("affiche 12 sections, l'introduction, la timeline sourcée et des documents explicitement privés",async()=>{
   const node=await render(<AimeDossier onNavigate={vi.fn()}/>);

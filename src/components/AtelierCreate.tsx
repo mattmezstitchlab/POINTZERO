@@ -22,7 +22,7 @@ export default function AtelierCreate({
       aria-label="Créer ou reprendre un motif"
       className={compact ? "space-y-3 text-white" : "pz-surface w-[min(460px,calc(100vw-28px))] p-5 text-white sm:p-6"}
     >
-      {!compact && <p className="text-[11px] font-semibold uppercase tracking-[.18em] text-white/45">POINTZERO · Atelier</p>}
+      {!compact && <p className="text-[11px] font-semibold uppercase tracking-[.18em] text-white/45">Point Zéro · Atelier</p>}
       {!compact && <h1 className="mt-2 text-[clamp(20px,3vw,28px)] font-semibold tracking-[-.04em] text-white">Que voulez-vous broder ?</h1>}
       <form className="mt-3 space-y-3" onSubmit={submit}>
         <label htmlFor={compact ? "atelier-description-panel" : "atelier-description"} className="sr-only">Description du motif</label>

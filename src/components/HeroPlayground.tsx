@@ -156,7 +156,7 @@ export default function HeroPlayground({
             </label>
             <label className="btn-quiet min-h-12 shrink-0 cursor-pointer px-4">
               <FileJson size={16}/> {openingProject ? "Ouverture…" : "Importer un projet JSON"}
-              <input type="file" accept=".json,.oxs,application/json" className="sr-only" onChange={e => { void onSelectProject(e); }} aria-label="Choisir un projet POINTZERO JSON ou OXS" />
+              <input type="file" accept=".json,.oxs,application/json" className="sr-only" onChange={e => { void onSelectProject(e); }} aria-label="Choisir un projet Point Zéro (JSON ou OXS)" />
             </label>
           </form>
           {projectError && <p className="mx-auto mt-2 max-w-[700px] rounded-md border border-red-300 bg-white p-3 text-center text-sm text-red-800" role="alert">Projet non ouvert : {projectError}</p>}

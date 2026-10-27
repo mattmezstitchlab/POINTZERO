@@ -116,7 +116,7 @@ describe("Accueil clair, une seule grille", () => {
 
   it("importe directement un projet POINTZERO JSON avec le lecteur de l'application", async () => {
     const file = new File(['{"v":3}'], "Bee2.pointzero.json", { type: "application/json" });
-    const input = container!.querySelector('input[aria-label="Choisir un projet POINTZERO JSON ou OXS"]') as HTMLInputElement;
+    const input = container!.querySelector('input[aria-label="Choisir un projet Point Zéro (JSON ou OXS)"]') as HTMLInputElement;
     expect(input).toBeTruthy();
     Object.defineProperty(input, "files", { configurable: true, value: [file] });
     await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
@@ -127,7 +127,7 @@ describe("Accueil clair, une seule grille", () => {
   it("signale immédiatement une erreur d'import JSON sans quitter l'accueil", async () => {
     projectSpy.mockResolvedValue("Projet invalide");
     const file = new File(["{}"], "corrompu.pointzero.json", { type: "application/json" });
-    const input = container!.querySelector('input[aria-label="Choisir un projet POINTZERO JSON ou OXS"]') as HTMLInputElement;
+    const input = container!.querySelector('input[aria-label="Choisir un projet Point Zéro (JSON ou OXS)"]') as HTMLInputElement;
     Object.defineProperty(input, "files", { configurable: true, value: [file] });
     await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
     expect(container!.querySelector('[role="alert"]')?.textContent).toContain("Projet invalide");

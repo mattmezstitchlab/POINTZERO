@@ -504,7 +504,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     await click(prepare);
     expect(category("Fils")?.getAttribute("aria-pressed")).toBe("true");
     expect(container?.textContent).toContain("Fils & toile");
-    expect(window.location.search).toBe("?studio=embroidery");
+    expect(window.location.pathname+window.location.search).toBe("/atelier");
   });
 
   it("ouvre directement la grille et la bibliothèque de motifs, sans écran d'accueil", async () => {
@@ -567,7 +567,7 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   });
   it("garde Créer dans la colonne gauche sans nouveau panneau flottant", async () => {
     await mount();
-    await click(button("POINTZERO : créer un motif"));
+    await click(button("Point Zéro : créer un motif"));
     const left=container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]');
     expect(left?.querySelector('[aria-label="Créer un nouveau motif"]')).toBeTruthy();
     expect(left?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();

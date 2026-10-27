@@ -28,7 +28,8 @@ describe("Point Zéro spécialisé", () => {
     expect(publicPathFor("stitch-home")).toBe("/");
     expect(entryStudio("", "", publicPathFor("aime-home"))).toBe("aime-home");
     expect(entryStudio("?studio=embroidery", "", "/atelier")).toBe("embroidery");
-    expect(entryStudio("", "", "/atelier")).toBe("design");
+    expect(entryStudio("", "", "/atelier")).toBe("embroidery");
+    expect(publicPathFor("embroidery")).toBe("/atelier");
   });
   it("ne crée ni ne remplace de données à l’ouverture", () => {
     localStorage.setItem("ouvrage", "données existantes");
@@ -38,7 +39,7 @@ describe("Point Zéro spécialisé", () => {
     expect(view.textContent).toContain("Roses de famille");
     expect(view.textContent).toContain("son effacement supprime les projets locaux");
     expect(view.querySelector("iframe")).toBeNull();
-    expect(view.textContent).toContain("LE PUZZLE PDF");
+    expect(view.textContent).toContain("Le puzzle PDF");
     expect(view.textContent).toContain("pas une capture d’écran");
     expect(view.querySelectorAll("h1")).toHaveLength(1);
     expect(write).not.toHaveBeenCalled();
@@ -62,7 +63,7 @@ describe("Point Zéro spécialisé", () => {
   });
   it("transmet le fichier choisi une seule fois et accepte de le sélectionner à nouveau", () => {
     const { view, onImport } = mount();
-    const input = [...view.querySelectorAll<HTMLInputElement>('input[type="file"]')].find(el=>el.accept.includes('.oxs'))!;
+    const input = view.querySelector<HTMLInputElement>('input[aria-label="Importer une image, un PDF ou un projet"]')!;
     expect(input.accept).toContain(".oxs");
     expect(input.accept).toContain(".pdf");
     const file = new File(["image"], "souvenir.png", { type: "image/png" });
