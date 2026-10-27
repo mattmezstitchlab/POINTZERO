@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Ellipsis, FolderOpen, Layers, PanelLeft, PanelRight, Pencil, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Ellipsis, FolderOpen, Layers, PanelLeft, PanelRight, Pencil, Redo2, Settings2, Share2, Type, Undo2 } from "lucide-react";
 import type { Pattern } from "../lib/pattern";
 import type { ViewMode } from "./Canvas";
 
@@ -50,6 +50,7 @@ export default function TopBar(p: Props) {
       <button type="button" className={iconButton + " hidden sm:grid"} aria-label="Bibliothèque" title="Bibliothèque" onClick={p.onLibrary}><FolderOpen size={17}/></button>
 
       <button type="button" className={iconButton + " hidden sm:grid"} aria-label="Réglages et aide" title="Réglages" onClick={p.onSettings}><Settings2 size={17}/></button>
+      <button type="button" className={iconButton + " gap-1 px-2 w-auto"} onClick={p.onShare} title="Inviter à voir mon ouvrage" aria-label="Inviter une personne à voir mon ouvrage"><UserPlus size={17}/><span className="hidden 2xl:inline text-xs">Inviter</span></button>
       <div className="relative">
         <button type="button" className={iconButton} aria-label="Plus d'options" aria-expanded={more} onClick={() => setMore(v => !v)}><Ellipsis size={19}/></button>
         {more && <div className="pz-surface absolute right-0 top-[calc(100%+8px)] z-50 grid w-[215px] gap-1 p-2 text-sm text-white" aria-label="Options d'affichage">
