@@ -492,9 +492,9 @@ export default function App() {
   const contextSection: "prepare" | "edit" | "follow" | "settings" =
     rightSection === "properties" || rightSection === "motifs" ? "edit" : rightSection;
   const enterStitchStudio = (entry: StitchEntry) => {
+    if (entry === "library") { switchStudio("buro"); return; }
     switchStudio("embroidery");
-    if (entry === "library") { setShowWelcome(false); setPanel("library"); }
-    else openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
+    openCategory(entry === "prepare" ? "threads" : entry === "stitch" ? "stitch" : "create");
   };
   return studioMode === "buro"
     ? <Buro currentName={P.name}
@@ -512,6 +512,7 @@ export default function App() {
     : studioMode === "stitch-home"
     ? <CrossStitchHome projectName={P.name} onOpen={enterStitchStudio}
         onShop={() => switchStudio("pattern-boutique")}
+        onBuro={() => switchStudio("buro")}
         onShare={() => { switchStudio("embroidery"); setPanel("share"); }}
         onImport={chosen => { switchStudio("embroidery"); importAnyFile(chosen); }}/>
     : studioMode === "universal-dossier"

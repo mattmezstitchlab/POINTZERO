@@ -2256,7 +2256,7 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 .buro { min-height: 100dvh; background: #f6f6f4; color: #0b0b0c; font-family: "Inter Tight", "Inter", var(--font-sans); }
 .buro-main { max-width: 1240px; margin: 0 auto; padding: 150px clamp(16px, 4vw, 56px) 160px; }
 .buro-kicker { margin: 0 0 12px; font-size: 13px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #55555a; }
-.buro-title { margin: 0; font-size: clamp(64px, 11vw, 168px); line-height: .86; font-weight: 600; letter-spacing: -.045em; text-transform: uppercase; }
+.buro-title { margin: 0; font-size: clamp(64px, 11vw, 168px); line-height: .86; font-weight: 600; letter-spacing: -.045em; }
 .buro-intro { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px 48px; align-items: end; margin: 28px 0 40px; }
 .buro-lead { margin: 0; max-width: 34rem; font-size: clamp(19px, 1.7vw, 24px); line-height: 1.4; }
 .buro-current { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border-radius: 16px; background: #fff; border: 1px solid #e2e2de; }
@@ -2297,3 +2297,4 @@ html[data-pz-motion="reduce"] .pz-guided-lens { transition: none; }
 .pzs-place { flex: none; display: inline-flex; align-items: center; gap: 8px; max-width: 220px; height: 46px; padding: 0 8px; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
 .pzs-threadtool { font-weight: 600; }
 @media (max-width: 720px) { .pzs-place { display: none; } }
+@media (max-width: 720px) { .pzs-seg button, .pzs-btm { height: 44px; padding: 0 10px; font-size: 14px; } .pzs-bottom { gap: 4px; padding: 5px; } }
