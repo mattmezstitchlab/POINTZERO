@@ -91,6 +91,15 @@ licence générique.
 Une teinte à l'écran n'est pas un bain de fil. Pour un ouvrage destiné à être vu de près, la
 référence reste la carte physique du fabricant.
 
+## Moteur d'analyse de Point Zéro (Grille 44)
+
+`api/analyse.mjs` est le second étage du moteur qui allume la Grille 44 : Claude lit une intention (texte, image ou PDF de 3 Mo maximum) et renvoie les briques à allumer, dans l'ordre des causalités, avec une citation pour chacune, les briques écartées et les informations repérées (dates, montants, nombre de personnes, lieux). La réponse a la même forme que le moteur local, qui reste utilisé quand ce service est absent ou en erreur.
+
+- `ANTHROPIC_API_KEY` : clé de l'API Claude (obligatoire ; sans elle, la route répond 503 et rien n'est envoyé).
+- `ANALYSE_MODEL` : modèle utilisé, `claude-haiku-5-5` par défaut.
+- `ANALYSE_ALLOWED_ORIGINS` : origines autorisées en plus du site lui-même, séparées par des virgules (`*.domaine.com` accepté).
+- Garde-fous : 8 000 caractères au plus, 20 analyses par minute et par adresse (au mieux, par instance), 25 secondes maximum.
+
 ## Ce qui n'est pas fini
 
 Liste assumée, dans l'ordre où elle gêne :
