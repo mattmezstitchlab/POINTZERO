@@ -56,8 +56,16 @@ async function click(el: Element | null | undefined) {
   expect(el, "commande de l'atelier présente").toBeTruthy();
   await act(async () => { el!.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
 }
-const nav = () => container?.querySelector('nav[aria-label="Catégories de l\'atelier"]');
-const category = (name: string) => [...(nav()?.querySelectorAll("button") ?? [])].find((b) => b.textContent?.includes(name));
+// Les deux docks (charte UniO) : en haut, faire ; en bas, se repérer.
+const nav = () => container?.querySelector('nav[aria-label="Dock des outils du studio de broderie"]');
+const bottom = () => container?.querySelector('nav[aria-label="Se repérer dans le studio"]');
+const category = (name: string) => [...(nav()?.querySelectorAll("button") ?? [])].find((b) => b.textContent?.replace(/\d+$/, "") === name);
+const inBottom = (name: string) => [...(bottom()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === name || b.getAttribute("aria-label") === name);
+const inspector = () => container?.querySelector('[aria-label="Inspecteur de broderie"]');
+async function brandMenu(item: string) {
+  await click(container?.querySelector("#pzs-brand"));
+  await click([...(container?.querySelectorAll("#pzs-menu button") ?? [])].find(b => b.textContent === item));
+}
 const dialog = (name: string) => container?.querySelector(`[role="dialog"][aria-label="${name}"]`);
 const button = (label: string) => container?.querySelector(`button[aria-label="${label}"]`);
 beforeEach(() => {
@@ -341,38 +349,41 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(container?.querySelector('[aria-label="Canevas de création universel"]')).toBeTruthy();
   });
 
-  it("aligne la structure de Broderie sur Photo avec la bande DMC bord à bord", async () => {
+  it("range le studio entre deux docks, la grille en plein écran", async () => {
     await mount();
-    expect(container?.querySelector('.pz-embroidery-header')).toBeTruthy();
-    expect(container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]')).toBeTruthy();
-    expect(container?.querySelector('[aria-label="Inspecteur de broderie"]')).toBeTruthy();
-    expect(container?.querySelector('[aria-label="Outils de broderie"]')).toBeTruthy();
-    const rail=container?.querySelector('[aria-label="Fils du motif"]');
-    expect(rail?.classList.contains("pz-embroidery-dmc")).toBe(true);
-    expect(rail?.classList.contains("inset-x-0")).toBe(true);
-    expect(rail?.classList.contains("bottom-0")).toBe(true);
-    expect(rail?.querySelector('[aria-label="Filtres des fils DMC"]')).toBeTruthy();
-    expect(button("Afficher la bibliothèque broderie")).toBeTruthy();
-    expect(button("Afficher les propriétés broderie")).toBeTruthy();
+    expect(nav()).toBeTruthy();
+    expect(bottom()).toBeTruthy();
+    expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
+    expect(container?.querySelector('.pz-embroidery-header')).toBeNull();
+    expect(container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]')).toBeNull();
+    expect(inspector()?.hasAttribute("hidden")).toBe(true);
+    expect(container?.querySelector('[aria-label="Fils du motif"]')).toBeNull();
+    expect(["Dessiner","Broder","Fils","Partager"].every(name => category(name))).toBe(true);
+    expect(category("Créer")).toBeUndefined();
+    expect(category("Dessiner")?.getAttribute("aria-pressed")).toBe("true");
+    expect(inBottom("Revenir au BurO")).toBeTruthy();
   });
-  it("garde les filtres DMC et les outils de broderie accessibles", async () => {
+  it("déploie les fils au-dessus du dock du bas et garde les filtres DMC", async () => {
     await mount();
+    await click(category("Fils"));
     const rail=container?.querySelector('[aria-label="Fils du motif"]');
+    expect(rail?.querySelector('[aria-label="Filtres des fils DMC"]')).toBeTruthy();
     const used=[...(rail?.querySelectorAll("button")??[])].find(x=>x.textContent?.includes("Utilisés"));
     await click(used);
     expect(used?.getAttribute("aria-pressed")).toBe("true");
     await click(button("Ajouter ou rechercher un fil DMC"));
     expect(dialog("Nuancier DMC")?.classList.contains("is-open")).toBe(true);
+    await click(button("Remonter d’un niveau"));
+    expect(container?.querySelector('[aria-label="Fils du motif"]')).toBeNull();
   });
-  it("ouvre et ferme les panneaux mobiles sans masquer la grille", async () => {
+  it("ouvre et ferme le panneau Calques sans masquer la grille", async () => {
     await mount();
-    await click(button("Afficher la bibliothèque broderie"));
-    expect(container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]')?.classList.contains("translate-x-0")).toBe(true);
-    await click(button("Afficher les propriétés broderie"));
-    expect(container?.querySelector('[aria-label="Inspecteur de broderie"]')?.classList.contains("translate-x-0")).toBe(true);
+    await click(category("Dessiner"));
+    await click(category("Calques"));
+    expect(inspector()?.hasAttribute("hidden")).toBe(false);
     expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
-    await click(button("Fermer les panneaux de broderie"));
-    expect(container?.querySelector('[aria-label="Inspecteur de broderie"]')?.classList.contains("translate-x-full")).toBe(true);
+    await click(button("Fermer le panneau"));
+    expect(inspector()?.hasAttribute("hidden")).toBe(true);
   });
 
   it("ouvre Budget, Programme et Admin depuis le même menu de studios, puis revient aux créations", async () => {
@@ -420,8 +431,8 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     expect(saveStored(existing)).toBe(true);
     await mount();
     const before = container?.querySelector('canvas[role="application"]')?.getAttribute("aria-label");
-    await click(button("Accueil Point Zéro"));
-    expect(container?.querySelector("h1")?.textContent).toContain("dernière croix");
+    await brandMenu("Accueil Point Zéro");
+    expect(container?.querySelector("h1")?.textContent).toBe("Point Zéro");
     expect(window.location.pathname).toBe("/");
     const resume = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Continuer à broder"));
     await click(resume);
@@ -441,7 +452,8 @@ describe("POINTZERO : atelier unique sans assistant", () => {
     const red = flossIndex("321"); p.cross[5] = red; p.done[5] = 1; ensurePalette(p, red);
     expect(saveStored(p)).toBe(true);
     await mount();
-    const levelBar = container!.querySelector<HTMLElement>(".pz-level-bar")!;
+    await click(container?.querySelector("#pzs-brand"));
+    const levelBar = container!.querySelector<HTMLElement>('[aria-label="Affichage du studio"]')!;
     expect(levelBar.getAttribute("role")).toBe("group");
     const labels: Record<string,string> = { beginner: "Débutant", expert: "Expert", intermediate: "Intermédiaire" };
     for (const level of ["beginner", "expert", "intermediate"]) {
@@ -453,69 +465,69 @@ describe("POINTZERO : atelier unique sans assistant", () => {
       await act(async () => window.dispatchEvent(new Event("pagehide")));
       const after = loadStored()!;
       expect(after.cross).toEqual(p.cross); expect(after.done).toEqual(p.done); expect(after.palette).toEqual(p.palette);
-      if (level === "expert") expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
     }
   });
 
   it("conserve l’outil actif et rend les autres accessibles en Débutant", async () => {
     await mount();
-    const buttons = () => [...container!.querySelectorAll("button")];
-    await click(buttons().find(b => b.textContent?.includes("Afficher tous les outils")));
-    await click(buttons().find(b => b.textContent === "Quart"));
-    await click([...container!.querySelectorAll(".pz-level-bar button")].find(b => b.textContent === "Débutant"));
-    expect(buttons().find(b => b.textContent === "Quart")?.getAttribute("aria-pressed")).toBe("true");
-    expect(container!.querySelector('[aria-label="Outils avancés"]')).toBeTruthy();
+    await click(category("Dessiner"));
+    await click(category("Plus d’outils"));
+    await click(category("Quart"));
+    expect(category("Quart")?.getAttribute("aria-pressed")).toBe("true");
+    await click(container?.querySelector("#pzs-brand"));
+    await click([...container!.querySelectorAll('[aria-label="Affichage du studio"] button')].find(b => b.textContent === "Débutant"));
+    await click(container?.querySelector("#pzs-brand"));
+    expect(category("Quart")?.getAttribute("aria-pressed")).toBe("true");
+    await click(button("Remonter d’un niveau"));
+    expect(category("Remplir")).toBeUndefined();
+    expect(category("Croix")).toBeTruthy();
+    expect(category("Plus d’outils")).toBeTruthy();
   });
 
   it("centralise la navigation et protège le redimensionnement", async () => {
     await mount();
+    await click(category("Dessiner"));
+    await click(category("Calques"));
     const sections=container!.querySelector(".pz-embroidery-right nav");
     expect([...sections!.querySelectorAll("button")].map(b=>b.textContent)).toEqual(["Calques","Motifs","Réglages"]);
-    await click(category("Fils"));
-    expect(container!.textContent).not.toContain("Nouvelle grille ou redimensionnement");
-    await click(category("Outils"));
+    await click(category("Réglages du dessin"));
     expect(container!.textContent).toContain("Redimensionner la grille");
     const confirm=vi.spyOn(window,"confirm").mockReturnValue(false);
     await click([...container!.querySelectorAll("button")].find(b=>b.textContent==="Redimensionner"));
     expect(confirm).toHaveBeenCalled();
   });
 
-  it("relie la barre inférieure au zoom, au recentrage, à l’import et à l’export", async () => {
+  it("relie le dock du bas au zoom et au recentrage, et le dock du haut à l’import et à l’export", async () => {
     await mount();
-    const bar=container!.querySelector('nav[aria-label="Actions rapides du studio"]')!;
     const send=vi.spyOn(window,"dispatchEvent");
-    const action=(text:string)=>[...bar.querySelectorAll("button")].find(b=>b.getAttribute("aria-label")===text||b.getAttribute("title")===text||b.textContent===text);
-    await click(action("Activer la loupe"));
+    await click(inBottom("Loupe : doubler le zoom de la zone visible"));
     expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"magnify"}}));
-    await click(bar.querySelector('[aria-label="Zoomer la grille"]'));
+    await click(inBottom("Zoomer"));
     expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomIn"}}));
-    await click(bar.querySelector('[aria-label="Dézoomer la grille"]'));
+    await click(inBottom("Dézoomer"));
     expect(send).toHaveBeenCalledWith(expect.objectContaining({detail:{action:"zoomOut"}}));
-    await click(action("Recentrer la grille"));
-    const picker=container!.querySelector<HTMLInputElement>('input[aria-label="Importer depuis la barre d’actions"]')!;
-    const choose=vi.spyOn(picker,"click");await click(action("Importer un fichier"));expect(choose).toHaveBeenCalled();
-    expect(picker.accept).toContain(".pdf");
-    await click(action("Exporter et partager"));
+    await click(inBottom("Tout voir"));
+    await click(category("Partager"));
+    await click(category("Exporter"));
     expect(container!.textContent).toContain("PDF");
-    expect(container!.querySelectorAll('[aria-label="Exporter et partager"]')).toHaveLength(1);
   });
 
   it("ouvre directement la préparation depuis l’accueil spécialisé", async () => {
     await mount(true);
     const prepare = [...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent?.includes("Préparer mon ouvrage"));
     await click(prepare);
-    expect(category("Fils")?.getAttribute("aria-pressed")).toBe("true");
-    expect(container?.textContent).toContain("Fils & toile");
+    expect(inspector()?.hasAttribute("hidden")).toBe(false);
+    expect(inspector()?.textContent).toContain("Fils & toile");
     expect(window.location.pathname+window.location.search).toBe("/atelier");
   });
 
   it("ouvre directement la grille et la bibliothèque de motifs, sans écran d'accueil", async () => {
     const view = await mount();
     expect(view.querySelector('canvas[role="application"]')).toBeTruthy();
-    await click([...view.querySelectorAll('.pz-embroidery-right nav button')].find(b=>b.textContent==="Motifs"));
+    await click(category("Dessiner"));
+    await click(category("Motifs"));
     expect(view.querySelector('[aria-label="Bibliothèque de motifs"]')).toBeTruthy();
     expect(view.querySelector('button[aria-label="Ajouter Fleur rose"]')).toBeTruthy();
-    expect(nav()?.querySelectorAll("button")).toHaveLength(4);
     expect(view.querySelector('[aria-label="Créer un nouveau motif"]')).toBeNull();
   });
   it("ne montre ni guide, ni démarrage automatique, même si l'ancien état subsiste", async () => {
@@ -527,13 +539,15 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   });
   it("Dessiner conserve la grille centrale sans ouvrir le grand panneau de réglages", async () => {
     await mount();
-    await click(category("Outils"));
+    await click(category("Dessiner"));
     expect(dialog("Composer")?.classList.contains("is-open")).toBeFalsy();
+    expect(inspector()?.hasAttribute("hidden")).toBe(true);
     expect(container?.querySelector('canvas[role="application"]')).toBeTruthy();
   });
   it("ajoute un motif DMC par clic et ouvre ses propriétés minimales", async () => {
     await mount();
-    await click([...container!.querySelectorAll('.pz-embroidery-right nav button')].find(b=>b.textContent==="Motifs"));
+    await click(category("Dessiner"));
+    await click(category("Motifs"));
     await click(container?.querySelector('button[aria-label="Ajouter Fleur rose"]'));
     expect(container?.querySelector('[aria-label="Propriétés du motif"]')).toBeTruthy();
     expect(container?.querySelector('[aria-label="Taille du motif"]')).toBeTruthy();
@@ -543,77 +557,96 @@ describe("POINTZERO : atelier unique sans assistant", () => {
   it("réunit fils, toile et profil dans le même panneau", async () => {
     await mount();
     await click(category("Fils"));
-    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
-    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
-    expect(right?.textContent).toContain("Mon profil brodeuse");
-    expect(right?.textContent).toContain("Modifier la toile");
+    await click(category("Fils et toile"));
+    expect(inspector()?.querySelector(".pz-embroidery-inline")).toBeTruthy();
+    expect(inspector()?.textContent).toContain("Mon profil brodeuse");
+    expect(inspector()?.textContent).toContain("Modifier la toile");
     expect(dialog("Fils & toile")?.classList.contains("is-open")).toBeFalsy();
   });
   it("donne accès au suivi Broder sans changer de page", async () => {
     await mount();
     await click(category("Broder"));
-    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
-    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
-    expect(right?.textContent).toContain("Journal du projet");
+    expect(category("Marquer")).toBeTruthy();
+    expect(nav()?.querySelector('button[aria-label^="Fil actif"]')).toBeTruthy();
+    await click(category("Suivi"));
+    expect(inspector()?.querySelector(".pz-embroidery-inline")).toBeTruthy();
+    expect(inspector()?.textContent).toContain("Journal du projet");
     expect(dialog("Broder")?.classList.contains("is-open")).toBeFalsy();
     expect(window.location.hash).toBe("");
   });
-  it("garde Bibliothèque, Exporter et Réglages dans l'en-tête", async () => {
+  it("garde le BurO et les Réglages dans le menu Point Zéro, et Exporter dans Partager", async () => {
     await mount();
-    expect(button("Bibliothèque")).toBeTruthy();
-    expect(button("Exporter et partager")).toBeTruthy();
-    await click(button("Réglages et aide"));
-    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
-    expect(right?.textContent).toContain("Confort et accessibilité");
+    await click(container?.querySelector("#pzs-brand"));
+    const items=[...(container?.querySelectorAll("#pzs-menu button")??[])].map(b=>b.textContent);
+    expect(items).toContain("BurO");
+    expect(items).toContain("Réglages et aide");
+    await click([...(container?.querySelectorAll("#pzs-menu button")??[])].find(b=>b.textContent==="Réglages et aide"));
+    expect(inspector()?.textContent).toContain("Confort et accessibilité");
     expect(dialog("Réglages & aide")?.classList.contains("is-open")).toBeFalsy();
+    await click(category("Partager"));
+    expect(category("Exporter")).toBeTruthy();
   });
-  it("garde Créer dans la colonne gauche sans nouveau panneau flottant", async () => {
+  it("ouvre le BurO : créer, importer et retrouver ses projets, avec des lieux en bas", async () => {
     await mount();
-    await click(button("Point Zéro : créer un motif"));
-    const left=container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]');
-    expect(left?.querySelector('[aria-label="Créer un nouveau motif"]')).toBeTruthy();
-    expect(left?.querySelector('textarea[placeholder="Décrivez votre motif…"]')).toBeTruthy();
-    expect(dialog("Créer")?.classList.contains("is-open")).toBeFalsy();
+    await brandMenu("BurO");
+    expect(window.location.pathname).toBe("/buro");
+    expect(container?.querySelector("h1")?.textContent).toBe("BurO");
+    const top = () => container?.querySelector('nav[aria-label="Dock des actions du BurO"]');
+    const inTop = (name: string) => [...(top()?.querySelectorAll("button") ?? [])].find(b => b.textContent?.replace(/\d+$/, "") === name);
+    expect(["Créer","Rejoindre","Échanger","Modèles"].every(name => inTop(name))).toBe(true);
+    const places = [...(container?.querySelectorAll('nav[aria-label="Lieux du BurO"] button') ?? [])].map(b => b.textContent?.replace(/\s*\d+$/, ""));
+    expect(places).toEqual(["Projets","Partagés avec moi","Archives"]);
+    await click(inTop("Créer"));
+    expect(["Grille vierge","Importer","Générer"].every(name => inTop(name))).toBe(true);
+    const picker = container!.querySelector<HTMLInputElement>('input[aria-label="Importer une image, un PDF ou un projet dans le BurO"]')!;
+    expect(picker.accept).toContain(".pdf"); expect(picker.accept).toContain(".oxs"); expect(picker.accept).toContain(".json"); expect(picker.accept).toContain("image/png");
+    const choose = vi.spyOn(picker, "click"); await click(inTop("Importer")); expect(choose).toHaveBeenCalled();
+    await click(button("Remonter d’un niveau"));
+    await click([...(container?.querySelectorAll('nav[aria-label="Lieux du BurO"] button') ?? [])].find(b => b.textContent?.startsWith("Partagés")));
+    expect(container?.textContent).toContain("Regarder un ouvrage en direct");
+    await click([...(container?.querySelectorAll("button") ?? [])].find(b => b.textContent === "Continuer →") ?? [...(container?.querySelectorAll("#buro-brand") ?? [])][0]);
   });
-  it("réutilise la colonne droite pour Fils, Suivi et Réglages, sans feuilles superposées", async () => {
+  it("choisit la visibilité du projet dans Partager, avec son orbe et son mot", async () => {
+    await mount();
+    await click(category("Partager"));
+    expect(category("Visibilité · Privé")).toBeTruthy();
+    await click(category("Visibilité · Privé"));
+    await click(category("Restreint"));
+    expect(category("Restreint")?.getAttribute("aria-pressed")).toBe("true");
+    expect(JSON.stringify(JSON.parse(localStorage.getItem("pointzero:visibilite") ?? "{}"))).toContain("restreint");
+    expect(bottom()?.textContent).toContain("Restreint");
+  });
+  it("réutilise un seul panneau pour Fils, Suivi et Réglages, sans feuilles superposées", async () => {
     await mount();
     await click(category("Fils"));
-    let right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
-    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
-    expect(right?.textContent).toContain("Mon profil brodeuse");
+    await click(category("Fils et toile"));
+    expect(inspector()?.textContent).toContain("Mon profil brodeuse");
+    await click(button("Remonter d’un niveau"));
     await click(category("Broder"));
-    right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
-    expect(right?.textContent).toContain("Journal du projet");
-    await click(button("Réglages et aide"));
-    right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
-    expect(right?.textContent).toContain("Confort et accessibilité");
+    await click(category("Suivi"));
+    expect(inspector()?.textContent).toContain("Journal du projet");
+    await brandMenu("Réglages et aide");
+    expect(inspector()?.textContent).toContain("Confort et accessibilité");
     expect(container?.querySelectorAll(".pz-embroidery-inline")).toHaveLength(1);
-    await click(button("Plus d'options"));
-    expect(container?.querySelector('[aria-label="Options d\'affichage"]')?.classList.contains("pz-surface")).toBe(true);
   });
-  it("présente les outils à gauche et les réglages techniques dans le panneau noir à droite", async () => {
+  it("garde les réglages techniques du dessin dans le panneau noir, à la demande", async () => {
     await mount();
-    const left=container?.querySelector('[aria-label="Bibliothèque et outils de broderie"]');
-    const right=container?.querySelector('[aria-label="Inspecteur de broderie"]');
-    expect(left?.querySelector('[aria-label="Outils de broderie"]')).toBeTruthy();
-    expect(right?.querySelector('[aria-label="Outils de broderie"]')).toBeNull();
-    await click(button("Plus d'options"));
-    const advanced=[...(container?.querySelectorAll("button")??[])].find(b=>b.textContent?.includes("Options de composition"));
-    await click(advanced);
-    expect(right?.querySelector(".pz-embroidery-inline")).toBeTruthy();
-    expect(right?.textContent).toContain("Texte (lettres en croix)");
-    expect(right?.textContent).toContain("Symétrie du dessin");
+    expect(inspector()?.querySelector('[aria-label="Outils de broderie"]')).toBeNull();
+    await click(category("Dessiner"));
+    await click(category("Réglages du dessin"));
+    expect(inspector()?.querySelector(".pz-embroidery-inline")).toBeTruthy();
+    expect(inspector()?.textContent).toContain("Texte (lettres en croix)");
+    expect(inspector()?.textContent).toContain("Symétrie du dessin");
     expect(dialog("Composer")?.classList.contains("is-open")).toBeFalsy();
   });
-  it("autorise un import unique d'images, PDF, JSON et OXS", async () => {
+  it("remonte d’un niveau avec Échap dans le dock", async () => {
     await mount();
-    await click(category("Créer"));
-    const picker = container?.querySelector('input[aria-label="Importer image, PDF ou projet JSON/OXS"]') as HTMLInputElement;
-    expect(picker).toBeTruthy();
-    expect(picker.accept).toContain("application/pdf");
-    expect(picker.accept).toContain(".oxs");
-    expect(picker.accept).toContain(".json");
-    expect(picker.accept).toContain("image/png");
+    await click(category("Dessiner"));
+    await click(category("Plus d’outils"));
+    await act(async () => { nav()!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    expect(category("Plus d’outils")).toBeTruthy();
+    await act(async () => { nav()!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    expect(category("Partager")).toBeTruthy();
   });
   it("ne propose plus de page ni de catégorie SLÂME", async () => {
     await mount();
